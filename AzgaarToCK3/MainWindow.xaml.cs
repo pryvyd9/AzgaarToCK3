@@ -1,6 +1,7 @@
 ﻿using ImageMagick;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -45,11 +46,12 @@ public class PackProvinceJsonConverter : JsonConverter<PackProvince[]>
         throw new NotImplementedException();
     }
 }
-
+public record Burg(/*townId*/int i, /*cellId*/int cell, /*townName*/string name, /*provinceId*/int feature, float x, float y);
 public class Pack
 {
     [JsonConverter(typeof(PackProvinceJsonConverter))]
     public PackProvince[] provinces { get; set; }
+    public Burg[] burgs { get; set; }
 }
 
 
@@ -57,18 +59,28 @@ public record JsonMap(Pack pack);
 
 
 public record Geometry(string type, float[][][] coordinates);
-public record Properties(string type, int province, int state, int height);
+public record Properties(int id, string type, int province, int state, int height, int[] neighbors);
 public record Feature(Geometry geometry, Properties properties);
 public record GeoMap(Feature[] features);
 
 
 //public record Province(List<float[][]> cells, MagickColor color);
-public record Cell(int height, float[][] cells);
+public record Cell(int id, int height, float[][] cells, int[] neighbors)
+{
+    public override string ToString()
+    {
+        return $"id:{id},neighbors:[{string.Join(",", neighbors)}]";
+    }
+}
+//public record Town(int id, int cellId, string name, float x, float y);
 public class Province 
 {
     public List<Cell> Cells { get; set; } = new();
+    // Town
+    public Burg Burg { get; set; }
     public MagickColor Color { get; set; }
     public string Name { get; set; }
+    public int Id { get; set; }
 }
 
 
@@ -83,7 +95,6 @@ public class Map
     public float YRatio { get; set; }
 
     public Province[] Provinces { get; set; }
-    //public Dictionary<int, int[]> Provinces { get; set; }
 }
 
 
@@ -103,6 +114,11 @@ public partial class MainWindow : Window
 {
     public static async Task Test()
     {
+        System.Globalization.CultureInfo customCulture = (System.Globalization.CultureInfo)System.Threading.Thread.CurrentThread.CurrentCulture.Clone();
+        customCulture.NumberFormat.NumberDecimalSeparator = ".";
+
+        System.Threading.Thread.CurrentThread.CurrentCulture = customCulture;
+
         var geoMap = await MapManager.LoadGeojson();
         var jsonMap = await MapManager.LoadJson();
         var map = await MapManager.ConvertMap(geoMap, jsonMap);
@@ -111,6 +127,10 @@ public partial class MainWindow : Window
         await MapManager.DrawProvinces(map);
         //await MapManager.DrawHeightMap(map);
         //await MapManager.WriteDefinition(map);
+        await MapManager.WriteBuildingLocators(map);
+        await MapManager.WriteSiegeLocators(map);
+        await MapManager.WriteCombatLocators(map);
+        await MapManager.WritePlayerStackLocators(map);
 
         Application.Current.Shutdown();
     }
