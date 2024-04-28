@@ -139,7 +139,7 @@ public partial class MainWindow : Window
         var map = await MapManager.ConvertMap(geoMap, jsonMap);
 
         //await MapManager.DrawCells(map);
-        //await MapManager.DrawProvinces(map);
+        await MapManager.DrawProvinces(map);
         //await MapManager.DrawHeightMap(map);
         //await MapManager.WriteDefinition(map);
         //await MapManager.WriteBuildingLocators(map);

@@ -23,10 +23,14 @@ public static class MapManager
     private const int MapHeight = 4096;
     private const int WaterLevelHeight = 30;
 
+    private const bool ShouldCreateFolderStructure = true;
+
     #region Magic
 
-    private static readonly double canvasSizeX = 1832;
-    private static readonly double canvasSizeY = 999;
+    //private static readonly double canvasSizeX = 1832;
+    //private static readonly double canvasSizeY = 999;
+    private static readonly double canvasSizeX = 8192;
+    private static readonly double canvasSizeY = 4096;
     private static readonly double pixelXRatio = MapWidth / canvasSizeX;
     private static readonly double pixelYRatio = MapHeight / canvasSizeY;
     // magic numbers
@@ -342,11 +346,17 @@ public static class MapManager
             //}
 
             cellsMap.Draw(drawables);
-            await cellsMap.WriteAsync($"{Environment.CurrentDirectory}/provinces.png");
+            var path = ShouldCreateFolderStructure
+                ? $"{Environment.CurrentDirectory}/mod/map_data/provinces.png"
+                : $"{Environment.CurrentDirectory}/provinces.png";
 
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+
+            await cellsMap.WriteAsync(path);
         }
         catch (Exception ex)
         {
+            Debugger.Break();
 
         }
 
@@ -384,12 +394,16 @@ public static class MapManager
             }
 
             cellsMap.Draw(drawables);
-            var outName = $"{Environment.CurrentDirectory}/heightmap.png";
-            await cellsMap.WriteAsync(outName);
+            var path = ShouldCreateFolderStructure
+                ? $"{Environment.CurrentDirectory}/mod/map_data/heightmap.png"
+                : $"{Environment.CurrentDirectory}/heightmap.png";
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
 
-            using var file = await SixLabors.ImageSharp.Image.LoadAsync(outName);
+            await cellsMap.WriteAsync(path);
+
+            using var file = await SixLabors.ImageSharp.Image.LoadAsync(path);
             file.Mutate(n => n.GaussianBlur(15));
-            file.Save(outName);
+            file.Save(path);
 
         }
         catch (Exception ex)
@@ -400,7 +414,11 @@ public static class MapManager
     public static async Task WriteDefinition(Map map)
     {
         var lines = map.Provinces.Select((n, i) => $"{i};{n.Color.R};{n.Color.G};{n.Color.B};{n.Name};x;");
-        await File.WriteAllLinesAsync("definition.csv", lines);
+        var path = ShouldCreateFolderStructure
+              ? $"{Environment.CurrentDirectory}/mod/map_data/definition.csv"
+              : $"{Environment.CurrentDirectory}/definition.csv";
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        await File.WriteAllLinesAsync(path, lines);
     }
     public static async Task WriteBuildingLocators(Map map)
     {
@@ -431,8 +449,12 @@ $@"game_object_locator={{
 {string.Join("\n", lines)}
     }}
 }}";
+            var path = ShouldCreateFolderStructure
+                ? $"{Environment.CurrentDirectory}/mod/gfx/map/map_object_data/building_locators.txt"
+                : $"{Environment.CurrentDirectory}/building_locators.txt";
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
 
-            await File.WriteAllTextAsync("building_locators.txt", file);
+            await File.WriteAllTextAsync(path, file);
         }
         catch (Exception e)
         {
@@ -467,7 +489,11 @@ $@"game_object_locator={{
 {string.Join("\n", lines)}
     }}
 }}";
-            await File.WriteAllTextAsync("siege_locators.txt", file);
+            var path = ShouldCreateFolderStructure
+                ? $"{Environment.CurrentDirectory}/mod/gfx/map/map_object_data/siege_locators.txt"
+                : $"{Environment.CurrentDirectory}/siege_locators.txt";
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            await File.WriteAllTextAsync(path, file);
         }
         catch (Exception e)
         {
@@ -501,7 +527,11 @@ $@"game_object_locator={{
 {string.Join("\n", lines)}
     }}
 }}";
-            await File.WriteAllTextAsync("combat_locators.txt", file);
+            var path = ShouldCreateFolderStructure
+                ? $"{Environment.CurrentDirectory}/mod/gfx/map/map_object_data/combat_locators.txt"
+                : $"{Environment.CurrentDirectory}/combat_locators.txt";
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            await File.WriteAllTextAsync(path, file);
         }
         catch (Exception e)
         {
@@ -537,56 +567,17 @@ $@"game_object_locator={{
 {string.Join("\n", lines)}
     }}
 }}";
-            await File.WriteAllTextAsync("player_stack_locators.txt", file);
+            var path = ShouldCreateFolderStructure
+                ? $"{Environment.CurrentDirectory}/mod/gfx/map/map_object_data/player_stack_locators.txt"
+                : $"{Environment.CurrentDirectory}/player_stack_locators.txt";
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            await File.WriteAllTextAsync(path, file);
         }
         catch (Exception e)
         {
             Debugger.Break();
         }
     }
-
-    //private static List<Duchy> CreateDuchies(Map map)
-    //{
-    //    try
-    //    {
-    //        var duchies = new List<Duchy>();
-    //        foreach (var state in map.JsonMap.pack.states.Where(n => n.provinces.Any()))
-    //        {
-    //            var provinces = state.provinces.Select(n => map.Provinces.First(m => m.Id == n)).ToArray();
-
-    //            // Each county should have 4 or fewer counties.
-    //            var countyCount = state.provinces.Length / 4;
-
-    //            var processedProvinces = new HashSet<Province>();
-
-    //            var counties = new List<County>();
-
-    //            for (int i = 0; i < provinces.Length; i++)
-    //            {
-    //                int countyId = i / 4;
-    //                if (i % 4 == 0)
-    //                {
-    //                    counties.Add(new County()
-    //                    {
-    //                        Color = provinces[i].Color,
-    //                        CapitalName = provinces[i].Name,
-    //                        Name = "Country of " + provinces[i].Name,
-    //                    });
-    //                }
-
-    //                counties.Last().baronies.Add(new Barony(provinces[i], provinces[i].Name, provinces[i].Color));
-    //            }
-
-    //            duchies.Add(new Duchy(counties.ToArray(), "Duchy of " + state.name, counties.First().Color, counties.First().CapitalName));
-    //        }
-    //        return duchies;
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Debugger.Break();
-    //        throw;
-    //    }
-    //}
 
     private static List<Duchy> CreateDuchies(Map map)
     {
@@ -806,7 +797,11 @@ e_hre = {{ landless = yes }}
 e_byzantium = {{ landless = yes }}
 e_roman_empire = {{ landless = yes }}";
 
-        await File.WriteAllTextAsync("00_landed_titles.txt", file);
+        var path = ShouldCreateFolderStructure
+            ? $"{Environment.CurrentDirectory}/mod/common/landed_titles/00_landed_titles.txt"
+            : $"{Environment.CurrentDirectory}/00_landed_titles.txt";
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        await File.WriteAllTextAsync(path, file);
     }
     public static async Task WriteTitleLocalization(Empire[] empires)
     {
@@ -848,6 +843,10 @@ e_roman_empire = {{ landless = yes }}";
 
  {string.Join("\n ", lines)}";
 
-        await File.WriteAllTextAsync("titles_l_english.yml", file, new UTF8Encoding(true));
+        var path = ShouldCreateFolderStructure
+            ? $"{Environment.CurrentDirectory}/mod/localization/english/titles_l_english.txt"
+            : $"{Environment.CurrentDirectory}/titles_l_english.txt";
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
     }
 }
