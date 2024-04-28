@@ -46,33 +46,36 @@ public class PackProvinceJsonConverter : JsonConverter<PackProvince[]>
         throw new NotImplementedException();
     }
 }
-public record Burg(/*townId*/int i, /*cellId*/int cell, /*townName*/string name, /*provinceId*/int feature, float x, float y);
+public record Burg(/*townId*/int i, /*cellId*/int cell, /*townName*/string name, int feature, float x, float y);
+public record State(int i, string name, int[] provinces);
+public record Culture(int i, string name);
+public record Religion(int i, string name);
 public class Pack
 {
     [JsonConverter(typeof(PackProvinceJsonConverter))]
     public PackProvince[] provinces { get; set; }
     public Burg[] burgs { get; set; }
+    public State[] states { get; set; }
+    public Culture[] cultures { get; set; }
+    public Religion[] religions { get; set; }
 }
-
-
 public record JsonMap(Pack pack);
 
 
 public record Geometry(string type, float[][][] coordinates);
-public record Properties(int id, string type, int province, int state, int height, int[] neighbors);
+public record Properties(int id, string type, int province, int state, int height, int[] neighbors, int culture, int religion);
 public record Feature(Geometry geometry, Properties properties);
 public record GeoMap(Feature[] features);
 
 
 //public record Province(List<float[][]> cells, MagickColor color);
-public record Cell(int id, int height, float[][] cells, int[] neighbors)
+public record Cell(int id, int height, float[][] cells, int[] neighbors, int culture, int religion)
 {
     public override string ToString()
     {
         return $"id:{id},neighbors:[{string.Join(",", neighbors)}]";
     }
 }
-//public record Town(int id, int cellId, string name, float x, float y);
 public class Province 
 {
     public List<Cell> Cells { get; set; } = new();
@@ -81,9 +84,20 @@ public class Province
     public MagickColor Color { get; set; }
     public string Name { get; set; }
     public int Id { get; set; }
+    public int StateId { get; set; }
+    public Province[] Neighbors { get; set; } = Array.Empty<Province>();
 }
 
-
+public record Barony(Province province, string name, MagickColor color);
+public class County {
+    public List<Barony> baronies = new();
+    public string Name { get; set; }
+    public MagickColor Color { get; set; }
+    public string CapitalName { get; set; }
+}
+public record Duchy(County[] counties, string name, MagickColor color, string capitalName);
+public record Kingdom(Duchy[] duchies, bool isAllowed, string name, MagickColor color, string capitalName);
+public record Empire(Kingdom[] kingdoms, bool isAllowed, string name, MagickColor color, string capitalName);
 public class Map
 {
     //public PointD[][] Coordinates { get; set; }
@@ -95,6 +109,7 @@ public class Map
     public float YRatio { get; set; }
 
     public Province[] Provinces { get; set; }
+    public Empire[] Empires { get; set; }
 }
 
 
@@ -124,13 +139,18 @@ public partial class MainWindow : Window
         var map = await MapManager.ConvertMap(geoMap, jsonMap);
 
         //await MapManager.DrawCells(map);
-        await MapManager.DrawProvinces(map);
+        //await MapManager.DrawProvinces(map);
         //await MapManager.DrawHeightMap(map);
         //await MapManager.WriteDefinition(map);
-        await MapManager.WriteBuildingLocators(map);
-        await MapManager.WriteSiegeLocators(map);
-        await MapManager.WriteCombatLocators(map);
-        await MapManager.WritePlayerStackLocators(map);
+        //await MapManager.WriteBuildingLocators(map);
+        //await MapManager.WriteSiegeLocators(map);
+        //await MapManager.WriteCombatLocators(map);
+        //await MapManager.WritePlayerStackLocators(map);
+        var titles = MapManager.CreateTitles(map);
+        map.Empires = titles;
+
+        await MapManager.WriteLandedTitles(map.Empires);
+        await MapManager.WriteTitleLocalization(map.Empires);
 
         Application.Current.Shutdown();
     }

@@ -8,8 +8,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
+using System.Windows.Documents;
 using System.Windows.Media.Imaging;
 
 namespace AzgaarToCK3;
@@ -20,6 +23,20 @@ public static class MapManager
     private const int MapHeight = 4096;
     private const int WaterLevelHeight = 30;
 
+    #region Magic
+
+    private static readonly double canvasSizeX = 1832;
+    private static readonly double canvasSizeY = 999;
+    private static readonly double pixelXRatio = MapWidth / canvasSizeX;
+    private static readonly double pixelYRatio = MapHeight / canvasSizeY;
+    // magic numbers
+    //private const double pixelErrorRatio = 1.1;
+    //private const int pixelErrorOffset = -825;
+
+    private const double pixelErrorRatio = 1.0;
+    private const int pixelErrorOffset = 0;
+
+    #endregion
 
     public static async Task<GeoMap> LoadGeojson()
     {
@@ -67,7 +84,7 @@ public static class MapManager
         return new MagickColor(r, g, b);
     }
 
-    private static Dictionary<int, Province> GetProvinceCells(GeoMap geomap)
+    private static Dictionary<int, Province> GetProvinceCells(GeoMap geomap, JsonMap jsonmap)
     {
         var provinces = new Dictionary<int, Province>();
         foreach (var feature in geomap.features)
@@ -76,10 +93,20 @@ public static class MapManager
 
             if (!provinces.ContainsKey(provinceId))
             {
-                provinces[provinceId] = new Province();
+                provinces[provinceId] = new Province()
+                {
+                    StateId = jsonmap.pack.provinces[provinceId].state
+                };
             }
 
-            var cells = feature.geometry.coordinates.Select(n => new Cell(feature.properties.id, feature.properties.height, n, feature.properties.neighbors));
+            var cells = feature.geometry.coordinates.Select(n => 
+                new Cell(
+                    feature.properties.id,
+                    feature.properties.height,
+                    n,
+                    feature.properties.neighbors,
+                    feature.properties.culture,
+                    feature.properties.religion));
             provinces[provinceId].Cells.AddRange(cells);
         }
        
@@ -142,7 +169,7 @@ public static class MapManager
 
     private static Province[] CreateProvinces(GeoMap geomap, JsonMap jsonmap)
     {
-        var provinceCells = GetProvinceCells(geomap);
+        var provinceCells = GetProvinceCells(geomap, jsonmap);
         var provinces = new Province[provinceCells.Count];
 
         // pId == 0 is ocean.
@@ -151,21 +178,51 @@ public static class MapManager
         provinces[0].Name = "x";
         provinces[0].Id = 0;
 
-        int i = 1;
         try
         {
-            for (; i < provinces.Length; i++)
+            
+            var neighborCellIds = new Dictionary<int, int[]>();
+            for (int i = 1; i < provinces.Length; i++)
             {
                 var color = GetColor(i, provinces.Length);
-                provinces[i] = provinceCells[i];
-                provinces[i].Color = color;
-                provinces[i].Name = jsonmap.pack.provinces[i].name;
-                provinces[i].Id = jsonmap.pack.provinces[i].i;
-                provinces[i].Burg = jsonmap.pack.burgs.FirstOrDefault(n => provinces[i].Cells.Any(m => m.id == n.cell));
+                var province = provinces[i] = provinceCells[i];
 
-                if (provinces[i].Burg is null)
+                province.Color = color;
+                province.Name = jsonmap.pack.provinces[i].name;
+                province.Id = jsonmap.pack.provinces[i].i;
+                province.Burg = jsonmap.pack.burgs[jsonmap.pack.provinces[i].burg];
+
+                var cellIds = province.Cells.Select(n => n.id);
+                //neighborCellIds[i] = province.Cells.Where(n => provinces[0].Cells.All(m => m.id != n.id)).SelectMany(n => n.neighbors.Where(m => !cellIds.Contains(m))).ToArray();
+                neighborCellIds[i] = province.Cells.SelectMany(n => n.neighbors.Where(m => !cellIds.Contains(m))).ToArray();
+            }
+
+            // Populate neighbors
+            for (int i = 0; i < provinces.Length; i++)
+            {
+                var neighbors = new HashSet<Province>();
+
+                if (neighborCellIds.TryGetValue(i, out var cellIds))
                 {
+                    var processedNeighbors = new HashSet<int>();
+                    foreach (var cid in cellIds)
+                    {
+                        if (processedNeighbors.Contains(cid)) continue;
 
+                        foreach (var p in provinces.Where(n => n.Cells.Any(m => m.id == cid)))
+                        {
+                            // Don't add water as a neighbor.
+                            // Don't add other countries' provinces.
+                            if (p.Id == 0 || p.StateId != provinces[i].StateId)
+                            {
+                                continue;
+                            }
+                            neighbors.Add(p);
+                        }
+
+                        processedNeighbors.Add(cid);
+                    }
+                    provinces[i].Neighbors = neighbors.ToArray();
                 }
             }
         }
@@ -192,12 +249,13 @@ public static class MapManager
         var minX = flatCoordinates.MinBy(n => n[0])![0];
         var minY = flatCoordinates.MinBy(n => n[1])![1];
 
-        var xRatio = MapWidth / (Math.Abs(minX) + Math.Abs(maxX));
-        var yRatio = MapHeight / (Math.Abs(minY) + Math.Abs(maxY));
+        var xRatio = MapWidth / (maxX - minX);
+        var yRatio = MapHeight / (maxY - minY);
 
         var map = new Map
         {
             GeoMap = geoMap,
+            JsonMap = jsonMap,
             XOffset= minX,
             YOffset= minY,
             XRatio = xRatio,
@@ -346,18 +404,15 @@ public static class MapManager
     }
     public static async Task WriteBuildingLocators(Map map)
     {
-        var canvasSizeX = 1832;
-        var canvasSizeY = 999;
-        var xRatio = MapWidth / canvasSizeX;
-        var yRatio = MapHeight / canvasSizeY;
-
         //var minX = map.Provinces.Where(n => n.Burg is not null).Select(n => n.Burg).MinBy()
-        var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
+        var lines = map.Provinces.Where(n => n.Burg is not null).Select(n =>
         {
+            var x = n.Burg.x * pixelErrorRatio * pixelXRatio + pixelErrorOffset;
+            var y = MapHeight - n.Burg.y * pixelYRatio;
             var str =
 $@"        {{
-            id = {i}
-            position ={{ {n.Burg.x * xRatio:0.00000} {0f:0.00000} {MapHeight - n.Burg.y * yRatio:0.00000} }}
+            id = {n.Id}
+            position ={{ {x:0.000000} {0f:0.000000} {y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
         }}";
@@ -387,18 +442,13 @@ $@"game_object_locator={{
     }
     public static async Task WriteSiegeLocators(Map map)
     {
-        var canvasSizeX = 1832;
-        var canvasSizeY = 999;
-        var xRatio = MapWidth / canvasSizeX;
-        var yRatio = MapHeight / canvasSizeY;
-
-        var offset = new PointD(10, 0);
+        var offset = new PointD(20, 0);
         var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
             var str =
 $@"        {{
-            id = {i}
-            position ={{ {n.Burg.x * xRatio + offset.X:0.00000} {0f:0.00000} {MapHeight - n.Burg.y * yRatio + offset.Y:0.00000} }}
+            id = {n.Id}
+            position ={{ {n.Burg.x * pixelErrorRatio * pixelXRatio + offset.X + pixelErrorOffset:0.000000} {0f:0.000000} {MapHeight - n.Burg.y * pixelYRatio + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
         }}";
@@ -426,17 +476,13 @@ $@"game_object_locator={{
     }
     public static async Task WriteCombatLocators(Map map)
     {
-        var canvasSizeX = 1832;
-        var canvasSizeY = 999;
-        var xRatio = MapWidth / canvasSizeX;
-        var yRatio = MapHeight / canvasSizeY;
-        var offset = new PointD(0, 100);
+        var offset = new PointD(0, 20);
         var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
             var str =
 $@"        {{
-            id = {i}
-            position ={{ {n.Burg.x * xRatio + offset.X:0.00000} {0f:0.00000} {MapHeight - n.Burg.y * yRatio + offset.Y:0.00000} }}
+            id = {n.Id}
+            position ={{ {n.Burg.x * pixelErrorRatio * pixelXRatio + offset.X + pixelErrorOffset:0.000000} {0f:0.000000} {MapHeight - n.Burg.y * pixelYRatio + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
         }}";
@@ -464,17 +510,15 @@ $@"game_object_locator={{
     }
     public static async Task WritePlayerStackLocators(Map map)
     {
-        var canvasSizeX = 1832;
-        var canvasSizeY = 999;
-        var xRatio = MapWidth / canvasSizeX;
-        var yRatio = MapHeight / canvasSizeY;
-        var offset = new PointD(100, 100);
+        var offset = new PointD(20, 20);
         var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
+            var x = n.Burg.x * pixelErrorRatio * pixelXRatio + offset.X + pixelErrorOffset;
+            var y = MapHeight - n.Burg.y * pixelYRatio + offset.Y;
             var str =
 $@"        {{
-            id = {i}
-            position ={{ {n.Burg.x * xRatio + offset.X:0.00000} {0f:0.00000} {MapHeight - n.Burg.y * yRatio + offset.Y:0.00000} }}
+            id = {n.Id}
+            position ={{ {x:0.000000} {0f:0.000000} {y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
         }}";
@@ -501,4 +545,309 @@ $@"game_object_locator={{
         }
     }
 
+    //private static List<Duchy> CreateDuchies(Map map)
+    //{
+    //    try
+    //    {
+    //        var duchies = new List<Duchy>();
+    //        foreach (var state in map.JsonMap.pack.states.Where(n => n.provinces.Any()))
+    //        {
+    //            var provinces = state.provinces.Select(n => map.Provinces.First(m => m.Id == n)).ToArray();
+
+    //            // Each county should have 4 or fewer counties.
+    //            var countyCount = state.provinces.Length / 4;
+
+    //            var processedProvinces = new HashSet<Province>();
+
+    //            var counties = new List<County>();
+
+    //            for (int i = 0; i < provinces.Length; i++)
+    //            {
+    //                int countyId = i / 4;
+    //                if (i % 4 == 0)
+    //                {
+    //                    counties.Add(new County()
+    //                    {
+    //                        Color = provinces[i].Color,
+    //                        CapitalName = provinces[i].Name,
+    //                        Name = "Country of " + provinces[i].Name,
+    //                    });
+    //                }
+
+    //                counties.Last().baronies.Add(new Barony(provinces[i], provinces[i].Name, provinces[i].Color));
+    //            }
+
+    //            duchies.Add(new Duchy(counties.ToArray(), "Duchy of " + state.name, counties.First().Color, counties.First().CapitalName));
+    //        }
+    //        return duchies;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        Debugger.Break();
+    //        throw;
+    //    }
+    //}
+
+    private static List<Duchy> CreateDuchies(Map map)
+    {
+        try
+        {
+            var duchies = new List<Duchy>();
+            foreach (var state in map.JsonMap.pack.states.Where(n => n.provinces.Any()))
+            {
+                var provinces = state.provinces.Select(n => map.Provinces.First(m => m.Id == n)).ToArray();
+
+                // Each county should have 4 or fewer counties.
+                var countyCount = state.provinces.Length / 4;
+                var unprocessedProvinces = provinces.ToHashSet();
+                var processedProvinces = new HashSet<Province>();
+                var counties = new List<County>();
+                var accumulatedProvinces = new List<Province>();
+
+                var currentProvince = provinces[0];
+
+                do
+                {
+                    for (int i = 0; i < 4; i++)
+                    {
+                        if (processedProvinces.Contains(currentProvince))
+                        {
+                            break;
+                        }
+                        if (i == 0)
+                        {
+                            counties.Add(new County()
+                            {
+                                Color = currentProvince.Color,
+                                CapitalName = currentProvince.Name,
+                                Name = "Country of " + currentProvince.Name,
+                            });
+                        }
+
+                        unprocessedProvinces.Remove(currentProvince);
+                        processedProvinces.Add(currentProvince);
+                        accumulatedProvinces.Add(currentProvince);
+                        counties.Last().baronies.Add(new Barony(currentProvince, currentProvince.Name, currentProvince.Color));
+
+                        if (currentProvince.Neighbors.FirstOrDefault(n => !processedProvinces.Contains(n)) is { } neighbor)
+                        {
+                            currentProvince = neighbor;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    // If empty then the loop will break anyways.
+                    currentProvince = unprocessedProvinces.FirstOrDefault();
+                } while (unprocessedProvinces.Count > 0);
+
+                duchies.Add(new Duchy(counties.ToArray(), "Duchy of " + state.name, counties.First().Color, counties.First().CapitalName));
+            }
+            return duchies;
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+            throw;
+        }
+    }
+
+    public static Empire[] CreateTitles(Map map)
+    {
+        try
+        {
+            var duchies = CreateDuchies(map);
+            //var cultures = map.JsonMap.pack.cultures;
+
+            var duchyCultures = new Dictionary<int, List<Duchy>>();
+            foreach (var duchy in duchies)
+            {
+                var primaryDuchyCultureId = duchy.counties
+                    .SelectMany(n => n.baronies)
+                    .SelectMany(n => n.province.Cells)
+                    .Select(n => n.culture)
+                    .GroupBy(n => n)
+                    .ToDictionary(n => n.Key, n => n.Count())
+                    .MaxBy(n => n.Value)
+                    .Key;
+
+                if (!duchyCultures.ContainsKey(primaryDuchyCultureId))
+                {
+                    duchyCultures[primaryDuchyCultureId] = new List<Duchy>();
+                }
+
+                duchyCultures[primaryDuchyCultureId].Add(duchy);
+            }
+
+            var kingdoms = duchyCultures.Select(n =>
+            {
+                var cultureId = n.Key;
+                var duchies = n.Value;
+                return new Kingdom(
+                    duchies.ToArray(),
+                    duchies.Count > 1,
+                    "Kingdom of " + map.JsonMap.pack.cultures.First(n => n.i == cultureId).name,
+                    duchies.First().color,
+                    duchies.First().capitalName);
+            }).ToArray();
+
+            var kingdomReligions = new Dictionary<int, List<Kingdom>>();
+            foreach (var kingdom in kingdoms)
+            {
+                var primaryDuchyReligionId = kingdom.duchies
+                    .SelectMany(n => n.counties)
+                    .SelectMany(n => n.baronies)
+                    .SelectMany(n => n.province.Cells)
+                    .Select(n => n.religion)
+                    .GroupBy(n => n)
+                    .ToDictionary(n => n.Key, n => n.Count())
+                    .MaxBy(n => n.Value)
+                    .Key;
+
+                if (!kingdomReligions.ContainsKey(primaryDuchyReligionId))
+                {
+                    kingdomReligions[primaryDuchyReligionId] = new List<Kingdom>();
+                }
+
+                kingdomReligions[primaryDuchyReligionId].Add(kingdom);
+            }
+
+            var empires = kingdomReligions.Select(n =>
+            {
+                var religionId = n.Key;
+                var kingdoms = n.Value;
+                return new Empire(
+                    kingdoms.ToArray(),
+                    kingdoms.Count > 1,
+                    "Empire of " + map.JsonMap.pack.religions.First(n => n.i == religionId).name,
+                    kingdoms.First().color,
+                    kingdoms.First().capitalName);
+            }).ToArray();
+
+            return empires;
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+            throw;
+        }
+      
+    }
+    public static async Task WriteLandedTitles(Empire[] empires)
+    {
+        int ei = 0;
+        int ki = 0;
+        int di = 0;
+        int ci = 0;
+        int bi = 0;
+
+        string[] GetBaronies(Barony[] baronies)
+        {
+            return baronies.Select((n, i) =>
+            {
+                return $@"                b_{bi++} = {{
+                    color = {{ {n.color.R} {n.color.G} {n.color.B} }}
+                    color2 = {{ 255 255 255 }}
+                    province = {n.province.Id}
+                }}";
+            }).ToArray();
+        }
+
+        string[] GetCounties(County[] counties)
+        {
+            return counties.Select((n, i) => $@"            c_{ci++} = {{
+                color = {{ {n.Color.R} {n.Color.G} {n.Color.B} }}
+                color2 = {{ 255 255 255 }}
+{string.Join("\n", GetBaronies(n.baronies.ToArray()))}
+            }}").ToArray();
+        }
+
+        string[] GetDuchies(Duchy[] duchies)
+        {
+            return duchies.Select((d, i) => $@"        d_{di++} = {{
+            color = {{ {d.color.R} {d.color.G} {d.color.B} }}
+            color2 = {{ 255 255 255 }}
+            capital = c_{ci}
+{string.Join("\n", GetCounties(d.counties))}
+        }}").ToArray();
+        }
+
+        string[] GetKingdoms(Kingdom[] kingdoms)
+        {
+            return kingdoms.Select((k, i) => $@"    k_{ki++} = {{
+        color = {{ {k.color.R} {k.color.G} {k.color.B} }}
+        color2 = {{ 255 255 255 }}
+        capital = c_{ci}
+        {(k.isAllowed ? "" : "allow = { always = no }")}
+{string.Join("\n", GetDuchies(k.duchies))}
+    }}").ToArray();
+        }
+
+        string[] GetEmpires()
+        {
+            return empires.Select((e, i) => $@"e_{ei++} = {{
+    color = {{ {e.color.R} {e.color.G} {e.color.B} }}
+    color2 = {{ 255 255 255 }}
+    capital = c_{ci}
+    definite_form = yes
+    {(e.isAllowed ? "" : "allow = { always = no }")}
+{string.Join("\n", GetKingdoms(e.kingdoms))}
+}}").ToArray();
+        }
+
+        var file = $@"@correct_culture_primary_score = 100
+@better_than_the_alternatives_score = 50
+@always_primary_score = 1000
+{string.Join("\n", GetEmpires())}
+# These titles cut hundreds of errors from logs. 
+e_hre = {{ landless = yes }}
+e_byzantium = {{ landless = yes }}
+e_roman_empire = {{ landless = yes }}";
+
+        await File.WriteAllTextAsync("00_landed_titles.txt", file);
+    }
+    public static async Task WriteTitleLocalization(Empire[] empires)
+    {
+        int ei = 0;
+        int ki = 0;
+        int di = 0;
+        int ci = 0;
+        int bi = 0;
+
+        var lines = new List<string>();
+
+        foreach (var e in empires)
+        {
+            lines.Add($"e_{ei++}: \"{e.name}\"");
+            foreach (var k in e.kingdoms)
+            {
+                lines.Add($"k_{ki++}: \"{k.name}\"");
+                foreach (var d in k.duchies)
+                {
+                    lines.Add($"d_{di++}: \"{d.name}\"");
+                    foreach (var c in d.counties)
+                    {
+                        lines.Add($"c_{ci++}: \"{c.Name}\"");
+                        foreach (var b in c.baronies)
+                        {
+                            lines.Add($"b_{bi++}: \"{b.name}\"");
+                        }
+                    }
+                }
+            }
+        }
+
+        var file = $@"l_english:
+ TITLE_NAME:0 ""$NAME$""
+ TITLE_TIERED_NAME:0 ""$TIER|U$ of $NAME$""
+ TITLE_CLAN_TIERED_NAME:0 ""the $NAME$ $TIER|U$""
+ TITLE_CLAN_TIERED_WITH_UNDERLYING_NAME:0 ""the $NAME$ $TIER|U$ #F ($TIER|U$ of $BASE_NAME$) #!""
+ TITLE_TIER_AS_NAME:0 ""$TIER|U$""
+
+ {string.Join("\n ", lines)}";
+
+        await File.WriteAllTextAsync("titles_l_english.yml", file, new UTF8Encoding(true));
+    }
 }
