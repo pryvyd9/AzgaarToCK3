@@ -22,140 +22,141 @@ using System.Windows.Shapes;
 namespace AzgaarToCK3;
 
 
-public record PackProvince(int i, int state, int burg, string name);
-
-// For some reason the first element in the array isn't an object but a number.
-// Need custom converter to skip the number and parse all other provinces.
-public class PackProvinceJsonConverter : JsonConverter<PackProvince[]>
+public static class Helper
 {
-    public override PackProvince[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public static string? GetBiomeName(int biomeId, int heightDifference)
     {
-        using var jsonDocument = JsonDocument.ParseValue(ref reader);
-        var str = jsonDocument.RootElement.GetRawText();
-
-        // replace 0 with empty province (sea).
-        var escapedStr = string.Concat(str.AsSpan(0, 1),"{}", str.AsSpan(2));
-
-        var provinces = JsonSerializer.Deserialize<PackProvince[]>(escapedStr);
-
-        return provinces;
+        // plains/farmlands/hills/mountains/desert/desert_mountains/oasis/jungle/forest/taiga/wetlands/steppe/floodplains/drylands
+        /*
+         * 	"Marine",
+			"Hot desert",
+			"Cold desert",
+			"Savanna",
+			"Grassland",
+			"Tropical seasonal forest",
+			"Temperate deciduous forest",
+			"Tropical rainforest",
+			"Temperate rainforest",
+			"Taiga",
+			"Tundra",
+			"Glacier",
+			"Wetland"
+         * */
+        if (heightDifference > 500)
+        {
+            return biomeId switch
+            {
+                0 => null,
+                1 or 3 => "desert_mountains",
+                _ => "mountains",
+            };
+        }
+        else if (heightDifference > 100 && biomeId is 4 or 5 or 6 or 7 or 8 or 10 or 11)
+        {
+            return "hills";
+        }
+        return biomeId switch
+        {
+            0 => null, // Marine > ocean
+            1 => "desert",// Hot desert > desert
+            2 => "taiga",// Cold desert > taiga
+            3 => "steppe",// Savanna > steppe
+            4 => "plains",// Grassland > plains
+            5 => "farmlands",// Tropical seasonal forest > farmlands
+            6 => "forest",// Temperate deciduous forest > forest
+            7 => "jungle",// Tropical rainforest > jungle
+            8 => "forest",// "Temperate rainforest" > forest
+            9 => "taiga",// Taiga > taiga
+            10 => "taiga",// Tundra > taiga
+            11 => "floodplains",// Glacier > floodplains
+            12 => "wetlands",// Wetland > wetlands
+            _ => throw new ArgumentException("Unrecognized biomeId")
+        }; ;
     }
 
-    public override void Write(Utf8JsonWriter writer, PackProvince[] value, JsonSerializerOptions options)
+    //public static double Percentile(double[] sequence, double excelPercentile)
+    //{
+    //    Array.Sort(sequence);
+    //    int N = sequence.Length;
+    //    double n = (N - 1) * excelPercentile + 1;
+    //    // Another method: double n = (N + 1) * excelPercentile;
+    //    if (n == 1d) return sequence[0];
+    //    else if (n == N) return sequence[N - 1];
+    //    else
+    //    {
+    //        int k = (int)n;
+    //        double d = n - k;
+    //        return sequence[k - 1] + d * (sequence[k] - sequence[k - 1]);
+    //    }
+    //}
+    public static double Percentile(int[] sequence, double excelPercentile)
     {
-        throw new NotImplementedException();
+        Array.Sort(sequence);
+        int N = sequence.Length;
+        double n = (N - 1) * excelPercentile + 1;
+        // Another method: double n = (N + 1) * excelPercentile;
+        if (n == 1d) return sequence[0];
+        else if (n == N) return sequence[N - 1];
+        else
+        {
+            int k = (int)n;
+            double d = n - k;
+            return sequence[k - 1] + d * (sequence[k] - sequence[k - 1]);
+        }
     }
 }
-public record Burg(/*townId*/int i, /*cellId*/int cell, /*townName*/string name, int feature, float x, float y);
-public record State(int i, string name, int[] provinces);
-public record Culture(int i, string name);
-public record Religion(int i, string name);
-public class Pack
-{
-    [JsonConverter(typeof(PackProvinceJsonConverter))]
-    public PackProvince[] provinces { get; set; }
-    public Burg[] burgs { get; set; }
-    public State[] states { get; set; }
-    public Culture[] cultures { get; set; }
-    public Religion[] religions { get; set; }
-}
-public record JsonMap(Pack pack);
-
-
-public record Geometry(string type, float[][][] coordinates);
-public record Properties(int id, string type, int province, int state, int height, int[] neighbors, int culture, int religion);
-public record Feature(Geometry geometry, Properties properties);
-public record GeoMap(Feature[] features);
-
-
-//public record Province(List<float[][]> cells, MagickColor color);
-public record Cell(int id, int height, float[][] cells, int[] neighbors, int culture, int religion)
-{
-    public override string ToString()
-    {
-        return $"id:{id},neighbors:[{string.Join(",", neighbors)}]";
-    }
-}
-public class Province 
-{
-    public List<Cell> Cells { get; set; } = new();
-    // Town
-    public Burg Burg { get; set; }
-    public MagickColor Color { get; set; }
-    public string Name { get; set; }
-    public int Id { get; set; }
-    public int StateId { get; set; }
-    public Province[] Neighbors { get; set; } = Array.Empty<Province>();
-}
-
-public record Barony(Province province, string name, MagickColor color);
-public class County {
-    public List<Barony> baronies = new();
-    public string Name { get; set; }
-    public MagickColor Color { get; set; }
-    public string CapitalName { get; set; }
-}
-public record Duchy(County[] counties, string name, MagickColor color, string capitalName);
-public record Kingdom(Duchy[] duchies, bool isAllowed, string name, MagickColor color, string capitalName);
-public record Empire(Kingdom[] kingdoms, bool isAllowed, string name, MagickColor color, string capitalName);
-public class Map
-{
-    //public PointD[][] Coordinates { get; set; }
-    public GeoMap GeoMap { get; set; }
-    public JsonMap JsonMap { get; set; }
-    public float XOffset { get; set; }
-    public float YOffset { get; set; }
-    public float XRatio { get; set; }
-    public float YRatio { get; set; }
-
-    public Province[] Provinces { get; set; }
-    public Empire[] Empires { get; set; }
-}
-
-
-public class MyJsonTypeInfoResolver : IJsonTypeInfoResolver
-{
-    public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options)
-    {
-        throw new NotImplementedException();
-    }
-}
-
 
 /// <summary>
 /// Interaction logic for MainWindow.xaml
 /// </summary>
 public partial class MainWindow : Window
 {
-    public static async Task Test()
+    private static void Configure()
     {
         System.Globalization.CultureInfo customCulture = (System.Globalization.CultureInfo)System.Threading.Thread.CurrentThread.CurrentCulture.Clone();
         customCulture.NumberFormat.NumberDecimalSeparator = ".";
 
         System.Threading.Thread.CurrentThread.CurrentCulture = customCulture;
-
+    }
+    private static async Task<Map> LoadMap()
+    {
         var geoMap = await MapManager.LoadGeojson();
         var jsonMap = await MapManager.LoadJson();
         var map = await MapManager.ConvertMap(geoMap, jsonMap);
+        return map;
+    }
+
+    public static async Task Test()
+    {
+        var map = await LoadMap();
+
 
         //await MapManager.DrawCells(map);
-        await MapManager.DrawProvinces(map);
+
+        //await MapManager.DrawProvinces(map);
         //await MapManager.DrawHeightMap(map);
+        //await MapManager.DrawRivers(map);
         //await MapManager.WriteDefinition(map);
+
         //await MapManager.WriteBuildingLocators(map);
         //await MapManager.WriteSiegeLocators(map);
         //await MapManager.WriteCombatLocators(map);
         //await MapManager.WritePlayerStackLocators(map);
-        var titles = MapManager.CreateTitles(map);
-        map.Empires = titles;
 
-        await MapManager.WriteLandedTitles(map.Empires);
-        await MapManager.WriteTitleLocalization(map.Empires);
+        //var titles = MapManager.CreateTitles(map);
+        //map.Empires = titles;
+        //await MapManager.WriteLandedTitles(map.Empires);
+        //await MapManager.WriteTitleLocalization(map.Empires);
+
+        //await MapManager.WriteDefault(map);
+        await MapManager.WriteTerrain(map);
 
         Application.Current.Shutdown();
     }
     public MainWindow()
     {
+        Configure();
+
         InitializeComponent();
 
         _ = Test();

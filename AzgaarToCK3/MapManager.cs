@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Policy;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -37,8 +38,8 @@ public static class MapManager
     //private const double pixelErrorRatio = 1.1;
     //private const int pixelErrorOffset = -825;
 
-    private const double pixelErrorRatio = 1.0;
-    private const int pixelErrorOffset = 0;
+    private const double pixelErrorRatio = 1.12;
+    private const int pixelErrorOffset = -600;
 
     #endregion
 
@@ -85,7 +86,15 @@ public static class MapManager
         byte g = (byte)((color & 0x00FF00) >> 8);
         byte b = (byte)((color & 0xFF0000) >> 16);
 
-        return new MagickColor(r, g, b);
+        var c = new MagickColor(r, g, b);
+        
+        // prevent system colors
+        //if (c == new MagickColor("#5C5D0B"))
+        //{
+        //    c.B++;
+        //}
+
+        return c;
     }
 
     private static Dictionary<int, Province> GetProvinceCells(GeoMap geomap, JsonMap jsonmap)
@@ -110,14 +119,15 @@ public static class MapManager
                     n,
                     feature.properties.neighbors,
                     feature.properties.culture,
-                    feature.properties.religion));
+                    feature.properties.religion,
+                    jsonmap.pack.cells[feature.properties.id].area,
+                    jsonmap.pack.cells[feature.properties.id].biome));
             provinces[provinceId].Cells.AddRange(cells);
         }
        
         return provinces;
     }
-
-    private static void TransferHangingCells(Province[] provinces)
+    private static void TransferHangingCells(Province[] nonWaterProvinces)
     {
         try
         {
@@ -126,7 +136,7 @@ public static class MapManager
 
             // Find cells that don't touch the province but still belong to it.
             // Reassign it to the neighbor province.
-            foreach (var province in provinces.Skip(1))
+            foreach (var province in nonWaterProvinces)
             {
                 var cells = province.Cells;
                 if (province.Color.ToString() == "#9A4FE7FF")
@@ -139,7 +149,7 @@ public static class MapManager
                 {
                     if (!cells.Any(m => cell.neighbors.Contains(m.id)))
                     {
-                        var nonWaterNeighborProvince = provinces.Skip(1).FirstOrDefault(p =>
+                        var nonWaterNeighborProvince = nonWaterProvinces.FirstOrDefault(p =>
                         {
                             return p.Cells.Any(c => cell.neighbors.Contains(c.id));
                         });
@@ -170,23 +180,82 @@ public static class MapManager
             Debugger.Break();
         }
     }
+    private static List<Province> CreateWaterProvinces(Province waterProvince)
+    {
+        try
+        {
+            var cells = waterProvince.Cells;
 
+            var areaPerProvince = 150000;
+
+            var unprocessedCells = waterProvince.Cells.ToDictionary(n => n.id, n => n);
+            var provinces = new List<Province>();
+
+            do
+            {
+                // If empty then the loop will break anyways.
+                var currentCell = unprocessedCells.Values.FirstOrDefault();
+
+                var currentArea = 0;
+                var accumulatedNeighbors = new HashSet<int>();
+
+                for (int i = 0; currentArea < areaPerProvince; i++)
+                {
+                    if (i == 0)
+                    {
+                        provinces.Add(new Province());
+                    }
+
+                    unprocessedCells.Remove(currentCell.id);
+                    provinces.Last().Cells.Add(currentCell);
+                    currentArea += currentCell.area;
+
+                    foreach (var n in currentCell.neighbors)
+                    {
+                        accumulatedNeighbors.Add(n);
+                    }
+
+                    if (accumulatedNeighbors.Select(n => unprocessedCells.GetValueOrDefault(n)).FirstOrDefault(n => n is not null) is { } neighbor)
+                    {
+                        currentCell = neighbor;
+                        accumulatedNeighbors.Remove(neighbor.id);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            } while (unprocessedCells.Count > 0);
+
+            return provinces;
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+            throw;
+        }
+    }
     private static Province[] CreateProvinces(GeoMap geomap, JsonMap jsonmap)
     {
         var provinceCells = GetProvinceCells(geomap, jsonmap);
-        var provinces = new Province[provinceCells.Count];
 
-        // pId == 0 is ocean.
-        provinces[0] = provinceCells[0];
-        provinces[0].Color = MagickColors.Black;
-        provinces[0].Name = "x";
-        provinces[0].Id = 0;
+        var waterProvinces = CreateWaterProvinces(provinceCells[0]);
+
+        var provinces = new Province[provinceCells.Count + waterProvinces.Count];
+
+        // pId == 0 is not an ocean.
+        // It's some system thing that needs to exist in order for all indices to start from 1.
+        provinces[0] = new Province
+        {
+            Color = MagickColors.Black,
+            Name = "x",
+            Id = 0,
+        };
 
         try
         {
-            
             var neighborCellIds = new Dictionary<int, int[]>();
-            for (int i = 1; i < provinces.Length; i++)
+            for (int i = 1; i < provinceCells.Count; i++)
             {
                 var color = GetColor(i, provinces.Length);
                 var province = provinces[i] = provinceCells[i];
@@ -196,13 +265,22 @@ public static class MapManager
                 province.Id = jsonmap.pack.provinces[i].i;
                 province.Burg = jsonmap.pack.burgs[jsonmap.pack.provinces[i].burg];
 
-                var cellIds = province.Cells.Select(n => n.id);
-                //neighborCellIds[i] = province.Cells.Where(n => provinces[0].Cells.All(m => m.id != n.id)).SelectMany(n => n.neighbors.Where(m => !cellIds.Contains(m))).ToArray();
+                var cellIds = province.Cells.Select(n => n.id).ToHashSet();
                 neighborCellIds[i] = province.Cells.SelectMany(n => n.neighbors.Where(m => !cellIds.Contains(m))).ToArray();
             }
 
+            // Create sea provinces
+            for (int i = 0; i < waterProvinces.Count; i++)
+            {
+                var province = provinces[provinceCells.Count + i] = waterProvinces[i];
+                province.Color = GetColor(provinceCells.Count + i, provinces.Length);
+                province.Name = "sea";
+                province.Id = provinceCells.Count + i;
+                province.IsWater = true;
+            }
+
             // Populate neighbors
-            for (int i = 0; i < provinces.Length; i++)
+            for (int i = 0; i < provinceCells.Count; i++)
             {
                 var neighbors = new HashSet<Province>();
 
@@ -213,14 +291,8 @@ public static class MapManager
                     {
                         if (processedNeighbors.Contains(cid)) continue;
 
-                        foreach (var p in provinces.Where(n => n.Cells.Any(m => m.id == cid)))
+                        foreach (var p in provinces.Where(n => n.Id != 0 && !n.IsWater && n.StateId == provinces[i].StateId && n.Cells.Any(m => m.id == cid)))
                         {
-                            // Don't add water as a neighbor.
-                            // Don't add other countries' provinces.
-                            if (p.Id == 0 || p.StateId != provinces[i].StateId)
-                            {
-                                continue;
-                            }
                             neighbors.Add(p);
                         }
 
@@ -230,15 +302,16 @@ public static class MapManager
                 }
             }
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Debugger.Break();
         }
 
-        TransferHangingCells(provinces);
+        TransferHangingCells(provinces[1..provinceCells.Count]);
 
         return provinces;
     }
+
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     public static async Task<Map> ConvertMap(GeoMap geoMap, JsonMap jsonMap)
@@ -315,7 +388,8 @@ public static class MapManager
                 Width = MapWidth,
                 Height = MapHeight,
             };
-            using var cellsMap = new MagickImage("xc:#5C5D0B", settings);
+            //using var cellsMap = new MagickImage("xc:#5C5D0B", settings);
+            using var cellsMap = new MagickImage("xc:black", settings);
 
             var drawables = new Drawables();
             foreach (var province in map.Provinces.Skip(1))
@@ -377,7 +451,7 @@ public static class MapManager
             using var cellsMap = new MagickImage("xc:black", settings);
 
             var drawables = new Drawables();
-            foreach (var province in map.Provinces.Skip(1))
+            foreach (var province in map.Provinces.Skip(1).Where(n => !n.IsWater))
             {
                 foreach (var cell in province.Cells)
                 {
@@ -409,6 +483,43 @@ public static class MapManager
         catch (Exception ex)
         {
 
+        }
+    }
+    public static async Task DrawRivers(Map map)
+    {
+        try
+        {
+            var settings = new MagickReadSettings()
+            {
+                Width = MapWidth,
+                Height = MapHeight
+            };
+            using var cellsMap = new MagickImage("xc:#ff0080", settings);
+
+            var drawables = new Drawables();
+            foreach (var province in map.Provinces.Skip(1).Where(n => !n.IsWater))
+            {
+                foreach (var cell in province.Cells)
+                {
+                    drawables
+                        .DisableStrokeAntialias()
+                        .StrokeColor(MagickColors.White)
+                        .FillColor(MagickColors.White)
+                        .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+                }
+            }
+
+            cellsMap.Draw(drawables);
+            var path = ShouldCreateFolderStructure
+                ? $"{Environment.CurrentDirectory}/mod/map_data/rivers.png"
+                : $"{Environment.CurrentDirectory}/rivers.png";
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+
+            await cellsMap.WriteAsync(path, MagickFormat.Png8);
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
         }
     }
     public static async Task WriteDefinition(Map map)
@@ -584,19 +695,20 @@ $@"game_object_locator={{
         try
         {
             var duchies = new List<Duchy>();
+            var processedProvinces = new HashSet<Province>();
+
             foreach (var state in map.JsonMap.pack.states.Where(n => n.provinces.Any()))
             {
                 var provinces = state.provinces.Select(n => map.Provinces.First(m => m.Id == n)).ToArray();
-
+              
                 // Each county should have 4 or fewer counties.
                 var countyCount = state.provinces.Length / 4;
-                var unprocessedProvinces = provinces.ToHashSet();
-                var processedProvinces = new HashSet<Province>();
+                var unprocessedProvinces = provinces.Except(processedProvinces).ToHashSet();
                 var counties = new List<County>();
                 var accumulatedProvinces = new List<Province>();
 
                 var currentProvince = provinces[0];
-
+              
                 do
                 {
                     for (int i = 0; i < 4; i++)
@@ -618,6 +730,7 @@ $@"game_object_locator={{
                         unprocessedProvinces.Remove(currentProvince);
                         processedProvinces.Add(currentProvince);
                         accumulatedProvinces.Add(currentProvince);
+                     
                         counties.Last().baronies.Add(new Barony(currentProvince, currentProvince.Name, currentProvince.Color));
 
                         if (currentProvince.Neighbors.FirstOrDefault(n => !processedProvinces.Contains(n)) is { } neighbor)
@@ -634,6 +747,7 @@ $@"game_object_locator={{
                     currentProvince = unprocessedProvinces.FirstOrDefault();
                 } while (unprocessedProvinces.Count > 0);
 
+              
                 duchies.Add(new Duchy(counties.ToArray(), "Duchy of " + state.name, counties.First().Color, counties.First().CapitalName));
             }
             return duchies;
@@ -644,7 +758,6 @@ $@"game_object_locator={{
             throw;
         }
     }
-
     public static Empire[] CreateTitles(Map map)
     {
         try
@@ -844,9 +957,141 @@ e_roman_empire = {{ landless = yes }}";
  {string.Join("\n ", lines)}";
 
         var path = ShouldCreateFolderStructure
-            ? $"{Environment.CurrentDirectory}/mod/localization/english/titles_l_english.txt"
-            : $"{Environment.CurrentDirectory}/titles_l_english.txt";
+            ? $"{Environment.CurrentDirectory}/mod/localization/english/titles_l_english.yml"
+            : $"{Environment.CurrentDirectory}/titles_l_english.yml";
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
+    }
+    public static async Task WriteDefault(Map map)
+    {
+        var waterProvinces = map.Provinces.Where(n => n.IsWater).Select(n => n.Id);
+        var file = $@"#max_provinces = 1466
+definitions = ""definition.csv""
+provinces = ""provinces.png""
+#positions = ""positions.txt""
+rivers = ""rivers.png""
+#terrain_definition = ""terrain.txt""
+topology = ""heightmap.heightmap""
+#tree_definition = ""trees.bmp""
+continent = ""continent.txt""
+adjacencies = ""adjacencies.csv""
+#climate = ""climate.txt""
+island_region = ""island_region.txt""
+seasons = ""seasons.txt""
+
+#############
+# SEA ZONES
+#############
+
+#North European Seas
+sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }} #French & Iberian atlantic coasts
+
+###############
+# MAJOR RIVERS
+###############
+
+########
+# LAKES
+########
+
+#####################
+# IMPASSABLE TERRAIN
+#####################
+# Can be colored by whoever owns the most of the province's neighbours.
+# Blocks unit movement.
+
+############
+# WASTELAND
+############
+# These are actually supposed to be Wasteland:
+# Cannot be colored. Blocks unit movement, used for things like Sahara desert. 
+
+# IMPASSABLE SEA ZONES
+# These sea provinces cannot be crossed/sailed
+
+# UNUSED PROVINCES
+# These provinces cause issues because they are passable land, but not part of any title.
+# They are probably not visible anywhere on the map, so feel free to reuse them (after double checking that they are actually missing).
+";
+
+        var path = ShouldCreateFolderStructure
+             ? $"{Environment.CurrentDirectory}/mod/map_data/default.map"
+             : $"{Environment.CurrentDirectory}/default.map";
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+
+        await File.WriteAllTextAsync(path, file);
+    }
+
+    // Biomes
+    public static async Task WriteTerrain(Map map)
+    {
+        //var provinceBiomes = map.Provinces
+        //    .Select((n, i) => (n, i))
+        //    .Skip(1)
+        //    .Where(n => !n.n.IsWater)
+        //    .Select(n => (n.i, n.n.Cells.Select(m => m.biome).Max()))
+        //    .Select(n => $"{n.i}={Helper.GetBiomeName(n.Item2)}");
+
+        double HeightDifference(Province province)
+        {
+            var heights = province.Cells.Select(n => n.height).ToArray();
+            return Helper.Percentile(heights, 0.7) - Helper.Percentile(heights, 0.3);
+        }
+
+        try
+        {
+            //{
+            //    var provinceBiomes1 = map.Provinces
+            //  .Select((n, i) => (n, i))
+            //  .Skip(1)
+            //  .Where(n => !n.n.IsWater && n.n.Cells.Any())
+            //  .Select(n =>
+            //  {
+            //      var hd = HeightDifference(n.n);
+
+
+            //      return new
+            //      {
+            //          ProvinceId = n.i,
+            //          PrimaryBiome = n.n.Cells.Select(m => m.biome).Max(),
+            //          //IsMountaineous = hd > 2,
+            //          HeightDifference = (int)hd,
+            //      };
+            //  }).ToArray();
+            //}
+
+            var provinceBiomes = map.Provinces
+                .Select((n, i) => (n, i))
+                .Skip(1)
+                .Where(n => !n.n.IsWater && n.n.Cells.Any())
+                .Select(n =>
+                    {
+                        var hd = HeightDifference(n.n);
+
+
+                        return new
+                        {
+                            ProvinceId = n.i,
+                            PrimaryBiome = n.n.Cells.Select(m => m.biome).Max(),
+                            HeightDifference = (int)hd,
+                        };
+                    })
+                .Select(n => $"{n.ProvinceId}={Helper.GetBiomeName(n.PrimaryBiome, n.HeightDifference)}").ToArray();
+
+            var file = $@"default=plains
+{string.Join("\n", provinceBiomes)}";
+            var path = ShouldCreateFolderStructure
+
+         ? $"{Environment.CurrentDirectory}/mod/common/province_terrain/00_province_terrain.txt"
+         : $"{Environment.CurrentDirectory}/00_province_terrain.txt";
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+
+            await File.WriteAllTextAsync(path, file);
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+        }
+       
     }
 }
