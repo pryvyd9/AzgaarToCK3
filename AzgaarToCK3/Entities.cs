@@ -9,6 +9,11 @@ using System.Threading.Tasks;
 
 namespace AzgaarToCK3;
 
+public record GeometryRivers(string type, float[][] coordinates);
+public record FeatureRivers(GeometryRivers geometry);
+public record GeoMapRivers(FeatureRivers[] features);
+
+
 public record PackProvince(int i, int state, int burg, string name);
 
 // For some reason the first element in the array isn't an object but a number.
@@ -93,6 +98,7 @@ public class Map
 {
     //public PointD[][] Coordinates { get; set; }
     public GeoMap GeoMap { get; set; }
+    public GeoMapRivers Rivers { get; set; }
     public JsonMap JsonMap { get; set; }
     public float XOffset { get; set; }
     public float YOffset { get; set; }

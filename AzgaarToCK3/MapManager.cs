@@ -52,6 +52,22 @@ public static class MapManager
         }
       
     }
+    public static async Task<GeoMapRivers> LoadGeojsonRivers()
+    {
+        try
+        {
+            var file = await File.ReadAllTextAsync("inputRivers.geojson");
+            var geomap = JsonSerializer.Deserialize<GeoMapRivers>(file);
+            return geomap;
+        }
+        catch (Exception e)
+        {
+            Debugger.Break();
+            return null;
+        }
+
+    }
+
     public static async Task<JsonMap> LoadJson()
     {
         try
@@ -308,7 +324,7 @@ public static class MapManager
 
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-    public static async Task<Map> ConvertMap(GeoMap geoMap, JsonMap jsonMap)
+    public static async Task<Map> ConvertMap(GeoMap geoMap, GeoMapRivers geoMapRivers, JsonMap jsonMap)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         var flatCoordinates = geoMap!.features.SelectMany(n => n.geometry.coordinates).SelectMany(n => n);
@@ -326,6 +342,7 @@ public static class MapManager
         var map = new Map
         {
             GeoMap = geoMap,
+            Rivers = geoMapRivers,
             JsonMap = jsonMap,
             XOffset= minX,
             YOffset= minY,
@@ -453,7 +470,7 @@ public static class MapManager
 
             await cellsMap.WriteAsync(path);
 
-            using var file = await SixLabors.ImageSharp.Image.LoadAsync(path);
+            using var file = await Image.LoadAsync(path);
             file.Mutate(n => n.GaussianBlur(15));
             file.Save(path);
 
@@ -475,6 +492,7 @@ public static class MapManager
             using var cellsMap = new MagickImage("xc:#ff0080", settings);
 
             var drawables = new Drawables();
+            // Draw land
             foreach (var province in map.Provinces.Skip(1).Where(n => !n.IsWater))
             {
                 foreach (var cell in province.Cells)
@@ -485,6 +503,15 @@ public static class MapManager
                         .FillColor(MagickColors.White)
                         .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
                 }
+            }
+
+            foreach (var river in map.Rivers.features)
+            {
+                drawables
+                    .DisableStrokeAntialias()
+                    .StrokeColor(new MagickColor("#00E1FF"))
+                    .StrokeWidth(0.5)
+                    .Polyline(river.geometry.coordinates.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
             }
 
             cellsMap.Draw(drawables);
@@ -1063,28 +1090,48 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }} #French & Iberian atla
         }
        
     }
-    public static async Task WriteHillsMask(Map map)
+    //private static async Task WriteMask(float[][][] cells, Map map, string filename)
+    //{
+    //    try
+    //    {
+    //        using var cellsMap = new MagickImage("template_mask.png");
+
+    //        var drawables = new Drawables();
+    //        foreach (var cell in cells)
+    //        {
+    //            drawables
+    //                .DisableStrokeAntialias()
+    //                .StrokeColor(MagickColors.White)
+    //                .FillColor(MagickColors.White)
+    //                .Polygon(cell.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+    //        }
+
+    //        cellsMap.Draw(drawables);
+    //        var path = ShouldCreateFolderStructure
+    //            ? $"{Environment.CurrentDirectory}/mod/gfx/map/terrain/{filename}.png"
+    //            : $"{Environment.CurrentDirectory}/{filename}.png";
+
+    //        Directory.CreateDirectory(Path.GetDirectoryName(path));
+
+    //        await cellsMap.WriteAsync(path, MagickFormat.Png00);
+
+    //        //using var file = await Image.LoadAsync(path);
+    //        //file.Mutate(n => n.GaussianBlur(15));
+    //        //file.Save(path);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        Debugger.Break();
+    //    }
+    //}
+    private static async Task WriteMask(IEnumerable<Cell> cells, Map map, string filename)
     {
         try
         {
-            var hillCells = map.Provinces
-               .Select(n => n)
-               .Skip(1)
-               .Where(n => !n.IsWater && n.Cells.Any())
-               .SelectMany(n => n.Cells)
-               .Where(n => Helper.IsCellHills(n.biome, n.height))
-               .Select(n => n.cells)
-               .ToArray();
-
-            var settings = new MagickReadSettings()
-            {
-                Width = MapWidth,
-                Height = MapHeight,
-            };
-            using var cellsMap = new MagickImage("xc:black", settings);
+            using var cellsMap = new MagickImage("template_mask.png");
 
             var drawables = new Drawables();
-            foreach (var cell in hillCells)
+            foreach (var cell in cells.Select(n => n.cells))
             {
                 drawables
                     .DisableStrokeAntialias()
@@ -1095,16 +1142,144 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }} #French & Iberian atla
 
             cellsMap.Draw(drawables);
             var path = ShouldCreateFolderStructure
-                ? $"{Environment.CurrentDirectory}/mod/gfx/map/terrain/hills_01_mask.png"
-                : $"{Environment.CurrentDirectory}/hills_01_mask.png";
+                ? $"{Environment.CurrentDirectory}/mod/gfx/map/terrain/{filename}.png"
+                : $"{Environment.CurrentDirectory}/{filename}.png";
 
             Directory.CreateDirectory(Path.GetDirectoryName(path));
 
-            await cellsMap.WriteAsync(path, MagickFormat.Png8);
+            await cellsMap.WriteAsync(path, MagickFormat.Png00);
+
+            //using var file = await Image.LoadAsync(path);
+            //file.Mutate(n => n.GaussianBlur(15));
+            //file.Save(path);
         }
         catch (Exception ex)
         {
             Debugger.Break();
+        }
+    }
+
+    public static async Task WriteMasks(Map map)
+    {
+        var nonWaterProvinceCells = map.Provinces
+            .Skip(1)
+            .Where(n => !n.IsWater && n.Cells.Any())
+            .SelectMany(n => n.Cells)
+            .ToArray();
+
+        var provinceBiomes = map.Provinces
+            .Skip(1)
+            .Where(n => !n.IsWater && n.Cells.Any())
+            .Select(n =>
+            {
+                var primaryBiome = n.Cells.Select(m => m.biome).Max();
+                var heightDifference = (int)Helper.HeightDifference(n);
+                return new
+                {
+                    Province = n,
+                    Biome = Helper.GetProvinceBiomeName(primaryBiome, heightDifference)
+                };
+            }).ToArray();
+
+        // hills
+        {
+            var cells = nonWaterProvinceCells
+                 .Where(n => Helper.IsCellHills(n.biome, n.height));
+
+            await WriteMask(cells, map, "hills_01_mask");
+        }
+        // mountains
+        {
+            var cells = nonWaterProvinceCells
+                .Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellMountains(n.height));
+
+            await WriteMask(cells, map, "mountain_02_mask");
+        }
+        // HighMountains
+        {
+            var cells = nonWaterProvinceCells
+               .Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellHighMountains(n.height));
+
+            await WriteMask(cells, map, "mountain_02_snow_mask");
+        }
+        // plains
+        {
+            var cells = provinceBiomes
+                .Where(n => n.Biome == "plains")
+                .SelectMany(n => n.Province.Cells);
+
+            await WriteMask(cells, map, "plains_01_mask");
+        }
+        // farmlands
+        {
+            var cells = nonWaterProvinceCells
+               .Where(n => Helper.MapBiome(n.biome) == "farmlands");
+
+            await WriteMask(cells, map, "farmland_01_mask");
+        }
+        // Desert
+        {
+            var cells = nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "desert");
+
+            await WriteMask(cells, map, "desert_01_mask");
+        }
+        // desert_mountains
+        {
+            var cells = nonWaterProvinceCells
+                .Where(n => Helper.MapBiome(n.biome) is "desert" && Helper.IsCellMountains(n.height));
+
+            await WriteMask(cells, map, "mountain_02_desert_mask");
+        }
+        // oasis
+        {
+            var cells = nonWaterProvinceCells
+                .Where(n => Helper.MapBiome(n.biome) == "oasis");
+
+            await WriteMask(cells, map, "oasis_mask");
+        }
+        // jungle
+        {
+            var cells = nonWaterProvinceCells
+                .Where(n => Helper.MapBiome(n.biome) == "jungle");
+
+            await WriteMask(cells, map, "forest_jungle_01_mask");
+        }
+        // forest
+        {
+            var cells = nonWaterProvinceCells
+                .Where(n => Helper.MapBiome(n.biome) == "forest");
+
+            await WriteMask(cells, map, "forest_leaf_01_mask");
+        }
+        // taiga
+        {
+            var cells = nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "taiga");
+
+            await WriteMask(cells, map, "forest_pine_01_mask");
+        }
+        // wetlands
+        {
+            var cells = provinceBiomes.Where(n => n.Biome == "wetlands").SelectMany(n => n.Province.Cells).Where(n => Helper.MapBiome(n.biome) == "floodplains");
+
+            await WriteMask(cells, map, "wetlands_02_mask");
+        }
+        // steppe
+        {
+            var cells = nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "steppe");
+
+            await WriteMask(cells, map, "steppe_01_mask");
+        }
+        // floodplains
+        {
+            var cells = nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "floodplains");
+
+            await WriteMask(cells, map, "floodplains_01_mask");
+        }
+        // drylands
+        {
+            var cells = nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "drylands");
+
+            await WriteMask(cells, map, "drylands_01_mask");
         }
     }
 }

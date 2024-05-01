@@ -35,8 +35,10 @@ public partial class MainWindow : Window
     private static async Task<Map> LoadMap()
     {
         var geoMap = await MapManager.LoadGeojson();
+        //var geoMapRivers = await MapManager.LoadGeojsonRivers();
+        var geoMapRivers = new GeoMapRivers(new FeatureRivers[0]);
         var jsonMap = await MapManager.LoadJson();
-        var map = await MapManager.ConvertMap(geoMap, jsonMap);
+        var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap);
         return map;
     }
 
@@ -49,7 +51,7 @@ public partial class MainWindow : Window
 
         //await MapManager.DrawProvinces(map);
         //await MapManager.DrawHeightMap(map);
-        await MapManager.DrawRivers(map);
+        //await MapManager.DrawRivers(map);
         //await MapManager.WriteDefinition(map);
 
         //await MapManager.WriteBuildingLocators(map);
@@ -64,7 +66,11 @@ public partial class MainWindow : Window
 
         //await MapManager.WriteDefault(map);
         //await MapManager.WriteTerrain(map);
+        await MapManager.WriteMasks(map);
         //await MapManager.WriteHillsMask(map);
+        //await MapManager.WriteMountainsMask(map);
+        //await MapManager.WriteHighMountainsMask(map);
+        //await MapManager.WritePlainsMask(map);
 
         Application.Current.Shutdown();
     }
