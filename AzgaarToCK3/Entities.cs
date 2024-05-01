@@ -75,6 +75,7 @@ public class Province
     public int StateId { get; set; }
     public Province[] Neighbors { get; set; } = Array.Empty<Province>();
     public bool IsWater { get; set; }
+    //public int HeightDifference { get; set; }
 }
 
 public record Barony(Province province, string name, MagickColor color);

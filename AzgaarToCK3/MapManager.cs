@@ -4,17 +4,11 @@ using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Security.Policy;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Sources;
-using System.Windows.Documents;
-using System.Windows.Media.Imaging;
 
 namespace AzgaarToCK3;
 
@@ -403,22 +397,7 @@ public static class MapManager
                         .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
                 }
             }
-            // Draw cells for debugging
-            //var featuresToTest = map.GeoMap.features.Skip(786).Take(2);
-
-            //foreach (var feature in featuresToTest)
-            //{
-            //    foreach (var cell in feature.geometry.coordinates)
-            //    {
-            //        drawables
-            //            .DisableStrokeAntialias()
-            //            .StrokeWidth(2)
-            //            .StrokeColor(MagickColors.Black)
-            //            .FillOpacity(new Percentage(0))
-            //            .Polygon(cell.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
-            //    }
-            //}
-
+          
             cellsMap.Draw(drawables);
             var path = ShouldCreateFolderStructure
                 ? $"{Environment.CurrentDirectory}/mod/map_data/provinces.png"
@@ -431,7 +410,6 @@ public static class MapManager
         catch (Exception ex)
         {
             Debugger.Break();
-
         }
 
 
@@ -492,7 +470,7 @@ public static class MapManager
             var settings = new MagickReadSettings()
             {
                 Width = MapWidth,
-                Height = MapHeight
+                Height = MapHeight,
             };
             using var cellsMap = new MagickImage("xc:#ff0080", settings);
 
@@ -515,7 +493,32 @@ public static class MapManager
                 : $"{Environment.CurrentDirectory}/rivers.png";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
 
-            await cellsMap.WriteAsync(path, MagickFormat.Png8);
+            cellsMap.Settings.SetDefine("png:color-type", "1");
+
+            string[] colormap = new string[] {
+               "#00FF00",
+               "#FF0000",
+               "#FFFC00",
+               "#00E1FF",
+               "#00C8FF",
+               "#0096FF",
+               "#0064FF",
+               "#0000FF",
+               "#0000E1",
+               "#0000C8",
+               "#000096",
+               "#000064",
+               "#005500",
+               "#007D00",
+               "#009E00",
+               "#18CE00",
+               "#FF0080",
+               "#FFFFFF",
+            };
+
+            cellsMap.Map(colormap.Select(n => new MagickColor(n)));
+
+            await cellsMap.WriteAsync(path);
         }
         catch (Exception ex)
         {
@@ -1025,49 +1028,15 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }} #French & Iberian atla
     // Biomes
     public static async Task WriteTerrain(Map map)
     {
-        //var provinceBiomes = map.Provinces
-        //    .Select((n, i) => (n, i))
-        //    .Skip(1)
-        //    .Where(n => !n.n.IsWater)
-        //    .Select(n => (n.i, n.n.Cells.Select(m => m.biome).Max()))
-        //    .Select(n => $"{n.i}={Helper.GetBiomeName(n.Item2)}");
-
-        double HeightDifference(Province province)
-        {
-            var heights = province.Cells.Select(n => n.height).ToArray();
-            return Helper.Percentile(heights, 0.7) - Helper.Percentile(heights, 0.3);
-        }
-
         try
         {
-            //{
-            //    var provinceBiomes1 = map.Provinces
-            //  .Select((n, i) => (n, i))
-            //  .Skip(1)
-            //  .Where(n => !n.n.IsWater && n.n.Cells.Any())
-            //  .Select(n =>
-            //  {
-            //      var hd = HeightDifference(n.n);
-
-
-            //      return new
-            //      {
-            //          ProvinceId = n.i,
-            //          PrimaryBiome = n.n.Cells.Select(m => m.biome).Max(),
-            //          //IsMountaineous = hd > 2,
-            //          HeightDifference = (int)hd,
-            //      };
-            //  }).ToArray();
-            //}
-
             var provinceBiomes = map.Provinces
                 .Select((n, i) => (n, i))
                 .Skip(1)
                 .Where(n => !n.n.IsWater && n.n.Cells.Any())
                 .Select(n =>
                     {
-                        var hd = HeightDifference(n.n);
-
+                        var hd = Helper.HeightDifference(n.n);
 
                         return new
                         {
@@ -1076,7 +1045,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }} #French & Iberian atla
                             HeightDifference = (int)hd,
                         };
                     })
-                .Select(n => $"{n.ProvinceId}={Helper.GetBiomeName(n.PrimaryBiome, n.HeightDifference)}").ToArray();
+                .Select(n => $"{n.ProvinceId}={Helper.GetProvinceBiomeName(n.PrimaryBiome, n.HeightDifference)}").ToArray();
 
             var file = $@"default=plains
 {string.Join("\n", provinceBiomes)}";
@@ -1093,5 +1062,49 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }} #French & Iberian atla
             Debugger.Break();
         }
        
+    }
+    public static async Task WriteHillsMask(Map map)
+    {
+        try
+        {
+            var hillCells = map.Provinces
+               .Select(n => n)
+               .Skip(1)
+               .Where(n => !n.IsWater && n.Cells.Any())
+               .SelectMany(n => n.Cells)
+               .Where(n => Helper.IsCellHills(n.biome, n.height))
+               .Select(n => n.cells)
+               .ToArray();
+
+            var settings = new MagickReadSettings()
+            {
+                Width = MapWidth,
+                Height = MapHeight,
+            };
+            using var cellsMap = new MagickImage("xc:black", settings);
+
+            var drawables = new Drawables();
+            foreach (var cell in hillCells)
+            {
+                drawables
+                    .DisableStrokeAntialias()
+                    .StrokeColor(MagickColors.White)
+                    .FillColor(MagickColors.White)
+                    .Polygon(cell.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+            }
+
+            cellsMap.Draw(drawables);
+            var path = ShouldCreateFolderStructure
+                ? $"{Environment.CurrentDirectory}/mod/gfx/map/terrain/hills_01_mask.png"
+                : $"{Environment.CurrentDirectory}/hills_01_mask.png";
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+
+            await cellsMap.WriteAsync(path, MagickFormat.Png8);
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+        }
     }
 }
