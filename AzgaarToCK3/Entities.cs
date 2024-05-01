@@ -43,6 +43,7 @@ public record State(int i, string name, int[] provinces);
 public record Culture(int i, string name);
 public record Religion(int i, string name);
 public record PackCell(int i, int area, int biome);
+public record MapCoordinates(float latT, float latN, float latS, float lonT, float lonW, float lonE);
 public class Pack
 {
     [JsonConverter(typeof(PackProvinceJsonConverter))]
@@ -53,7 +54,8 @@ public class Pack
     public Religion[] religions { get; set; }
     public PackCell[] cells { get; set; }
 }
-public record JsonMap(Pack pack);
+public record Info(int width, int height);
+public record JsonMap(Pack pack, MapCoordinates mapCoordinates, Info info);
 
 public record Geometry(string type, float[][][] coordinates);
 public record Properties(int id, string type, int province, int state, int height, int[] neighbors, int culture, int religion);
@@ -80,7 +82,6 @@ public class Province
     public int StateId { get; set; }
     public Province[] Neighbors { get; set; } = Array.Empty<Province>();
     public bool IsWater { get; set; }
-    //public int HeightDifference { get; set; }
 }
 
 public record Barony(Province province, string name, MagickColor color);
@@ -96,16 +97,21 @@ public record Kingdom(Duchy[] duchies, bool isAllowed, string name, MagickColor 
 public record Empire(Kingdom[] kingdoms, bool isAllowed, string name, MagickColor color, string capitalName);
 public class Map
 {
-    //public PointD[][] Coordinates { get; set; }
+    public const int MapWidth = 8192;
+    public const int MapHeight = 4096;
+
     public GeoMap GeoMap { get; set; }
     public GeoMapRivers Rivers { get; set; }
     public JsonMap JsonMap { get; set; }
-    public float XOffset { get; set; }
-    public float YOffset { get; set; }
-    public float XRatio { get; set; }
-    public float YRatio { get; set; }
+    public float XOffset => JsonMap.mapCoordinates.lonW;
+    public float YOffset => JsonMap.mapCoordinates.latS;
+    public float XRatio => MapWidth / JsonMap.mapCoordinates.lonT;
+    public float YRatio => MapHeight / JsonMap.mapCoordinates.latT;
 
     public Province[] Provinces { get; set; }
     public Empire[] Empires { get; set; }
+
+    public double pixelXRatio => (double)MapWidth / JsonMap.info.width;
+    public double pixelYRatio => (double)MapHeight / JsonMap.info.height;
 }
 

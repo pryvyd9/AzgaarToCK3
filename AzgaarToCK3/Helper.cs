@@ -13,9 +13,13 @@ public static class Helper
     {
         return height is > 1000 and <= 2000;
     }
+    public static bool IsCellLowMountains(int height)
+    {
+        return height is > 500 and <= 1000;
+    }
     public static bool IsCellHills(int biomeId, int height)
     {
-        if (IsCellHighMountains(height) || IsCellMountains(height))
+        if (IsCellHighMountains(height) || IsCellMountains(height) || IsCellLowMountains(height))
         {
             return false;
         }
@@ -23,7 +27,7 @@ public static class Helper
     }
     private static bool IsHills(int biomeId, int heightDifference)
     {
-        return heightDifference > 500 && biomeId is 4 or 5 or 6 or 7 or 8;
+        return heightDifference > 200 && biomeId is 4 or 5 or 6 or 7 or 8;
     }
     public static string MapBiome(int biomeId)
     {

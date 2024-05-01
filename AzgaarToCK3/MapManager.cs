@@ -14,8 +14,8 @@ namespace AzgaarToCK3;
 
 public static class MapManager
 {
-    private const int MapWidth = 8192;
-    private const int MapHeight = 4096;
+    //private const int MapWidth = 8192;
+    //private const int MapHeight = 4096;
     private const int WaterLevelHeight = 30;
 
     private const bool ShouldCreateFolderStructure = true;
@@ -24,16 +24,19 @@ public static class MapManager
 
     //private static readonly double canvasSizeX = 1832;
     //private static readonly double canvasSizeY = 999;
-    private static readonly double canvasSizeX = 8192;
-    private static readonly double canvasSizeY = 4096;
-    private static readonly double pixelXRatio = MapWidth / canvasSizeX;
-    private static readonly double pixelYRatio = MapHeight / canvasSizeY;
+    //private static readonly double canvasSizeX = 8192;
+    //private static readonly double canvasSizeY = 4096;
+    //private static readonly double pixelXRatio = MapWidth / canvasSizeX;
+    //private static readonly double pixelYRatio = MapHeight / canvasSizeY;
     // magic numbers
     //private const double pixelErrorRatio = 1.1;
     //private const int pixelErrorOffset = -825;
 
-    private const double pixelErrorRatio = 1.12;
-    private const int pixelErrorOffset = -600;
+    //private const double pixelErrorRatio = 1.12;
+    //private const int pixelErrorOffset = -600;
+
+    private const double pixelErrorRatio = 1;
+    private const int pixelErrorOffset = 0;
 
     #endregion
 
@@ -67,7 +70,6 @@ public static class MapManager
         }
 
     }
-
     public static async Task<JsonMap> LoadJson()
     {
         try
@@ -322,32 +324,24 @@ public static class MapManager
         return provinces;
     }
 
+    private static PointD GeoToPixel(float lon, float lat, Map map)
+    {
+        return new PointD((lon - map.XOffset) * map.XRatio, Map.MapHeight - (lat - map.YOffset) * map.YRatio);
+    }
+    private static PointD PixelToFullPixel(float x, float y, Map map)
+    {
+        return new PointD(x * map.pixelXRatio, Map.MapHeight - y * map.pixelYRatio);
+    }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     public static async Task<Map> ConvertMap(GeoMap geoMap, GeoMapRivers geoMapRivers, JsonMap jsonMap)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
-        var flatCoordinates = geoMap!.features.SelectMany(n => n.geometry.coordinates).SelectMany(n => n);
-
-        // Cells
-        var maxX = flatCoordinates.MaxBy(n => n[0])![0];
-        var maxY = flatCoordinates.MaxBy(n => n[1])![1];
-
-        var minX = flatCoordinates.MinBy(n => n[0])![0];
-        var minY = flatCoordinates.MinBy(n => n[1])![1];
-
-        var xRatio = MapWidth / (maxX - minX);
-        var yRatio = MapHeight / (maxY - minY);
-
         var map = new Map
         {
             GeoMap = geoMap,
             Rivers = geoMapRivers,
             JsonMap = jsonMap,
-            XOffset= minX,
-            YOffset= minY,
-            XRatio = xRatio,
-            YRatio = yRatio,
             Provinces = CreateProvinces(geoMap, jsonMap),
         };
 
@@ -360,8 +354,8 @@ public static class MapManager
         {
             var settings = new MagickReadSettings()
             {
-                Width = MapWidth,
-                Height = MapHeight,
+                Width = Map.MapWidth,
+                Height = Map.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:white", settings);
 
@@ -375,7 +369,7 @@ public static class MapManager
                         .StrokeWidth(2)
                         .StrokeColor(MagickColors.Black)
                         .FillOpacity(new Percentage(0))
-                        .Polygon(cell.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+                        .Polygon(cell.Select(n => GeoToPixel(n[0], n[1], map)));
                 }
             }
 
@@ -396,8 +390,8 @@ public static class MapManager
         {
             var settings = new MagickReadSettings()
             {
-                Width = MapWidth,
-                Height = MapHeight,
+                Width = Map.MapWidth,
+                Height = Map.MapHeight,
             };
             //using var cellsMap = new MagickImage("xc:#5C5D0B", settings);
             using var cellsMap = new MagickImage("xc:black", settings);
@@ -411,7 +405,7 @@ public static class MapManager
                         .DisableStrokeAntialias()
                         .StrokeColor(province.Color)
                         .FillColor(province.Color)
-                        .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+                        .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, Map.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
                 }
             }
           
@@ -440,8 +434,8 @@ public static class MapManager
 
             var settings = new MagickReadSettings()
             {
-                Width = MapWidth,
-                Height = MapHeight,
+                Width = Map.MapWidth,
+                Height = Map.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:black", settings);
 
@@ -458,7 +452,7 @@ public static class MapManager
                         .DisableStrokeAntialias()
                         .StrokeColor(color)
                         .FillColor(color)
-                        .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+                        .Polygon(cell.cells.Select(n => GeoToPixel(n[0], n[1], map)));
                 }
             }
 
@@ -486,8 +480,8 @@ public static class MapManager
         {
             var settings = new MagickReadSettings()
             {
-                Width = MapWidth,
-                Height = MapHeight,
+                Width = Map.MapWidth,
+                Height = Map.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:#ff0080", settings);
 
@@ -501,7 +495,7 @@ public static class MapManager
                         .DisableStrokeAntialias()
                         .StrokeColor(MagickColors.White)
                         .FillColor(MagickColors.White)
-                        .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+                        .Polygon(cell.cells.Select(n => GeoToPixel(n[0], n[1], map)));
                 }
             }
 
@@ -511,7 +505,7 @@ public static class MapManager
                     .DisableStrokeAntialias()
                     .StrokeColor(new MagickColor("#00E1FF"))
                     .StrokeWidth(0.5)
-                    .Polyline(river.geometry.coordinates.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+                    .Polyline(river.geometry.coordinates.Select(n => GeoToPixel(n[0], n[1], map)));
             }
 
             cellsMap.Draw(drawables);
@@ -561,17 +555,18 @@ public static class MapManager
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllLinesAsync(path, lines);
     }
-    public static async Task WriteBuildingLocators(Map map)
+
+    private static async Task WriteBuildingLocators(Map map)
     {
-        //var minX = map.Provinces.Where(n => n.Burg is not null).Select(n => n.Burg).MinBy()
+        var offset = new PointD(-5, -5);
+
         var lines = map.Provinces.Where(n => n.Burg is not null).Select(n =>
         {
-            var x = n.Burg.x * pixelErrorRatio * pixelXRatio + pixelErrorOffset;
-            var y = MapHeight - n.Burg.y * pixelYRatio;
+            var p = PixelToFullPixel(n.Burg.x, n.Burg.y, map);
             var str =
 $@"        {{
             id = {n.Id}
-            position ={{ {x:0.000000} {0f:0.000000} {y:0.000000} }}
+            position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
         }}";
@@ -603,15 +598,17 @@ $@"game_object_locator={{
         }
       
     }
-    public static async Task WriteSiegeLocators(Map map)
+    private static async Task WriteSiegeLocators(Map map)
     {
-        var offset = new PointD(20, 0);
+        var offset = new PointD(5, -5);
         var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
+            var p = PixelToFullPixel(n.Burg.x, n.Burg.y, map);
+
             var str =
 $@"        {{
             id = {n.Id}
-            position ={{ {n.Burg.x * pixelErrorRatio * pixelXRatio + offset.X + pixelErrorOffset:0.000000} {0f:0.000000} {MapHeight - n.Burg.y * pixelYRatio + offset.Y:0.000000} }}
+            position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
         }}";
@@ -641,15 +638,17 @@ $@"game_object_locator={{
             Debugger.Break();
         }
     }
-    public static async Task WriteCombatLocators(Map map)
+    private static async Task WriteCombatLocators(Map map)
     {
-        var offset = new PointD(0, 20);
+        var offset = new PointD(-5, 5);
         var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
+            var p = PixelToFullPixel(n.Burg.x, n.Burg.y, map);
+
             var str =
 $@"        {{
             id = {n.Id}
-            position ={{ {n.Burg.x * pixelErrorRatio * pixelXRatio + offset.X + pixelErrorOffset:0.000000} {0f:0.000000} {MapHeight - n.Burg.y * pixelYRatio + offset.Y:0.000000} }}
+            position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
         }}";
@@ -679,17 +678,17 @@ $@"game_object_locator={{
             Debugger.Break();
         }
     }
-    public static async Task WritePlayerStackLocators(Map map)
+    private static async Task WritePlayerStackLocators(Map map)
     {
-        var offset = new PointD(20, 20);
+        var offset = new PointD(5, 5);
         var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
-            var x = n.Burg.x * pixelErrorRatio * pixelXRatio + offset.X + pixelErrorOffset;
-            var y = MapHeight - n.Burg.y * pixelYRatio + offset.Y;
+            var p = PixelToFullPixel(n.Burg.x, n.Burg.y, map);
+
             var str =
 $@"        {{
             id = {n.Id}
-            position ={{ {x:0.000000} {0f:0.000000} {y:0.000000} }}
+            position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
         }}";
@@ -718,6 +717,13 @@ $@"game_object_locator={{
         {
             Debugger.Break();
         }
+    }
+    public static async Task WriteLocators(Map map)
+    {
+        await WriteBuildingLocators(map);
+        await WriteSiegeLocators(map);
+        await WriteCombatLocators(map);
+        await WritePlayerStackLocators(map);
     }
 
     private static List<Duchy> CreateDuchies(Map map)
@@ -1090,40 +1096,6 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }} #French & Iberian atla
         }
        
     }
-    //private static async Task WriteMask(float[][][] cells, Map map, string filename)
-    //{
-    //    try
-    //    {
-    //        using var cellsMap = new MagickImage("template_mask.png");
-
-    //        var drawables = new Drawables();
-    //        foreach (var cell in cells)
-    //        {
-    //            drawables
-    //                .DisableStrokeAntialias()
-    //                .StrokeColor(MagickColors.White)
-    //                .FillColor(MagickColors.White)
-    //                .Polygon(cell.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
-    //        }
-
-    //        cellsMap.Draw(drawables);
-    //        var path = ShouldCreateFolderStructure
-    //            ? $"{Environment.CurrentDirectory}/mod/gfx/map/terrain/{filename}.png"
-    //            : $"{Environment.CurrentDirectory}/{filename}.png";
-
-    //        Directory.CreateDirectory(Path.GetDirectoryName(path));
-
-    //        await cellsMap.WriteAsync(path, MagickFormat.Png00);
-
-    //        //using var file = await Image.LoadAsync(path);
-    //        //file.Mutate(n => n.GaussianBlur(15));
-    //        //file.Save(path);
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Debugger.Break();
-    //    }
-    //}
     private static async Task WriteMask(IEnumerable<Cell> cells, Map map, string filename)
     {
         try
@@ -1137,7 +1109,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }} #French & Iberian atla
                     .DisableStrokeAntialias()
                     .StrokeColor(MagickColors.White)
                     .FillColor(MagickColors.White)
-                    .Polygon(cell.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+                    .Polygon(cell.Select(n => GeoToPixel(n[0], n[1], map)));
             }
 
             cellsMap.Draw(drawables);
@@ -1149,9 +1121,13 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }} #French & Iberian atla
 
             await cellsMap.WriteAsync(path, MagickFormat.Png00);
 
-            //using var file = await Image.LoadAsync(path);
-            //file.Mutate(n => n.GaussianBlur(15));
-            //file.Save(path);
+            //var s = Stopwatch.StartNew();
+
+            using var file = await Image.LoadAsync(path);
+            file.Mutate(n => n.GaussianBlur(15));
+            file.Save(path);
+
+            //s.Stop();
         }
         catch (Exception ex)
         {
@@ -1181,42 +1157,32 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }} #French & Iberian atla
                 };
             }).ToArray();
 
-        // hills
+        var tasks = new[]
         {
-            var cells = nonWaterProvinceCells
-                 .Where(n => Helper.IsCellHills(n.biome, n.height));
+            // hills
+            WriteMask(nonWaterProvinceCells
+                 .Where(n => Helper.IsCellHills(n.biome, n.height)), map, "hills_01_mask"),
 
-            await WriteMask(cells, map, "hills_01_mask");
-        }
-        // mountains
-        {
-            var cells = nonWaterProvinceCells
-                .Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellMountains(n.height));
+            // low mountains
+            WriteMask(nonWaterProvinceCells
+                .Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellLowMountains(n.height)), map, "mountain_02_mask"),
 
-            await WriteMask(cells, map, "mountain_02_mask");
-        }
-        // HighMountains
-        {
-            var cells = nonWaterProvinceCells
-               .Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellHighMountains(n.height));
-
-            await WriteMask(cells, map, "mountain_02_snow_mask");
-        }
+            // mountains
+            WriteMask(nonWaterProvinceCells
+                .Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellMountains(n.height) || Helper.IsCellHighMountains(n.height)), map, "mountain_02_snow_mask"),
+            // HighMountains
+            WriteMask(nonWaterProvinceCells
+               .Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellHighMountains(n.height)), map, "mountain_02_c_snow_mask"),
         // plains
-        {
-            var cells = provinceBiomes
-                .Where(n => n.Biome == "plains")
-                .SelectMany(n => n.Province.Cells);
-
-            await WriteMask(cells, map, "plains_01_mask");
-        }
+        WriteMask(nonWaterProvinceCells
+               .Where(n => Helper.MapBiome(n.biome) == "farmlands"), map, "farmland_01_mask"),
         // farmlands
-        {
-            var cells = nonWaterProvinceCells
-               .Where(n => Helper.MapBiome(n.biome) == "farmlands");
+        WriteMask(nonWaterProvinceCells
+               .Where(n => Helper.MapBiome(n.biome) == "farmlands"), map, "farmland_01_mask"),
+        };
 
-            await WriteMask(cells, map, "farmland_01_mask");
-        }
+        await Task.WhenAll(tasks);
+
         // Desert
         {
             var cells = nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "desert");
