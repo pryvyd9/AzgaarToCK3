@@ -198,7 +198,8 @@ public static class MapManager
         {
             var cells = waterProvince.Cells;
 
-            var areaPerProvince = 150000;
+            var largestWaterProvince = cells.MaxBy(n => n.area).area;
+            var areaPerProvince = largestWaterProvince * 1.5;
 
             var unprocessedCells = waterProvince.Cells.ToDictionary(n => n.id, n => n);
             var provinces = new List<Province>();
@@ -327,6 +328,10 @@ public static class MapManager
     private static PointD GeoToPixel(float lon, float lat, Map map)
     {
         return new PointD((lon - map.XOffset) * map.XRatio, Map.MapHeight - (lat - map.YOffset) * map.YRatio);
+    }
+    private static PointD GeoToPixelCrutch(float lon, float lat, Map map)
+    {
+        return new PointD((lon - map.XOffset) * map.XRatio, (lat - map.YOffset) * map.YRatio);
     }
     private static PointD PixelToFullPixel(float x, float y, Map map)
     {
@@ -558,7 +563,7 @@ public static class MapManager
 
     private static async Task WriteBuildingLocators(Map map)
     {
-        var offset = new PointD(-5, -5);
+        var offset = new PointD(0);
 
         var lines = map.Provinces.Where(n => n.Burg is not null).Select(n =>
         {
@@ -600,7 +605,7 @@ $@"game_object_locator={{
     }
     private static async Task WriteSiegeLocators(Map map)
     {
-        var offset = new PointD(5, -5);
+        var offset = new PointD(10, -5);
         var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
             var p = PixelToFullPixel(n.Burg.x, n.Burg.y, map);
@@ -640,7 +645,7 @@ $@"game_object_locator={{
     }
     private static async Task WriteCombatLocators(Map map)
     {
-        var offset = new PointD(-5, 5);
+        var offset = new PointD(0, 10);
         var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
             var p = PixelToFullPixel(n.Burg.x, n.Burg.y, map);
@@ -680,10 +685,24 @@ $@"game_object_locator={{
     }
     private static async Task WritePlayerStackLocators(Map map)
     {
-        var offset = new PointD(5, 5);
-        var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
+        var offset = new PointD(-10, -5);
+        var lines = map.Provinces.Skip(1).Select((n, i) =>
         {
-            var p = PixelToFullPixel(n.Burg.x, n.Burg.y, map);
+            var p = new PointD();
+            if (n.Burg is null)
+            {
+                var maxLon = n.Cells.SelectMany(n => n.cells).MaxBy(n => n[0])[0];
+                var minLon = n.Cells.SelectMany(n => n.cells).MinBy(n => n[0])[0];
+
+                var maxLat = n.Cells.SelectMany(n => n.cells).MaxBy(n => n[1])[1];
+                var minLat = n.Cells.SelectMany(n => n.cells).MinBy(n => n[1])[1];
+
+                p = GeoToPixelCrutch((maxLon + minLon) / 2, (maxLat + minLat) / 2, map);
+            }
+            else
+            {
+                p = PixelToFullPixel(n.Burg.x, n.Burg.y, map);
+            }
 
             var str =
 $@"        {{

@@ -49,21 +49,21 @@ public partial class MainWindow : Window
 
         //await MapManager.DrawCells(map);
 
-        await MapManager.DrawProvinces(map);
+        //await MapManager.DrawProvinces(map);
         await MapManager.DrawHeightMap(map);
-        await MapManager.DrawRivers(map);
-        await MapManager.WriteDefinition(map);
+        //await MapManager.DrawRivers(map);
+        //await MapManager.WriteDefinition(map);
 
         await MapManager.WriteLocators(map);
 
-        var titles = MapManager.CreateTitles(map);
-        map.Empires = titles;
-        await MapManager.WriteLandedTitles(map.Empires);
-        await MapManager.WriteTitleLocalization(map.Empires);
+        //var titles = MapManager.CreateTitles(map);
+        //map.Empires = titles;
+        //await MapManager.WriteLandedTitles(map.Empires);
+        //await MapManager.WriteTitleLocalization(map.Empires);
 
-        await MapManager.WriteDefault(map);
-        await MapManager.WriteTerrain(map);
-        await MapManager.WriteMasks(map);
+        //await MapManager.WriteDefault(map);
+        //await MapManager.WriteTerrain(map);
+        //await MapManager.WriteMasks(map);
 
         Application.Current.Shutdown();
     }
