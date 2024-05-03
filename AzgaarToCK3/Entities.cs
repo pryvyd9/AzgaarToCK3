@@ -113,5 +113,7 @@ public class Map
 
     public double pixelXRatio => (double)MapWidth / JsonMap.info.width;
     public double pixelYRatio => (double)MapHeight / JsonMap.info.height;
+
+    public Dictionary<int, int> IdToIndex { get; set; }
 }
 

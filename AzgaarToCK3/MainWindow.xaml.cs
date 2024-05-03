@@ -1,5 +1,7 @@
 ﻿using ImageMagick;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -42,6 +44,8 @@ public partial class MainWindow : Window
         return map;
     }
 
+
+
     public static async Task Test()
     {
         var map = await LoadMap();
@@ -50,20 +54,22 @@ public partial class MainWindow : Window
         //await MapManager.DrawCells(map);
 
         //await MapManager.DrawProvinces(map);
-        await MapManager.DrawHeightMap(map);
+        //await MapManager.DrawHeightMap(map);
         //await MapManager.DrawRivers(map);
         //await MapManager.WriteDefinition(map);
 
-        await MapManager.WriteLocators(map);
+        //await MapManager.WriteLocators(map);
 
-        //var titles = MapManager.CreateTitles(map);
-        //map.Empires = titles;
-        //await MapManager.WriteLandedTitles(map.Empires);
-        //await MapManager.WriteTitleLocalization(map.Empires);
+        var titles = MapManager.CreateTitles(map);
+        map.Empires = titles;
+        await MapManager.WriteLandedTitles(map);
+        await MapManager.WriteTitleLocalization(map);
 
         //await MapManager.WriteDefault(map);
         //await MapManager.WriteTerrain(map);
         //await MapManager.WriteMasks(map);
+
+        //await MapManager.WriteGraphics();
 
         Application.Current.Shutdown();
     }
