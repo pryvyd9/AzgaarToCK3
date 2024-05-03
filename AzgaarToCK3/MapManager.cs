@@ -192,6 +192,23 @@ public static class MapManager
             Debugger.Break();
         }
     }
+    
+    public class WaterCellAreaComparerAscending : IComparer<Cell>
+    {
+        public int Compare(Cell? x, Cell? y)
+        {
+            if (x is null || y is null)
+            {
+                return 0;
+            }
+
+            var diff = x.area - y.area;
+            
+            return diff == 0 
+                ? 0
+                : diff / Math.Abs(diff);
+        }
+    }
     private static List<Province> CreateWaterProvinces(Province waterProvince)
     {
         try
@@ -206,32 +223,37 @@ public static class MapManager
 
             do
             {
-                // If empty then the loop will break anyways.
                 var currentCell = unprocessedCells.Values.FirstOrDefault();
+                if (currentCell is null)
+                {
+                    break;
+                }
 
                 var currentArea = 0;
-                var accumulatedNeighbors = new HashSet<int>();
+                // First accumulate smaller provinces. It will create a more convex shape.
+                var accumulatedNeighbors = new List<Cell>();
+
+                provinces.Add(new Province());
 
                 for (int i = 0; currentArea < areaPerProvince; i++)
                 {
-                    if (i == 0)
-                    {
-                        provinces.Add(new Province());
-                    }
-
                     unprocessedCells.Remove(currentCell.id);
                     provinces.Last().Cells.Add(currentCell);
                     currentArea += currentCell.area;
 
-                    foreach (var n in currentCell.neighbors)
+                    foreach (var n in currentCell.neighbors.Where(n => unprocessedCells.ContainsKey(n)))
                     {
-                        accumulatedNeighbors.Add(n);
+                        // If cell is not found then it's not water cell. So ignore it.
+                        if (cells.FirstOrDefault(m => m.id == n) is { } cell)
+                        {
+                            accumulatedNeighbors.Add(cell);
+                        }
                     }
 
-                    if (accumulatedNeighbors.Select(n => unprocessedCells.GetValueOrDefault(n)).FirstOrDefault(n => n is not null) is { } neighbor)
+                    if (accumulatedNeighbors.FirstOrDefault() is { } neighbor)
                     {
                         currentCell = neighbor;
-                        accumulatedNeighbors.Remove(neighbor.id);
+                        accumulatedNeighbors.Remove(neighbor);
                     }
                     else
                     {
@@ -248,6 +270,8 @@ public static class MapManager
             throw;
         }
     }
+
+
     private static Province[] CreateProvinces(GeoMap geomap, JsonMap jsonmap)
     {
         var provinceCells = GetProvinceCells(geomap, jsonmap);
@@ -1038,8 +1062,7 @@ seasons = ""seasons.txt""
 # SEA ZONES
 #############
 
-#North European Seas
-sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }} #French & Iberian atlantic coasts
+sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
 ###############
 # MAJOR RIVERS
@@ -1266,5 +1289,12 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }} #French & Iberian atla
 
             await WriteMask(cells, map, "drylands_01_mask");
         }
+    }
+
+    public static async Task WriteGraphics()
+    {
+        var path = $"{Environment.CurrentDirectory}/mod/common/defines/graphic/00_graphics.txt";
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        File.Copy("00_graphics.txt", path, false);
     }
 }
