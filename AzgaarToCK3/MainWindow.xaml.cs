@@ -1,6 +1,7 @@
 ﻿using ImageMagick;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -48,30 +49,40 @@ public partial class MainWindow : Window
 
     public static async Task Test()
     {
-        var map = await LoadMap();
+        try
+        {
+            var map = await LoadMap();
 
 
-        //await MapManager.DrawCells(map);
+            //await MapManager.DrawCells(map);
 
-        //await MapManager.DrawProvinces(map);
-        //await MapManager.DrawHeightMap(map);
-        //await MapManager.DrawRivers(map);
-        //await MapManager.WriteDefinition(map);
+            //await MapManager.DrawProvinces(map);
+            //await MapManager.DrawHeightMap(map);
+            //await MapManager.DrawRivers(map);
+            //await MapManager.WriteDefinition(map);
 
-        //await MapManager.WriteLocators(map);
+            await MapManager.WriteLocators(map);
 
-        var titles = MapManager.CreateTitles(map);
-        map.Empires = titles;
-        await MapManager.WriteLandedTitles(map);
-        await MapManager.WriteTitleLocalization(map);
+            var titles = MapManager.CreateTitles(map);
+            map.Empires = titles;
+            await MapManager.WriteLandedTitles(map);
+            await MapManager.WriteTitleLocalization(map);
 
-        //await MapManager.WriteDefault(map);
-        //await MapManager.WriteTerrain(map);
-        //await MapManager.WriteMasks(map);
+            await MapManager.WriteHistoryProvinces(map);
 
-        //await MapManager.WriteGraphics();
+            //await MapManager.WriteDefault(map);
+            //await MapManager.WriteTerrain(map);
+            //await MapManager.WriteMasks(map);
 
-        Application.Current.Shutdown();
+            await MapManager.WriteGraphics();
+
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+        }
+      
     }
     public MainWindow()
     {
