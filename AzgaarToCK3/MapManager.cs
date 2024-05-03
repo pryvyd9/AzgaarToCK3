@@ -1322,18 +1322,27 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         }
 
         var ToOriginalCultureName = new string[totalCultures + 1];
+        // Consistent cultures for debugging
         {
-            var indices = Enumerable.Range(0, originalCultureNames.Length).ToList();
-            var r = new Random();
-
             // cultureId starts from 1
             for (int i = 0; i < totalCultures + 1; i++)
             {
-                var index = r.Next(indices.Count);
-                ToOriginalCultureName[i] = originalCultureNames[indices[index]];
-                indices.RemoveAt(index);
+                ToOriginalCultureName[i] = originalCultureNames[i];
             }
         }
+        //// Randomized cultures
+        //{
+        //    var indices = Enumerable.Range(0, originalCultureNames.Length).ToList();
+        //    var r = new Random();
+
+        //    // cultureId starts from 1
+        //    for (int i = 0; i < totalCultures + 1; i++)
+        //    {
+        //        var index = r.Next(indices.Count);
+        //        ToOriginalCultureName[i] = originalCultureNames[indices[index]];
+        //        indices.RemoveAt(index);
+        //    }
+        //}
 
         // Kingdom index
         int ki = 1;
@@ -1348,11 +1357,11 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     .SelectMany(n => n.baronies)
                     .Select(n =>
                     {
-                        var str = $@"{bi} = {{
-                        	culture = {ToOriginalCultureName[baronyCultures[bi]]}
-                        	religion = west_african_pagan
-                        	holding = tribal_holding
-                        }}";
+                        var str = $@"{map.IdToIndex[n.province.Id]} = {{
+    culture = {ToOriginalCultureName[baronyCultures[bi]]}
+    religion = west_african_pagan
+    holding = tribal_holding
+}}";
 
                         bi++;
                         return str;
@@ -1368,276 +1377,4 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             }
         }
     }
-
-    //    public static async Task WriteHistoryProvinces(Map map)
-    //    {
-    //        // 40 culture.
-    //        var originalCultureNames = new string[]
-    //        {
-    //            "mongol",
-    //            "bengali",
-    //            "vlach",
-    //            "pulaar",
-    //            "croatian",
-    //            "italian",
-    //            "english",
-    //            "sorko",
-    //            "somali",
-    //            "andalusian",
-    //            "armenian",
-    //            "bedouin",
-    //            "kanuri",
-    //            "saxon",
-    //            "burmese",
-    //            "finnish",
-    //            "frankish",
-    //            "butr",
-    //            "komi",
-    //            "pommeranian",
-    //            "soninke",
-    //            "tamil",
-    //            "yoruba",
-    //            "irish",
-    //            "akan",
-    //            "persian",
-    //            "turkish",
-    //            "han",
-    //            "norse",
-    //            "pictish",
-    //            "gothic",
-    //            "malinke",
-    //            "mordvin",
-    //            "russian",
-    //            "ashkenazi",
-    //            "mogyer",
-    //            "ethiopian",
-    //            "bodpa",
-    //            "tangut",
-    //            "latgalian",
-    //        };
-
-    //        var ci = 1;
-    //        var countyCultures = map.Empires
-    //            .SelectMany(n => n.kingdoms)
-    //            .SelectMany(n => n.duchies)
-    //            .SelectMany(n => n.counties)
-    //            .ToDictionary(n => ci++, n => n.baronies.SelectMany(n => n.province.Cells.Select(m => m.culture)).Max());
-
-    //        var totalCultures = map.JsonMap.pack.cultures.Length;
-    //        if (totalCultures > originalCultureNames.Length)
-    //        {
-    //            // Generated too many cultures.
-    //            Debugger.Break();
-    //        }
-
-    //        var ToOriginalCultureName = new string[totalCultures + 1];
-    //        {
-    //            var indices = Enumerable.Range(0, originalCultureNames.Length).ToList();
-    //            var r = new Random();
-
-    //            // cultureId starts from 1
-    //            for (int i = 0; i < totalCultures + 1; i++)
-    //            {
-    //                var index = r.Next(indices.Count);
-    //                ToOriginalCultureName[i] = originalCultureNames[indices[index]];
-    //                indices.RemoveAt(index);
-    //            }
-    //        }
-
-    //        // Kingdom index
-    //        int ki = 1;
-    //        ci = 1;
-    //        var bi = 1;
-
-    //        foreach (var empire in map.Empires)
-    //        {
-    //            foreach (var kingdom in empire.kingdoms)
-    //            {
-    //                var isFirstBarony = true;
-    //                var baronies = kingdom.duchies
-    //                    .SelectMany(n => {
-    //                        //isFirstBarony = true;
-    //                        return n.counties;
-    //                        })
-    //                    .SelectMany(n => {
-    //                        isFirstBarony = true;
-
-    //                        return n.baronies;
-    //                        })
-    //                    .Select(n =>
-    //                    {
-    //                        string str = null;
-    //                        if (isFirstBarony)
-    //                        {
-    //                            str = $@"{bi} = {{
-    //	culture = italian
-    //	religion = west_african_pagan
-    //	holding = none
-    //}}";
-    //                            isFirstBarony = false;
-    //                        }
-    //                        else
-    //                        {
-    //                            str = $@"{bi} = {{
-    //	holding = none
-    //}}";
-    //                        }
-
-    //                        bi++;
-    //                        return str;
-    //                    })
-    //                    .ToArray();
-
-    //                var file = string.Join('\n', baronies);
-    //                var path = $"{Environment.CurrentDirectory}/mod/history/provinces/k_{ki}.txt";
-    //                Directory.CreateDirectory(Path.GetDirectoryName(path));
-    //                await File.WriteAllTextAsync(path, file);
-
-    //                ki++;
-    //            }
-    //        }
-    //    }
-
-    //    public static async Task WriteHistoryProvinces(Map map)
-    //    {
-    //        // 40 culture.
-    //        var originalCultureNames = new string[]
-    //        {
-    //            "mongol",
-    //            "bengali",
-    //            "vlach",
-    //            "pulaar",
-    //            "croatian",
-    //            "italian",
-    //            "english",
-    //            "sorko",
-    //            "somali",
-    //            "andalusian",
-    //            "armenian",
-    //            "bedouin",
-    //            "kanuri",
-    //            "saxon",
-    //            "burmese",
-    //            "finnish",
-    //            "frankish",
-    //            "butr",
-    //            "komi",
-    //            "pommeranian",
-    //            "soninke",
-    //            "tamil",
-    //            "yoruba",
-    //            "irish",
-    //            "akan",
-    //            "persian",
-    //            "turkish",
-    //            "han",
-    //            "norse",
-    //            "pictish",
-    //            "gothic",
-    //            "malinke",
-    //            "mordvin",
-    //            "russian",
-    //            "ashkenazi",
-    //            "mogyer",
-    //            "ethiopian",
-    //            "bodpa",
-    //            "tangut",
-    //            "latgalian",
-    //        };
-
-    //        var ci = 1;
-    //        var countyCultures = map.Empires
-    //            .SelectMany(n => n.kingdoms)
-    //            .SelectMany(n => n.duchies)
-    //            .SelectMany(n => n.counties)
-    //            .ToDictionary(n => ci++, n => n.baronies.SelectMany(n => n.province.Cells.Select(m => m.culture)).Max());
-
-    //        var totalCultures = map.JsonMap.pack.cultures.Length;
-    //        if (totalCultures > originalCultureNames.Length)
-    //        {
-    //            // Generated too many cultures.
-    //            Debugger.Break();
-    //        }
-
-    //        var ToOriginalCultureName = new string[totalCultures + 1];
-    //        {
-    //            var indices = Enumerable.Range(0, originalCultureNames.Length).ToList();
-    //            var r = new Random();
-
-    //            // cultureId starts from 1
-    //            for (int i = 0; i < totalCultures + 1; i++)
-    //            {
-    //                var index = r.Next(indices.Count);
-    //                ToOriginalCultureName[i] = originalCultureNames[indices[index]];
-    //                indices.RemoveAt(index);
-    //            }
-    //        }
-
-    //        // Kingdom index
-    //        int ki = 1;
-    //        ci = 1;
-    //        var bi = 1;
-
-    //        var baronies = map.Empires
-    //            .SelectMany(n => n.kingdoms)
-    //            .SelectMany(n => n.duchies)
-    //                  .SelectMany(n => n.counties)
-    //                  .SelectMany(n => n.baronies)
-    //                  .Select(n =>
-    //                  {
-    //                      string str = $@"{bi} = {{
-    //	culture = italian
-    //	religion = west_african_pagan
-    //	holding = none
-    //}}";
-    //                      bi++;
-    //                      return str;
-    //                  })
-    //                  .ToArray();
-
-    //        var file = string.Join('\n', baronies);
-    //        var path = $"{Environment.CurrentDirectory}/mod/history/provinces/k_{ki}.txt";
-    //        Directory.CreateDirectory(Path.GetDirectoryName(path));
-    //        await File.WriteAllTextAsync(path, file);
-
-
-    //        foreach (var empire in map.Empires)
-    //        {
-    //            foreach (var kingdom in empire.kingdoms)
-    //            {
-    //                var isFirstBarony = true;
-    //                var baronies = kingdom.duchies
-    //                    .SelectMany(n => {
-    //                        //isFirstBarony = true;
-    //                        return n.counties;
-    //                    })
-    //                    .SelectMany(n => {
-    //                        isFirstBarony = true;
-
-    //                        return n.baronies;
-    //                    })
-    //                    .Select(n =>
-    //                    {
-    //                        string str = $@"{bi} = {{
-    //	culture = italian
-    //	religion = west_african_pagan
-    //	holding = none
-    //}}";
-
-    //                        bi++;
-    //                        return str;
-    //                    })
-    //                    .ToArray();
-
-    //                var file = string.Join('\n', baronies);
-    //                var path = $"{Environment.CurrentDirectory}/mod/history/provinces/k_{ki}.txt";
-    //                Directory.CreateDirectory(Path.GetDirectoryName(path));
-    //                await File.WriteAllTextAsync(path, file);
-
-    //                ki++;
-    //            }
-    //        }
-    //    }
-
-
 }
