@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 
 namespace AzgaarToCK3;
 
+//public record CK3Religion()
+
 public record GeometryRivers(string type, float[][] coordinates);
 public record FeatureRivers(GeometryRivers geometry);
 public record GeoMapRivers(FeatureRivers[] features);

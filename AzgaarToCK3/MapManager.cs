@@ -11,15 +11,91 @@ using System.Linq;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace AzgaarToCK3;
+
+public static class ConfigReader
+{
+    public record CK3Faith(string name, string[] holySites);
+    public record CK3Religion(string name, CK3Faith[] faiths);
+
+    // CAUTION: Duplicated keys!
+    private static string ToJson(string content)
+    {
+        // Remove comments
+        content = Regex.Replace(content, "#.*[\\s\\n]", "");
+        // "key":"value"
+        content = Regex.Replace(content, "(\\w+)\\s*=", "\"$1\":");
+        content = Regex.Replace(content, ":\\s*([\\w\\.-]+)", ":\"$1\"");
+            // array
+        //content = Regex.Replace(content, "{[\\s\\n]*([\\s\\n\\w\\d\\.-]+)[\\s\\n]*}", "[$1]");
+        content = Regex.Replace(content, @"{[\s\n]*([\s\n\w\d\.-]+)[\s\n]*}", "[$1]");
+        content = Regex.Replace(content, "\\[\\s*([\\w\\d])", "[\"$1");
+        content = Regex.Replace(content, "([\\w\\d])[\\s\\n]+([\\w\\d])", "$1\",\"$2");
+        content = Regex.Replace(content, "([\\w\\d])[\\s\\n]*]", "$1\"]");
+            // object array
+        content = Regex.Replace(content, "{[\\s\\n]*(([\\s\\n]*{[\\s\\n\\w=\":]*})*)[\\s\\n]*}", "[$1]");
+            // fill missing commas
+        content = Regex.Replace(content, "([\"}\\]])[\\s\\n]*([\"{])", "$1,$2");
+
+        return "{" + content + "}";
+    }
+
+    public static async Task<List<CK3Religion>> GetCK3Religions(Settings settings)
+    {
+        var religions = new List<CK3Religion>();
+
+        try
+        {
+            var religionsPath = $"{settings.ck3Directory}\\common\\religion\\religions";
+            var religionFiles = Directory.EnumerateFiles(religionsPath).Where(n => n.EndsWith(".txt"));
+
+            foreach (var religionFilename in religionFiles)
+            {
+                var content = await File.ReadAllTextAsync(religionFilename);
+
+                var contentJson = ToJson(content);
+                // faith name, holy sites
+                var religion = JsonSerializer.Deserialize<Dictionary<string, JsonDocument>>(contentJson)!.First();
+
+
+                var h = religion.Value.RootElement.EnumerateObject()
+                    .GroupBy(n => n.Name, n => n.Value)
+                    .ToDictionary(n => n.Key, n => n.Select(m => m));
+
+                var faiths = h["faiths"]
+                    .SelectMany(n => JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(n)!.Select(m => m))
+                    .ToDictionary(n => n.Key, n => n.Value);
+
+                var ck3Faiths = faiths
+                  .SelectMany(f => f.Value.EnumerateObject().Where(n => n.Name == "holy_site").Select(n => (f.Key, n.Value.GetString())))
+                  .GroupBy(n => n.Key, n => n.Item2)
+                  .Select(n => new CK3Faith(n.Key, n.ToArray()!))
+                  .ToArray();
+
+                religions.Add(new CK3Religion(religion.Key, ck3Faiths));
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+        }
+       
+        return religions;
+    }
+
+    //public static async Task<string[]> GetHolySites(string religionName)
+}
 
 public static class MapManager
 {
     private const int WaterLevelHeight = 30;
     private const bool ShouldCreateFolderStructure = true;
 
+    public static string OutputDirectory { get; set; } = $"{Environment.CurrentDirectory}/mod";
 
     public static async Task<GeoMap> LoadGeojson()
     {
@@ -422,7 +498,7 @@ public static class MapManager
             }
 
             cellsMap.Draw(drawables);
-            var path = $"{Environment.CurrentDirectory}/mod/map_data/provinces.png";
+            var path = $"{OutputDirectory}/map_data/provinces.png";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await cellsMap.WriteAsync(path);
         }
@@ -478,11 +554,8 @@ public static class MapManager
             }
 
             cellsMap.Draw(drawables);
-            var path = ShouldCreateFolderStructure
-                ? $"{Environment.CurrentDirectory}/mod/map_data/heightmap.png"
-                : $"{Environment.CurrentDirectory}/heightmap.png";
+            var path = $"{OutputDirectory}/map_data/heightmap.png";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-
             await cellsMap.WriteAsync(path);
 
             using var file = await Image.LoadAsync(path);
@@ -531,9 +604,7 @@ public static class MapManager
             }
 
             cellsMap.Draw(drawables);
-            var path = ShouldCreateFolderStructure
-                ? $"{Environment.CurrentDirectory}/mod/map_data/rivers.png"
-                : $"{Environment.CurrentDirectory}/rivers.png";
+            var path = $"{OutputDirectory}/map_data/rivers.png";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
 
             cellsMap.Settings.SetDefine("png:color-type", "1");
@@ -571,7 +642,7 @@ public static class MapManager
     public static async Task WriteDefinition(Map map)
     {
         var lines = map.Provinces.Select((n, i) => $"{i};{n.Color.R};{n.Color.G};{n.Color.B};{n.Name};x;");
-        var path = $"{Environment.CurrentDirectory}/mod/map_data/definition.csv";
+        var path = $"{OutputDirectory}/map_data/definition.csv";
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllLinesAsync(path, lines);
     }
@@ -605,7 +676,7 @@ $@"game_object_locator={{
 {string.Join("\n", lines)}
     }}
 }}";
-            var path = $"{Environment.CurrentDirectory}/mod/gfx/map/map_object_data/building_locators.txt";
+            var path = $"{OutputDirectory}/gfx/map/map_object_data/building_locators.txt";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file);
         }
@@ -644,7 +715,7 @@ $@"game_object_locator={{
 {string.Join("\n", lines)}
     }}
 }}";
-            var path = $"{Environment.CurrentDirectory}/mod/gfx/map/map_object_data/siege_locators.txt";
+            var path = $"{OutputDirectory}/gfx/map/map_object_data/siege_locators.txt";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file);
         }
@@ -682,7 +753,7 @@ $@"game_object_locator={{
 {string.Join("\n", lines)}
     }}
 }}";
-            var path = $"{Environment.CurrentDirectory}/mod/gfx/map/map_object_data/combat_locators.txt";
+            var path = $"{OutputDirectory}/gfx/map/map_object_data/combat_locators.txt";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file);
         }
@@ -734,7 +805,7 @@ $@"game_object_locator={{
 {string.Join("\n", lines)}
     }}
 }}";
-            var path = $"{Environment.CurrentDirectory}/mod/gfx/map/map_object_data/player_stack_locators.txt";
+            var path = $"{OutputDirectory}/gfx/map/map_object_data/player_stack_locators.txt";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file);
         }
@@ -984,7 +1055,7 @@ e_hre = {{ landless = yes }}
 e_byzantium = {{ landless = yes }}
 e_roman_empire = {{ landless = yes }}";
 
-        var path = $"{Environment.CurrentDirectory}/mod/common/landed_titles/00_landed_titles.txt";
+        var path = $"{OutputDirectory}/common/landed_titles/00_landed_titles.txt";
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -1028,7 +1099,7 @@ e_roman_empire = {{ landless = yes }}";
  TITLE_TIER_AS_NAME:0 ""$TIER|U$""
 
  {string.Join("\n ", lines)}";
-            var path = $"{Environment.CurrentDirectory}/mod/localization/english/titles_l_english.yml";
+            var path = $"{OutputDirectory}/localization/english/titles_l_english.yml";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
         }
@@ -1041,7 +1112,7 @@ e_roman_empire = {{ landless = yes }}";
  TITLE_TIER_AS_NAME:0 ""$TIER|U$""
 
  {string.Join("\n ", lines)}";
-            var path = $"{Environment.CurrentDirectory}/mod/localization/russian/titles_l_russian.yml";
+            var path = $"{OutputDirectory}/localization/russian/titles_l_russian.yml";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
         }
@@ -1097,7 +1168,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 # They are probably not visible anywhere on the map, so feel free to reuse them (after double checking that they are actually missing).
 ";
 
-        var path = $"{Environment.CurrentDirectory}/mod/map_data/default.map";
+        var path = $"{OutputDirectory}/map_data/default.map";
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -1126,12 +1197,8 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
             var file = $@"default=plains
 {string.Join("\n", provinceBiomes)}";
-            var path = ShouldCreateFolderStructure
-
-         ? $"{Environment.CurrentDirectory}/mod/common/province_terrain/00_province_terrain.txt"
-         : $"{Environment.CurrentDirectory}/00_province_terrain.txt";
+            var path = $"{OutputDirectory}/common/province_terrain/00_province_terrain.txt";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-
             await File.WriteAllTextAsync(path, file);
         }
         catch (Exception ex)
@@ -1157,19 +1224,14 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             }
 
             cellsMap.Draw(drawables);
-            var path = $"{Environment.CurrentDirectory}/mod/gfx/map/terrain/{filename}.png";
 
+            var path = $"{OutputDirectory}/gfx/map/terrain/{filename}.png";
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-
             await cellsMap.WriteAsync(path, MagickFormat.Png00);
-
-            //var s = Stopwatch.StartNew();
 
             using var file = await Image.LoadAsync(path);
             file.Mutate(n => n.GaussianBlur(15));
             file.Save(path);
-
-            //s.Stop();
         }
         catch (Exception ex)
         {
@@ -1264,7 +1326,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
     public static async Task WriteGraphics()
     {
-        var path = $"{Environment.CurrentDirectory}/mod/common/defines/graphic/00_graphics.txt";
+        var path = $"{OutputDirectory}/common/defines/graphic/00_graphics.txt";
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         File.Copy("00_graphics.txt", path, true);
     }
@@ -1470,7 +1532,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     .ToArray();
 
                 var file = string.Join('\n', baronies);
-                var path = $"{Environment.CurrentDirectory}/mod/history/provinces/k_{ki}.txt";
+                var path = $"{OutputDirectory}/history/provinces/k_{ki}.txt";
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 await File.WriteAllTextAsync(path, file);
 
@@ -1479,8 +1541,6 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         }
 
         // Remove original cultures from provinces
-        FileSystem.CopyDirectory($"{Environment.CurrentDirectory}/originalCultureReplacements", $"{Environment.CurrentDirectory}/mod/history/provinces", true);
+        FileSystem.CopyDirectory($"{Environment.CurrentDirectory}/originalCultureReplacements", $"{OutputDirectory}/history/provinces", true);
     }
-
-
 }
