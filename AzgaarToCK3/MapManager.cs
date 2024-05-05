@@ -25,63 +25,65 @@ public static class ConfigReader
     private static string ToJson(string content)
     {
         // Remove comments
-        content = Regex.Replace(content, "#.*[\\s\\n]", "");
+        content = Regex.Replace(content, @"#.*[\s\n]", "");
+        // remove hsv color modifier
+        content = Regex.Replace(content, "hsv", "");
         // "key":"value"
-        content = Regex.Replace(content, "(\\w+)\\s*=", "\"$1\":");
-        content = Regex.Replace(content, ":\\s*([\\w\\.-]+)", ":\"$1\"");
-            // array
-        //content = Regex.Replace(content, "{[\\s\\n]*([\\s\\n\\w\\d\\.-]+)[\\s\\n]*}", "[$1]");
+        content = Regex.Replace(content, @"(\w+)\s*=", "\"$1\":");
+        content = Regex.Replace(content, @":\s*([\w\.-]+)", ":\"$1\"");
+        // array
         content = Regex.Replace(content, @"{[\s\n]*([\s\n\w\d\.-]+)[\s\n]*}", "[$1]");
-        content = Regex.Replace(content, "\\[\\s*([\\w\\d])", "[\"$1");
-        content = Regex.Replace(content, "([\\w\\d])[\\s\\n]+([\\w\\d])", "$1\",\"$2");
-        content = Regex.Replace(content, "([\\w\\d])[\\s\\n]*]", "$1\"]");
-            // object array
-        content = Regex.Replace(content, "{[\\s\\n]*(([\\s\\n]*{[\\s\\n\\w=\":]*})*)[\\s\\n]*}", "[$1]");
-            // fill missing commas
-        content = Regex.Replace(content, "([\"}\\]])[\\s\\n]*([\"{])", "$1,$2");
+        content = Regex.Replace(content, @"\[\s*([\w\d])", "[\"$1");
+        content = Regex.Replace(content, @"([\w\d])[\s\n]+([\w\d])", "$1\",\"$2");
+        content = Regex.Replace(content, @"([\w\d])[\s\n]*]", "$1\"]");
+        // object array
+        content = Regex.Replace(content, """{[\s\n]*(([\s\n]*{[\s\n\w=":]*})*)[\s\n]*}""", "[$1]");
+        // fill missing commas
+        content = Regex.Replace(content, """(["}\]])[\s\n]*(["{])""", "$1,$2");
 
         return "{" + content + "}";
     }
 
+    // CK3 file structure is tricky and some things cannot be parsed yet.
+    // Unsupported religions: west_african_religion
     public static async Task<List<CK3Religion>> GetCK3Religions(Settings settings)
     {
         var religions = new List<CK3Religion>();
 
-        try
+        var religionsPath = $"{settings.ck3Directory}\\common\\religion\\religions";
+        var religionFiles = Directory.EnumerateFiles(religionsPath).Where(n => n.EndsWith(".txt"));
+
+        foreach (var religionFilename in religionFiles)
         {
-            var religionsPath = $"{settings.ck3Directory}\\common\\religion\\religions";
-            var religionFiles = Directory.EnumerateFiles(religionsPath).Where(n => n.EndsWith(".txt"));
+            var content = await File.ReadAllTextAsync(religionFilename);
 
-            foreach (var religionFilename in religionFiles)
+            var contentJson = ToJson(content);
+            try
             {
-                var content = await File.ReadAllTextAsync(religionFilename);
-
-                var contentJson = ToJson(content);
                 // faith name, holy sites
-                var religion = JsonSerializer.Deserialize<Dictionary<string, JsonDocument>>(contentJson)!.First();
-
+                var religion = JsonSerializer.Deserialize<Dictionary<string, JsonDocument>>(contentJson, new JsonSerializerOptions { })!.First();
 
                 var h = religion.Value.RootElement.EnumerateObject()
-                    .GroupBy(n => n.Name, n => n.Value)
-                    .ToDictionary(n => n.Key, n => n.Select(m => m));
+                .GroupBy(n => n.Name, n => n.Value)
+                .ToDictionary(n => n.Key, n => n.Select(m => m));
 
                 var faiths = h["faiths"]
                     .SelectMany(n => JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(n)!.Select(m => m))
                     .ToDictionary(n => n.Key, n => n.Value);
 
                 var ck3Faiths = faiths
-                  .SelectMany(f => f.Value.EnumerateObject().Where(n => n.Name == "holy_site").Select(n => (f.Key, n.Value.GetString())))
-                  .GroupBy(n => n.Key, n => n.Item2)
-                  .Select(n => new CK3Faith(n.Key, n.ToArray()!))
-                  .ToArray();
+                    .SelectMany(f => f.Value.EnumerateObject().Where(n => n.Name == "holy_site").Select(n => (f.Key, n.Value.GetString())))
+                    .GroupBy(n => n.Key, n => n.Item2)
+                    .Select(n => new CK3Faith(n.Key, n.ToArray()!))
+                    .ToArray();
 
                 religions.Add(new CK3Religion(religion.Key, ck3Faiths));
             }
-
-        }
-        catch (Exception ex)
-        {
-            Debugger.Break();
+            catch(Exception ex)
+            {
+                // ignore errors (west_african_religion)
+                continue;
+            }
         }
        
         return religions;
