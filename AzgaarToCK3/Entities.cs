@@ -86,17 +86,18 @@ public class Province
     public bool IsWater { get; set; }
 }
 
-public record Barony(Province province, string name, MagickColor color);
+public record Barony(int id, Province province, string name, MagickColor color);
 public class County
 {
+    public int Id { get; init; }
     public List<Barony> baronies = new();
-    public string Name { get; set; }
-    public MagickColor Color { get; set; }
-    public string CapitalName { get; set; }
+    public string Name { get; init; }
+    public MagickColor Color { get; init; }
+    public string CapitalName { get; init; }
 }
-public record Duchy(County[] counties, string name, MagickColor color, string capitalName);
-public record Kingdom(Duchy[] duchies, bool isAllowed, string name, MagickColor color, string capitalName);
-public record Empire(Kingdom[] kingdoms, bool isAllowed, string name, MagickColor color, string capitalName);
+public record Duchy(int id, County[] counties, string name, MagickColor color, string capitalName);
+public record Kingdom(int id, Duchy[] duchies, bool isAllowed, string name, MagickColor color, string capitalName);
+public record Empire(int id, Kingdom[] kingdoms, bool isAllowed, string name, MagickColor color, string capitalName);
 public class Map
 {
     public const int MapWidth = 8192;
@@ -117,5 +118,6 @@ public class Map
     public double pixelYRatio => (double)MapHeight / JsonMap.info.height;
 
     public Dictionary<int, int> IdToIndex { get; set; }
+    public Settings Settings { get; set; }
 }
 

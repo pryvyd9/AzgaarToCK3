@@ -90,45 +90,47 @@ public partial class MainWindow : Window
         var geoMapRivers = new GeoMapRivers(new FeatureRivers[0]);
         var jsonMap = await MapManager.LoadJson();
         var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap);
+        map.Settings = _settings;
         return map;
     }
 
-    public static async Task Run()
-    {
-        try
-        {
-            await ConfigReader.GetCK3Religions(_settings);
+    //public static async Task Run()
+    //{
+    //    try
+    //    {
+    //        //await ConfigReader.GetCK3Religions(_settings);
 
-            var map = await LoadMap();
+    //        var map = await LoadMap();
 
 
-            //await MapManager.DrawCells(map);
+    //        //await MapManager.DrawCells(map);
 
-            await MapManager.DrawProvinces(map);
-            await MapManager.DrawHeightMap(map);
-            await MapManager.DrawRivers(map);
-            await MapManager.WriteDefinition(map);
+    //        //await MapManager.DrawProvinces(map);
+    //        //await MapManager.DrawHeightMap(map);
+    //        //await MapManager.DrawRivers(map);
+    //        //await MapManager.WriteDefinition(map);
 
-            await MapManager.WriteLocators(map);
+    //        //await MapManager.WriteLocators(map);
 
-            var titles = MapManager.CreateTitles(map);
-            map.Empires = titles;
-            await MapManager.WriteLandedTitles(map);
-            await MapManager.WriteTitleLocalization(map);
+    //        var titles = MapManager.CreateTitles(map);
+    //        map.Empires = titles;
+    //        await MapManager.WriteLandedTitles(map);
+    //        await MapManager.WriteTitleLocalization(map);
 
-            await MapManager.WriteHistoryProvinces(map);
+    //        var faiths = await MapManager.WriteHistoryProvinces(map);
+    //        await MapManager.WriteHolySites(map, faiths);
 
-            await MapManager.WriteDefault(map);
-            await MapManager.WriteTerrain(map);
-            await MapManager.WriteMasks(map);
+    //        //await MapManager.WriteDefault(map);
+    //        //await MapManager.WriteTerrain(map);
+    //        //await MapManager.WriteMasks(map);
 
-            await MapManager.WriteGraphics();
-        }
-        catch (Exception ex)
-        {
-            Debugger.Break();
-        }
-    }
+    //        //await MapManager.WriteGraphics();
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        Debugger.Break();
+    //    }
+    //}
 
     public static async Task Test()
     {
@@ -153,7 +155,9 @@ public partial class MainWindow : Window
             await MapManager.WriteLandedTitles(map);
             await MapManager.WriteTitleLocalization(map);
 
-            await MapManager.WriteHistoryProvinces(map);
+            var faiths = await MapManager.WriteHistoryProvinces(map);
+            await MapManager.CopyOriginalReligions(map);
+            await MapManager.WriteHolySites(map, faiths);
 
             //await MapManager.WriteDefault(map);
             //await MapManager.WriteTerrain(map);

@@ -3,99 +3,19 @@ using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace AzgaarToCK3;
 
-public static class ConfigReader
-{
-    public record CK3Faith(string name, string[] holySites);
-    public record CK3Religion(string name, CK3Faith[] faiths);
-
-    // CAUTION: Duplicated keys!
-    private static string ToJson(string content)
-    {
-        // Remove comments
-        content = Regex.Replace(content, @"#.*[\s\n]", "");
-        // remove hsv color modifier
-        content = Regex.Replace(content, "hsv", "");
-        // "key":"value"
-        content = Regex.Replace(content, @"(\w+)\s*=", "\"$1\":");
-        content = Regex.Replace(content, @":\s*([\w\.-]+)", ":\"$1\"");
-        // array
-        content = Regex.Replace(content, @"{[\s\n]*([\s\n\w\d\.-]+)[\s\n]*}", "[$1]");
-        content = Regex.Replace(content, @"\[\s*([\w\d])", "[\"$1");
-        content = Regex.Replace(content, @"([\w\d])[\s\n]+([\w\d])", "$1\",\"$2");
-        content = Regex.Replace(content, @"([\w\d])[\s\n]*]", "$1\"]");
-        // object array
-        content = Regex.Replace(content, """{[\s\n]*(([\s\n]*{[\s\n\w=":]*})*)[\s\n]*}""", "[$1]");
-        // fill missing commas
-        content = Regex.Replace(content, """(["}\]])[\s\n]*(["{])""", "$1,$2");
-
-        return "{" + content + "}";
-    }
-
-    // CK3 file structure is tricky and some things cannot be parsed yet.
-    // Unsupported religions: west_african_religion
-    public static async Task<List<CK3Religion>> GetCK3Religions(Settings settings)
-    {
-        var religions = new List<CK3Religion>();
-
-        var religionsPath = $"{settings.ck3Directory}\\common\\religion\\religions";
-        var religionFiles = Directory.EnumerateFiles(religionsPath).Where(n => n.EndsWith(".txt"));
-
-        foreach (var religionFilename in religionFiles)
-        {
-            var content = await File.ReadAllTextAsync(religionFilename);
-
-            var contentJson = ToJson(content);
-            try
-            {
-                // faith name, holy sites
-                var religion = JsonSerializer.Deserialize<Dictionary<string, JsonDocument>>(contentJson, new JsonSerializerOptions { })!.First();
-
-                var h = religion.Value.RootElement.EnumerateObject()
-                .GroupBy(n => n.Name, n => n.Value)
-                .ToDictionary(n => n.Key, n => n.Select(m => m));
-
-                var faiths = h["faiths"]
-                    .SelectMany(n => JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(n)!.Select(m => m))
-                    .ToDictionary(n => n.Key, n => n.Value);
-
-                var ck3Faiths = faiths
-                    .SelectMany(f => f.Value.EnumerateObject().Where(n => n.Name == "holy_site").Select(n => (f.Key, n.Value.GetString())))
-                    .GroupBy(n => n.Key, n => n.Item2)
-                    .Select(n => new CK3Faith(n.Key, n.ToArray()!))
-                    .ToArray();
-
-                religions.Add(new CK3Religion(religion.Key, ck3Faiths));
-            }
-            catch(Exception ex)
-            {
-                // ignore errors (west_african_religion)
-                continue;
-            }
-        }
-       
-        return religions;
-    }
-
-    //public static async Task<string[]> GetHolySites(string religionName)
-}
-
 public static class MapManager
 {
     private const int WaterLevelHeight = 30;
-    private const bool ShouldCreateFolderStructure = true;
 
     public static string OutputDirectory { get; set; } = $"{Environment.CurrentDirectory}/mod";
 
@@ -421,9 +341,7 @@ public static class MapManager
         return new PointD(x * map.pixelXRatio, Map.MapHeight - y * map.pixelYRatio);
     }
 
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     public static async Task<Map> ConvertMap(GeoMap geoMap, GeoMapRivers geoMapRivers, JsonMap jsonMap)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         var provinces = CreateProvinces(geoMap, jsonMap);
 
@@ -830,6 +748,9 @@ $@"game_object_locator={{
         {
             var duchies = new List<Duchy>();
             var processedProvinces = new HashSet<Province>();
+            var bi = 1;
+            var ci = 1;
+            var di = 1;
 
             foreach (var state in map.JsonMap.pack.states.Where(n => n.provinces.Any()))
             {
@@ -852,6 +773,7 @@ $@"game_object_locator={{
                         {
                             counties.Add(new County()
                             {
+                                Id = ci++,
                                 Color = currentProvince.Color,
                                 CapitalName = currentProvince.Name,
                                 Name = "County of " + currentProvince.Name,
@@ -861,7 +783,7 @@ $@"game_object_locator={{
                         unprocessedProvinces.Remove(currentProvince);
                         processedProvinces.Add(currentProvince);
                      
-                        counties.Last().baronies.Add(new Barony(currentProvince, currentProvince.Name, currentProvince.Color));
+                        counties.Last().baronies.Add(new Barony(bi++, currentProvince, currentProvince.Name, currentProvince.Color));
 
                         Province? neighbor = null;
                         while (true)
@@ -892,7 +814,7 @@ $@"game_object_locator={{
                     currentProvince = unprocessedProvinces.FirstOrDefault();
                 } while (unprocessedProvinces.Count > 0);
               
-                duchies.Add(new Duchy(counties.ToArray(), "Duchy of " + state.name, counties.First().Color, counties.First().CapitalName));
+                duchies.Add(new Duchy(di++, counties.ToArray(), "Duchy of " + state.name, counties.First().Color, counties.First().CapitalName));
             }
             return duchies;
         }
@@ -933,11 +855,14 @@ $@"game_object_locator={{
                 duchyCultures[primaryDuchyCultureId].Add(duchy);
             }
 
+            var ki = 1;
+
             var kingdoms = duchyCultures.Select(n =>
             {
                 var cultureId = n.Key;
                 var duchies = n.Value;
                 return new Kingdom(
+                    ki++,
                     duchies.ToArray(),
                     duchies.Count > 1,
                     "Kingdom of " + map.JsonMap.pack.cultures.First(n => n.i == cultureId).name,
@@ -966,11 +891,14 @@ $@"game_object_locator={{
                 kingdomReligions[primaryDuchyReligionId].Add(kingdom);
             }
 
+            var ei = 1;
+
             var empires = kingdomReligions.Select(n =>
             {
                 var religionId = n.Key;
                 var kingdoms = n.Value;
                 return new Empire(
+                    ei++,
                     kingdoms.ToArray(),
                     kingdoms.Count > 1,
                     "Empire of " + map.JsonMap.pack.religions.First(n => n.i == religionId).name,
@@ -988,17 +916,13 @@ $@"game_object_locator={{
     }
     public static async Task WriteLandedTitles(Map map)
     {
-        int ei = 1;
-        int ki = 1;
-        int di = 1;
-        int ci = 1;
-        int bi = 1;
+        var ci = 1;
 
         string[] GetBaronies(Barony[] baronies)
         {
             return baronies.Select((n, i) =>
             {
-                return $@"                b_{bi++} = {{
+                return $@"                b_{n.id} = {{
                     color = {{ {n.color.R} {n.color.G} {n.color.B} }}
                     color2 = {{ 255 255 255 }}
                     province = {map.IdToIndex[n.province.Id]}
@@ -1008,16 +932,20 @@ $@"game_object_locator={{
 
         string[] GetCounties(County[] counties)
         {
-            return counties.Select((n, i) => $@"            c_{ci++} = {{
+            return counties.Select((n, i) =>
+            {
+                ci = n.Id;
+                return $@"            c_{ci} = {{
                 color = {{ {n.Color.R} {n.Color.G} {n.Color.B} }}
                 color2 = {{ 255 255 255 }}
 {string.Join("\n", GetBaronies(n.baronies.ToArray()))}
-            }}").ToArray();
+            }}";
+            }).ToArray();
         }
 
         string[] GetDuchies(Duchy[] duchies)
         {
-            return duchies.Select((d, i) => $@"        d_{di++} = {{
+            return duchies.Select((d, i) => $@"        d_{d.id} = {{
             color = {{ {d.color.R} {d.color.G} {d.color.B} }}
             color2 = {{ 255 255 255 }}
             capital = c_{ci}
@@ -1027,7 +955,7 @@ $@"game_object_locator={{
 
         string[] GetKingdoms(Kingdom[] kingdoms)
         {
-            return kingdoms.Select((k, i) => $@"    k_{ki++} = {{
+            return kingdoms.Select((k, i) => $@"    k_{k.id} = {{
         color = {{ {k.color.R} {k.color.G} {k.color.B} }}
         color2 = {{ 255 255 255 }}
         capital = c_{ci}
@@ -1038,7 +966,7 @@ $@"game_object_locator={{
 
         string[] GetEmpires()
         {
-            return map.Empires.Select((e, i) => $@"e_{ei++} = {{
+            return map.Empires.Select((e, i) => $@"e_{e.id} = {{
     color = {{ {e.color.R} {e.color.G} {e.color.B} }}
     color2 = {{ 255 255 255 }}
     capital = c_{ci}
@@ -1061,31 +989,26 @@ e_roman_empire = {{ landless = yes }}";
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
+
     public static async Task WriteTitleLocalization(Map map)
     {
-        int ei = 1;
-        int ki = 1;
-        int di = 1;
-        int ci = 1;
-        int bi = 1;
-
         var lines = new List<string>();
 
         foreach (var e in map.Empires)
         {
-            lines.Add($"e_{ei++}: \"{e.name}\"");
+            lines.Add($"e_{e.id}: \"{e.name}\"");
             foreach (var k in e.kingdoms)
             {
-                lines.Add($"k_{ki++}: \"{k.name}\"");
+                lines.Add($"k_{k.id}: \"{k.name}\"");
                 foreach (var d in k.duchies)
                 {
-                    lines.Add($"d_{di++}: \"{d.name}\"");
+                    lines.Add($"d_{d.id}: \"{d.name}\"");
                     foreach (var c in d.counties)
                     {
-                        lines.Add($"c_{ci++}: \"{c.Name}\"");
+                        lines.Add($"c_{c.Id}: \"{c.Name}\"");
                         foreach (var b in c.baronies)
                         {
-                            lines.Add($"b_{bi++}: \"{b.name}\"");
+                            lines.Add($"b_{b.id}: \"{b.name}\"");
                         }
                     }
                 }
@@ -1337,15 +1260,12 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     private static async Task<(Dictionary<int, int> baronyCultures, string[] toOriginalCultureName)> GetCultures(Map map)
     {
         var originalCultureNames = await File.ReadAllLinesAsync("originalCultures.txt");
-        var bi = 1;
         var baronyCultures = map.Empires
             .SelectMany(n => n.kingdoms)
             .SelectMany(n => n.duchies)
             .SelectMany(n => n.counties)
             .SelectMany(n => n.baronies)
-        //.Select(n => (n, bi++))
-        //.ToDictionary(n => n.Item2, n => n.n.province.Cells.Select(m => m.culture).Max());
-            .ToDictionary(n => bi++, n => n.province.Cells.Select(m => m.culture).Max());
+            .ToDictionary(n => n.id, n => n.province.Cells.Select(m => m.culture).Max());
 
         var totalCultures = map.JsonMap.pack.cultures.Length;
         if (totalCultures > originalCultureNames.Length)
@@ -1380,16 +1300,13 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     }
     private static async Task<(Dictionary<int, int> baronyReligions, string[] toOriginalReligionName)> GetReligions(Map map)
     {
-        var originalReligionNames = await File.ReadAllLinesAsync("originalReligions.txt");
-        var bi = 1;
+        var originalReligionNames = (await ConfigReader.GetCK3Religions(map.Settings)).SelectMany(n => n.faiths).Select(n => n.name).ToArray();
         var baronyReligions = map.Empires
             .SelectMany(n => n.kingdoms)
             .SelectMany(n => n.duchies)
             .SelectMany(n => n.counties)
             .SelectMany(n => n.baronies)
-        //.Select(n => (n, bi++))
-        //.ToDictionary(n => n.Item2, n => n.n.province.Cells.Select(m => m.culture).Max());
-            .ToDictionary(n => bi++, n => n.province.Cells.Select(m => m.religion).Max());
+            .ToDictionary(n => n.id, n => n.province.Cells.Select(m => m.religion).Max());
 
         var totalReligions = map.JsonMap.pack.religions.Length;
         if (totalReligions > originalReligionNames.Length)
@@ -1422,96 +1339,11 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
         return (baronyReligions, toOriginalReligionName);
     }
-
-    //    public static async Task WriteHistoryProvinces(Map map)
-    //    {
-    //        // 40 cultures
-    //        var originalCultureNames = await File.ReadAllLinesAsync("originalCultures.txt");
-
-    //        var bi = 1;
-    //        var baronyCultures = map.Empires
-    //            .SelectMany(n => n.kingdoms)
-    //            .SelectMany(n => n.duchies)
-    //            .SelectMany(n => n.counties)
-    //            .SelectMany(n => n.baronies)
-    //            .Select(n => (n, bi++))
-    //            .ToDictionary(n => n.Item2, n => n.n.province.Cells.Select(m => m.culture).Max());
-    //            //.ToDictionary(n => bi++, n => n.province.Cells.Select(m => m.culture).Max());
-
-    //        var totalCultures = map.JsonMap.pack.cultures.Length;
-    //        if (totalCultures > originalCultureNames.Length)
-    //        {
-    //            // Generated too many cultures.
-    //            Debugger.Break();
-    //        }
-
-    //        var toOriginalCultureName = new string[totalCultures + 1];
-    //        //// Consistent cultures for debugging
-    //        //{
-    //        //    // cultureId starts from 1
-    //        //    for (int i = 0; i < totalCultures + 1; i++)
-    //        //    {
-    //        //        ToOriginalCultureName[i] = originalCultureNames[i];
-    //        //    }
-    //        //}
-    //        // Randomized cultures
-    //        {
-    //            var indices = Enumerable.Range(0, originalCultureNames.Length).ToList();
-    //            var r = new Random();
-
-    //            // cultureId starts from 1
-    //            for (int i = 0; i < totalCultures + 1; i++)
-    //            {
-    //                var index = r.Next(indices.Count);
-    //                toOriginalCultureName[i] = originalCultureNames[indices[index]];
-    //                indices.RemoveAt(index);
-    //            }
-    //        }
-
-    //        // Kingdom index
-    //        int ki = 1;
-    //        bi = 1;
-
-    //        foreach (var empire in map.Empires)
-    //        {
-    //            foreach (var kingdom in empire.kingdoms)
-    //            {
-    //                var baronies = kingdom.duchies
-    //                    .SelectMany(n => n.counties)
-    //                    .SelectMany(n => n.baronies)
-    //                    .Select(n =>
-    //                    {
-    //                        var str = $@"{map.IdToIndex[n.province.Id]} = {{
-    //    culture = {toOriginalCultureName[baronyCultures[bi]]}
-    //    religion = west_african_pagan
-    //    holding = tribal_holding
-    //}}";
-
-    //                        bi++;
-    //                        return str;
-    //                    })
-    //                    .ToArray();
-
-    //                var file = string.Join('\n', baronies);
-    //                var path = $"{Environment.CurrentDirectory}/mod/history/provinces/k_{ki}.txt";
-    //                Directory.CreateDirectory(Path.GetDirectoryName(path));
-    //                await File.WriteAllTextAsync(path, file);
-
-    //                ki++;
-    //            }
-    //        }
-
-    //        // Remove original cultures from provinces
-    //        FileSystem.CopyDirectory($"{Environment.CurrentDirectory}/originalCultureReplacements", $"{Environment.CurrentDirectory}/mod/history/provinces", true);
-    //    }
-
-    public static async Task WriteHistoryProvinces(Map map)
+  
+    public static async Task<string[]> WriteHistoryProvinces(Map map)
     {
         var (baronyCultures, toOriginalCultureName) = await GetCultures(map);
         var (baronyReligions, toOriginalReligionName) = await GetReligions(map);
-
-        int ki = 1;
-        var bi = 1;
 
         foreach (var empire in map.Empires)
         {
@@ -1523,26 +1355,70 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     .Select(n =>
                     {
                         var str = $@"{map.IdToIndex[n.province.Id]} = {{
-    culture = {toOriginalCultureName[baronyCultures[bi]]}
-    religion = {toOriginalReligionName[baronyReligions[bi]]}
+    culture = {toOriginalCultureName[baronyCultures[n.id]]}
+    religion = {toOriginalReligionName[baronyReligions[n.id]]}
     holding = auto
 }}";
-
-                        bi++;
                         return str;
                     })
                     .ToArray();
 
                 var file = string.Join('\n', baronies);
-                var path = $"{OutputDirectory}/history/provinces/k_{ki}.txt";
+                var path = $"{OutputDirectory}/history/provinces/k_{kingdom.id}.txt";
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 await File.WriteAllTextAsync(path, file);
-
-                ki++;
             }
         }
 
         // Remove original cultures from provinces
         FileSystem.CopyDirectory($"{Environment.CurrentDirectory}/originalCultureReplacements", $"{OutputDirectory}/history/provinces", true);
+
+        return toOriginalReligionName;
+    }
+    public static async Task CopyOriginalReligions(Map map)
+    {
+        var religionsPath = $"{map.Settings.ck3Directory}/common/religion/religions";
+        FileSystem.CopyDirectory(religionsPath, $"{OutputDirectory}/common/religion", true);
+    }
+    // Maps original holy sites to newly created provinces.
+    public static async Task WriteHolySites(Map map, string[] pickedFaiths)
+    {
+        var originalFaiths = (await ConfigReader.GetCK3Religions(map.Settings)).SelectMany(n => n.faiths).Where(n => pickedFaiths.Contains(n.name)).ToArray();
+        var originalHolySites = await ConfigReader.GetCK3HolySites(map.Settings);
+
+        var pickedHolySites = pickedFaiths
+            .SelectMany(n => originalFaiths.First(m => m.name == n).holySites.Select(m => (name: m, holySite: originalHolySites[m])))
+            .ToArray();
+
+        var counties = map.Empires.SelectMany(n => n.kingdoms).SelectMany(n => n.duchies).SelectMany(n => n.counties).ToArray();
+        //var baronies = counties.SelectMany(n => n.baronies).ToArray();
+
+        var rnd = new Random();
+
+        var mappedHolySites = pickedHolySites.Select(n =>
+        {
+            var county = counties[rnd.Next(0, counties.Length)];
+            int? barony = string.IsNullOrWhiteSpace(n.holySite.barony) ? null : county.baronies[rnd.Next(0, county.baronies.Count)].id;
+
+            var baronyStr = barony > 0 ? $"barony = b_{barony}" : null;
+            var isActiveStr = n.holySite?.is_active == "no" ? $"is_active = no" : null;
+            var flagStr = string.IsNullOrEmpty(n.holySite?.flag) ? null : $"flag = {n.holySite.flag}";
+            var characterModifierStr = string.Join("\n", n.holySite?.character_modifier?.Select(n => $"     {n.Key} = {n.Value}") ?? new string[0]);
+           
+            return $@"{n.name} = {{
+    county = c_{county.Id}
+    {baronyStr}
+    {isActiveStr}
+    {flagStr}
+    character_modifier = {{
+{characterModifierStr}
+    }}
+}}";
+        });
+
+        var file = string.Join('\n', mappedHolySites);
+        var path = $"{OutputDirectory}/common/religion/holy_sites/00_holy_sites.txt";
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        await File.WriteAllTextAsync(path, file);
     }
 }
