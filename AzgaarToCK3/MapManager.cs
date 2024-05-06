@@ -1370,15 +1370,21 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             }
         }
 
-        // Remove original cultures from provinces
-        FileSystem.CopyDirectory($"{Environment.CurrentDirectory}/originalCultureReplacements", $"{OutputDirectory}/history/provinces", true);
+        // Make original culture history empty
+        // Otherwise it will override newly created culture
+        var originalProvincesPath = $"{map.Settings.ck3Directory}/history/provinces";
+        var provincesPath = $"{OutputDirectory}/history/provinces/";
+        foreach (var p in Directory.EnumerateFiles(originalProvincesPath))
+        {
+            File.WriteAllText(provincesPath + Path.GetFileName(p), "");
+        }
 
         return toOriginalReligionName;
     }
     public static async Task CopyOriginalReligions(Map map)
     {
         var religionsPath = $"{map.Settings.ck3Directory}/common/religion/religions";
-        FileSystem.CopyDirectory(religionsPath, $"{OutputDirectory}/common/religion", true);
+        FileSystem.CopyDirectory(religionsPath, $"{OutputDirectory}/common/religion/religions", true);
     }
     // Maps original holy sites to newly created provinces.
     public static async Task WriteHolySites(Map map, string[] pickedFaiths)
@@ -1391,10 +1397,8 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             .ToArray();
 
         var counties = map.Empires.SelectMany(n => n.kingdoms).SelectMany(n => n.duchies).SelectMany(n => n.counties).ToArray();
-        //var baronies = counties.SelectMany(n => n.baronies).ToArray();
 
         var rnd = new Random();
-
         var mappedHolySites = pickedHolySites.Select(n =>
         {
             var county = counties[rnd.Next(0, counties.Length)];

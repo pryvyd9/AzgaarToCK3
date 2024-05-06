@@ -136,7 +136,9 @@ public partial class MainWindow : Window
     {
         try
         {
-            await ConfigReader.GetCK3Religions(_settings);
+            //CK3FileReader.Read(@"g:\Games\SteamLibrary\steamapps\common\Crusader Kings III\game\common\religion\religions\00_christianity.txt");
+
+            //await ConfigReader.GetCK3Religions(_settings);
 
             var map = await LoadMap();
 
