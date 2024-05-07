@@ -19,6 +19,8 @@ public static class ConfigReader
     public record CK3HolySite(string? barony, Dictionary<string, string> character_modifier, string is_active, string flag);
 
     // CAUTION: Duplicated keys!
+    // Some files have a structure that will fail to properly convert to json.
+    // Use CK3FileReader for those files
     private static string ToJson(string content)
     {
         // Remove comments
@@ -42,7 +44,7 @@ public static class ConfigReader
     }
 
     // CK3 file structure is tricky and some things cannot be parsed yet.
-    // Unsupported religions: west_african_religion
+    // Check CK3FileReader for more details
     public static async Task<List<CK3Religion>> GetCK3Religions(Settings settings)
     {
         var religions = new List<CK3Religion>();
@@ -53,35 +55,42 @@ public static class ConfigReader
         foreach (var religionFilename in religionFiles)
         {
             var content = await File.ReadAllTextAsync(religionFilename);
-            var contentJson = ToJson(content);
+
             try
             {
-                // faith name, holy sites
-                var religion = JsonSerializer.Deserialize<Dictionary<string, JsonDocument>>(contentJson, new JsonSerializerOptions { })!.First();
+                var ck3Religion = CK3FileReader.Read(content);
+                var ck3Religions = ck3Religion.Where(n => n.Key != CK3FileReader.ValuesKey).ToArray();
 
-                var h = religion.Value.RootElement.EnumerateObject()
-                .GroupBy(n => n.Name, n => n.Value)
-                .ToDictionary(n => n.Key, n => n.Select(m => m));
+                foreach (var (religionName, religion) in ck3Religions)
+                {
+                    var faiths = ((Dictionary<string, object[]>)religion.First())["faiths"]
+                        .Cast<Dictionary<string, object[]>>()
+                        .First()
+                        .Where(n => n.Key != CK3FileReader.ValuesKey)
+                        .ToArray();
 
-                var faiths = h["faiths"]
-                    .SelectMany(n => JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(n)!.Select(m => m))
-                    .ToDictionary(n => n.Key, n => n.Value);
+                    var ck3Faiths = faiths.Select(n =>
+                    {
+                        var holySites = n.Value
+                              .Cast<Dictionary<string, object[]>>()
+                              .SelectMany(n => n["holy_site"])
+                              .Cast<string>()
+                              .Distinct()
+                              .ToArray();
 
-                var ck3Faiths = faiths
-                    .SelectMany(f => f.Value.EnumerateObject().Where(n => n.Name == "holy_site").Select(n => (f.Key, n.Value.GetString())))
-                    .GroupBy(n => n.Key, n => n.Item2)
-                    .Select(n => new CK3Faith(n.Key, n.ToArray()!))
-                    .ToArray();
+                        return new CK3Faith(n.Key, holySites);
+                    }).ToArray();
 
-                religions.Add(new CK3Religion(religion.Key, ck3Faiths));
+                    religions.Add(new CK3Religion(religionName, ck3Faiths));
+                }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                // ignore errors (west_african_religion)
-                continue;
+                Debugger.Break();
+                throw;
             }
         }
-       
+
         return religions;
     }
     public static async Task<Dictionary<string, CK3HolySite>> GetCK3HolySites(Settings settings)

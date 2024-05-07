@@ -1,12 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace AzgaarToCK3;
 
+
+/// <summary>
+/// This creates a very inconvenient structure.
+/// Should be used if it's impossible to convert a file to a json.
+/// Recursive structure:
+/// [string key, object[] values]
+/// value = [string key, object[] value]
+/// Known issues: Skips hsv attribute
+/// </summary>
 public static class CK3FileReader
 {
     private enum TokenType
@@ -19,7 +27,6 @@ public static class CK3FileReader
         objectStart,
         objectEnd,
     }
-
     private class IncompleteToken 
     {
         public TokenType type;
@@ -30,7 +37,6 @@ public static class CK3FileReader
             return $"{type}: {value}";
         }
     }
-
     private class SemiCompleteToken
     {
         public List<(string, SemiCompleteToken)> KeyObjects = new();
@@ -39,9 +45,12 @@ public static class CK3FileReader
         public List<string> ArrayValues = new();
     }
 
+    public const string ValuesKey = "values";
+    public static HashSet<string> TokensToIgnore = new() { "hsv" };
+
     private static IncompleteToken[] GetListOfTokens(string content)
     {
-        var tokenRegex = new Regex(@"[\s\n]*([^\s\n]+)", RegexOptions.Compiled);
+        var tokenRegex = new Regex(@"[\s\n]*([^\s\n}]+|})", RegexOptions.Compiled);
         var commentRegex = new Regex(@"[\s\n]*#[^\n]+", RegexOptions.Compiled);
 
         List<IncompleteToken> incompleteTokens = new();
@@ -57,85 +66,111 @@ public static class CK3FileReader
             cursor += tokenUntrim.Length;
             var tokenTrim = token.Groups[1].Value;
 
-            switch (tokenTrim[0])
+            if (TokensToIgnore.Contains(tokenTrim))
             {
-                case '{':
-                    {
-                        if (previousToken is TokenType.assignment or TokenType.objectStart or TokenType.objectEnd)
-                            AddIncompleteToken(TokenType.objectStart, null);
-                        else
-                            throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
-                        break;
-                    }
-                case '}':
-                    {
-                        if (previousToken is TokenType.value or TokenType.objectEnd)
-                            AddIncompleteToken(TokenType.objectEnd, null);
-                        else if (previousToken is TokenType.key)
-                        {
-                            ChangePreviousTokenType(TokenType.value);
-                            AddIncompleteToken(TokenType.objectEnd, null);
-                        }
-                        else
-                            throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
-                        break;
-                    }
-                case '#':
-                    {
-                        // Skip comment.
-                        var comment = commentRegex.Match(leftContent).Groups[0].Value;
-                        cursor += comment.Length - tokenUntrim.Length;
-                        break;
-                    }
-                case '=':
-                    {
-                        if (previousToken is TokenType.key)
-                            previousToken = TokenType.assignment;
-                        else
-                            throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
-                        break;
-                    }
-                case '\"':
-                    {
-                        if (previousToken is TokenType.assignment)
-                            AddIncompleteToken(TokenType.value, tokenTrim);
-                        else
-                            throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
-                        break;
-                    }
-                case var tokenBeginning when Char.IsLetter(tokenBeginning):
-                    {
-                        if (previousToken is TokenType.unknown or TokenType.objectStart or TokenType.value or TokenType.objectEnd)
-                            AddIncompleteToken(TokenType.key, tokenTrim);
-                        else if (previousToken is TokenType.assignment)
-                            AddIncompleteToken(TokenType.value, tokenTrim);
-                        else if (previousToken is TokenType.key)
-                        {
-                            ChangePreviousTokenType(TokenType.value);
-                            AddIncompleteToken(TokenType.value, tokenTrim);
-                        }
-                        else
-                            throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
-                        break;
-                    }
-                case var tokenBeginning when Char.IsDigit(tokenBeginning):
-                    {
-                        if (previousToken is TokenType.objectStart or TokenType.value or TokenType.assignment)
-                            AddIncompleteToken(TokenType.value, tokenTrim);
-                        else if (previousToken is TokenType.key)
-                        {
-                            // Change previous token to value. It wasn't a field name after all.
-                            ChangePreviousTokenType(TokenType.value);
-                            AddIncompleteToken(TokenType.value, tokenTrim);
-                        }
-                        else if (previousToken is TokenType.unknown)
-                            throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
-                        break;
-                    }
-                default:
-                    break;
+                // Ignore token
+                continue;
             }
 
+            try
+            {
+                if (tokenTrim.Length is 0)
+                {
+                    if (previousToken is TokenType.objectEnd)
+                    {
+                        // Assume that only white space is left in the file
+                        break;
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
+                    }
+                }
+
+                switch (tokenTrim[0])
+                {
+                    case '{':
+                        {
+                            if (previousToken is TokenType.assignment or TokenType.objectStart or TokenType.objectEnd)
+                                AddIncompleteToken(TokenType.objectStart, null);
+                            else
+                                throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
+                            break;
+                        }
+                    case '}':
+                        {
+                            if (previousToken is TokenType.value or TokenType.objectEnd)
+                                AddIncompleteToken(TokenType.objectEnd, null);
+                            else if (previousToken is TokenType.key)
+                            {
+                                ChangePreviousTokenType(TokenType.value);
+                                AddIncompleteToken(TokenType.objectEnd, null);
+                            }
+                            else
+                                throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
+                            break;
+                        }
+                    case '#':
+                        {
+                            // Skip comment.
+                            var comment = commentRegex.Match(leftContent).Groups[0].Value;
+                            cursor += comment.Length - tokenUntrim.Length;
+                            break;
+                        }
+                    case '=':
+                        {
+                            if (previousToken is TokenType.key)
+                                previousToken = TokenType.assignment;
+                            else
+                                throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
+                            break;
+                        }
+                    case '\"':
+                        {
+                            if (previousToken is TokenType.assignment)
+                                AddIncompleteToken(TokenType.value, tokenTrim);
+                            else
+                                throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
+                            break;
+                        }
+                    case var tokenBeginning when Char.IsLetter(tokenBeginning):
+                        {
+                            if (previousToken is TokenType.unknown or TokenType.objectStart or TokenType.value or TokenType.objectEnd)
+                                AddIncompleteToken(TokenType.key, tokenTrim);
+                            else if (previousToken is TokenType.assignment)
+                                AddIncompleteToken(TokenType.value, tokenTrim);
+                            else if (previousToken is TokenType.key)
+                            {
+                                ChangePreviousTokenType(TokenType.value);
+                                AddIncompleteToken(TokenType.value, tokenTrim);
+                            }
+                            else
+                                throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
+                            break;
+                        }
+                    case var tokenBeginning when Char.IsDigit(tokenBeginning):
+                        {
+                            if (previousToken is TokenType.objectStart or TokenType.value or TokenType.assignment)
+                                AddIncompleteToken(TokenType.value, tokenTrim);
+                            else if (previousToken is TokenType.key)
+                            {
+                                // Change previous token to value. It wasn't a field name after all.
+                                ChangePreviousTokenType(TokenType.value);
+                                AddIncompleteToken(TokenType.value, tokenTrim);
+                            }
+                            else if (previousToken is TokenType.unknown)
+                                throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
+                            break;
+                        }
+                    default:
+                        throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
+                }
+            }
+            catch(Exception e)
+            {
+                Debugger.Break();
+                throw;
+            }
         } while (cursor < content.Length - 1);
 
         return incompleteTokens.ToArray();
@@ -215,7 +250,6 @@ public static class CK3FileReader
 
         return root;
     }
-
     // Head recursion. Bevare of stack overflow.
     private static Dictionary<string, object[]> GetCompleteTokens(SemiCompleteToken token)
     {
@@ -226,18 +260,16 @@ public static class CK3FileReader
         token.KeyObjects.GroupBy(n => n.Item1).ToList()
           .ForEach(n => { completeToken[n.Key] = n.Select(m => GetCompleteTokens(m.Item2)).Cast<object>().ToArray(); });
 
-        completeToken["values"] = token.ArrayValues.Cast<object>().Concat(token.ArrayObjects.Select(n => GetCompleteTokens(n))).ToArray();
+        completeToken[ValuesKey] = token.ArrayValues.Cast<object>().Concat(token.ArrayObjects.Select(n => GetCompleteTokens(n))).ToArray();
 
         return completeToken;
     }
 
-    public static Dictionary<string, object[]> Read(string filename)
+    public static Dictionary<string, object[]> Read(string fileContent)
     {
-        var content = File.ReadAllText(filename);
-     
         try
         {
-            var incompleteTokens = GetListOfTokens(content);
+            var incompleteTokens = GetListOfTokens(fileContent);
             var semicompleteToken = BuildTokenTree(incompleteTokens);
             var completeToken = GetCompleteTokens(semicompleteToken);
 

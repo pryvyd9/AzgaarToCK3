@@ -26,7 +26,7 @@ using System.Windows.Shapes;
 
 namespace AzgaarToCK3;
 
-public record Settings(string modName, string modsFolderPath, string ck3Directory);
+public record Settings(string modName, string modsFolderPath, string ck3Directory, string totalConversionSandboxPath);
 
 /// <summary>
 /// Interaction logic for MainWindow.xaml
@@ -61,7 +61,32 @@ public partial class MainWindow : Window
 
         return ck3Directories[0];
     }
-    private void Configure()
+    private static string GetTotalConversionSandboxDirectory()
+    {
+        var steamRegistryKey = Environment.Is64BitOperatingSystem
+            ? "HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Valve\\Steam"
+            : "HKEY_LOCAL_MACHINE\\SOFTWARE\\Valve\\Steam";
+
+        var steamPath = Registry.GetValue(steamRegistryKey, "InstallPath", null);
+        var libraries = File.ReadAllText($"{steamPath}/steamapps/libraryfolders.vdf");
+        var pathRegex = new Regex("\"path\"\\s*\"(.+)\"");
+        var paths = pathRegex.Matches(libraries).Select(n => n.Groups[1].Value);
+
+        var ck3Directories = paths.Select(n => $"{n}/steamapps/workshop/1158310/2524797018").Where(Directory.Exists).ToArray();
+        if (ck3Directories.Length > 1)
+        {
+            Debugger.Break();
+            throw new Exception("Multiple mod directories found.");
+        }
+        else if (ck3Directories.Length == 0)
+        {
+            Debugger.Break();
+            throw new Exception("No mod directories found.");
+        }
+
+        return ck3Directories[0];
+    }
+    private static void Configure()
     {
         System.Globalization.CultureInfo customCulture = (System.Globalization.CultureInfo)System.Threading.Thread.CurrentThread.CurrentCulture.Clone();
         customCulture.NumberFormat.NumberDecimalSeparator = ".";
@@ -73,7 +98,8 @@ public partial class MainWindow : Window
             _settings = new Settings(
               defaultModName,
               $"{Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)}/Paradox Interactive/Crusader Kings III/mod",
-              GetGameDirectory()
+              GetGameDirectory(),
+              GetTotalConversionSandboxDirectory()
               );
             File.WriteAllText(settingsFileName, JsonSerializer.Serialize(_settings));
         }
@@ -86,69 +112,25 @@ public partial class MainWindow : Window
     private static async Task<Map> LoadMap()
     {
         var geoMap = await MapManager.LoadGeojson();
-        //var geoMapRivers = await MapManager.LoadGeojsonRivers();
-        var geoMapRivers = new GeoMapRivers(new FeatureRivers[0]);
+        var geoMapRivers = new GeoMapRivers(Array.Empty<FeatureRivers>());
         var jsonMap = await MapManager.LoadJson();
         var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap);
         map.Settings = _settings;
         return map;
     }
 
-    //public static async Task Run()
-    //{
-    //    try
-    //    {
-    //        //await ConfigReader.GetCK3Religions(_settings);
-
-    //        var map = await LoadMap();
-
-
-    //        //await MapManager.DrawCells(map);
-
-    //        //await MapManager.DrawProvinces(map);
-    //        //await MapManager.DrawHeightMap(map);
-    //        //await MapManager.DrawRivers(map);
-    //        //await MapManager.WriteDefinition(map);
-
-    //        //await MapManager.WriteLocators(map);
-
-    //        var titles = MapManager.CreateTitles(map);
-    //        map.Empires = titles;
-    //        await MapManager.WriteLandedTitles(map);
-    //        await MapManager.WriteTitleLocalization(map);
-
-    //        var faiths = await MapManager.WriteHistoryProvinces(map);
-    //        await MapManager.WriteHolySites(map, faiths);
-
-    //        //await MapManager.WriteDefault(map);
-    //        //await MapManager.WriteTerrain(map);
-    //        //await MapManager.WriteMasks(map);
-
-    //        //await MapManager.WriteGraphics();
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Debugger.Break();
-    //    }
-    //}
-
-    public static async Task Test()
+    public static async Task Run()
     {
         try
         {
-            //CK3FileReader.Read(@"g:\Games\SteamLibrary\steamapps\common\Crusader Kings III\game\common\religion\religions\00_christianity.txt");
-
-            //await ConfigReader.GetCK3Religions(_settings);
-
             var map = await LoadMap();
-
 
             //await MapManager.DrawCells(map);
 
-            //await MapManager.DrawProvinces(map);
-            //await MapManager.DrawHeightMap(map);
-            //await MapManager.DrawRivers(map);
-            //await MapManager.WriteDefinition(map);
+            await MapManager.DrawProvinces(map);
+            await MapManager.DrawHeightMap(map);
+            await MapManager.DrawRivers(map);
+            await MapManager.WriteDefinition(map);
 
             await MapManager.WriteLocators(map);
 
@@ -161,13 +143,15 @@ public partial class MainWindow : Window
             await MapManager.CopyOriginalReligions(map);
             await MapManager.WriteHolySites(map, faiths);
 
-            //await MapManager.WriteDefault(map);
-            //await MapManager.WriteTerrain(map);
-            //await MapManager.WriteMasks(map);
+            await MapManager.WriteDefault(map);
+            await MapManager.WriteTerrain(map);
+            await MapManager.WriteMasks(map);
 
             await MapManager.WriteGraphics();
 
+#if DEBUG
             Application.Current.Shutdown();
+#endif
         }
         catch (Exception ex)
         {
@@ -181,12 +165,12 @@ public partial class MainWindow : Window
 
         InitializeComponent();
 #if DEBUG
-        _ = Test();
+        _ = Run();
 #endif
     }
 
     private void StartButtonClick(object sender, RoutedEventArgs e)
     {
-        _ = Test();
+        _ = Run();
     }
 }
