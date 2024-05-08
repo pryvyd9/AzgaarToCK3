@@ -1,4 +1,4 @@
-# AzgaarToCK3
+# Azgaar's Fantasy Map Generator to Crusaider Kings III
 ## Installation
 - Download latest release and extract it to any folder
 - Subscribe to "Total Conversion Sandbox" mod on workshop
@@ -54,3 +54,7 @@ Hopefully there not many of them.
 ## Multiplayer
 - use "[UMMS]Ultimate Modded Multiplayer Solver:null checksum" mod
 - use IronyModManager to export playset with custom mod and friends should import the exported file
+
+### Thanks
+- [flinker](https://www.youtube.com/@flinkerCK) for helpful mod editing tutorials
+- [Azgaar](https://github.com/Azgaar) for help with integration
