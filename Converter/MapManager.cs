@@ -195,7 +195,7 @@ public static class MapManager
             var cells = waterProvince.Cells;
 
             var largestWaterProvince = cells.MaxBy(n => n.area).area;
-            var areaPerProvince = largestWaterProvince / 2;
+            var areaPerProvince = largestWaterProvince * 1.5;
 
             var unprocessedCells = waterProvince.Cells.ToDictionary(n => n.id, n => n);
             var provinces = new List<Province>();
