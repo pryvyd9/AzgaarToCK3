@@ -27,7 +27,30 @@ Then find settings related to that type of object and tweak them then retry 10-1
 Usually changing some distance parameters helps.
 If that still did not help then select the object and move it by hand.
 Hopefully there not many of them.
-15. Save all and exit (Alt+F4 if it restarts the game instead of exit)
+15. Make any other changes in map editor.
+16. Save all and exit (Alt+F4 if it restarts the game instead of exit)
 ![screenshot](docs/Screenshot_2024-05-08_220216.png)
-16. Remove -mapeditor launch option and run the game
-17. Enjoy!
+17. Remove -mapeditor launch option and run the game
+18. Enjoy!
+
+## Quirks
+- Azgaar only has 2 titles and CK3 has 5:
+	- barony = province
+	- county = 4 neighboring provinces of the same state
+	- duchy = state
+	- kingdom = all duchies of the same dominant culture
+	- empire = all kingdoms of the same dominant religion
+- Biome to terrain conversion is complicated and is WIP.
+- Characters are not generated yet to everyone starts as counts. Use "Entitled" mod to as a workaround for now.
+- No heads of religion.
+- Holy sites are mapped to random provinces/counties.
+- Cultures are mapped to random existing cultures.
+- Religions are mapped to random existing religions.
+
+## Known issues
+- Water provinces are rarely convex. It means that ship routes will look like navigators are all drunk.
+- Map painting is not perfect.
+
+## Multiplayer
+- use "[UMMS]Ultimate Modded Multiplayer Solver:null checksum" mod
+- use IronyModManager to export playset with custom mod and friends should import the exported file
