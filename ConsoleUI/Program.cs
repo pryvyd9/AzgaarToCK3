@@ -5,7 +5,7 @@ namespace ConsoleUI;
 
 internal class Program
 {
-    static async Task Main(string[] args)
+    static async Task Run()
     {
         if (!SettingsManager.TryLoad())
         {
@@ -58,7 +58,7 @@ internal class Program
             }
         }
 
-        if (SettingsManager.Settings.shouldOverride!.Value)
+        if (SettingsManager.Settings.shouldOverride ?? false)
         {
             Console.WriteLine($"Mod will be overriden in all future runs. If you wish to change it change '{nameof(SettingsManager.Settings.shouldOverride)}' in 'settings.json' file.");
         }
@@ -98,6 +98,18 @@ internal class Program
         }
 
         Exit();
+    }
+    static async Task Main(string[] args)
+    {
+        try
+        {
+            await Run();
+        }catch(Exception ex)
+        {
+            Console.WriteLine("An error has occured.");
+            Console.WriteLine(ex.Message);
+            Console.WriteLine(ex.StackTrace);
+        }
     }
 
     private static bool YesNo()
