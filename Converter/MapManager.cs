@@ -11,13 +11,15 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace AzgaarToCK3;
+namespace Converter;
 
 public static class MapManager
 {
     private const int WaterLevelHeight = 30;
 
-    public static string OutputDirectory { get; set; } = $"{Environment.CurrentDirectory}/mod";
+    //public static string OutputDirectory { get; set; } = $"{Environment.CurrentDirectory}/mod";
+    public static string OutputDirectory => $"{SettingsManager.Settings.modsDirectory}/{SettingsManager.Settings.modName}";
+
 
     public static async Task<GeoMap> LoadGeojson()
     {
@@ -27,12 +29,11 @@ public static class MapManager
             var geomap = JsonSerializer.Deserialize<GeoMap>(file);
             return geomap;
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             Debugger.Break();
-            return null;
+            throw;
         }
-      
     }
     public static async Task<GeoMapRivers> LoadGeojsonRivers()
     {
@@ -45,9 +46,8 @@ public static class MapManager
         catch (Exception e)
         {
             Debugger.Break();
-            return null;
+            throw;
         }
-
     }
     public static async Task<JsonMap> LoadJson()
     {
@@ -61,7 +61,7 @@ public static class MapManager
         catch (Exception e)
         {
             Debugger.Break();
-            return null;
+            throw;
         }
 
     }
@@ -96,7 +96,7 @@ public static class MapManager
                 };
             }
 
-            var cells = feature.geometry.coordinates.Select(n => 
+            var cells = feature.geometry.coordinates.Select(n =>
                 new Cell(
                     feature.properties.id,
                     feature.properties.height,
@@ -108,7 +108,7 @@ public static class MapManager
                     jsonmap.pack.cells[feature.properties.id].biome));
             provinces[provinceId].Cells.AddRange(cells);
         }
-       
+
         return provinces;
     }
     // Remove 1 cell islands from all provinces.
@@ -182,8 +182,8 @@ public static class MapManager
             }
 
             var diff = x.area - y.area;
-            
-            return diff == 0 
+
+            return diff == 0
                 ? 0
                 : diff / Math.Abs(diff);
         }
@@ -195,7 +195,7 @@ public static class MapManager
             var cells = waterProvince.Cells;
 
             var largestWaterProvince = cells.MaxBy(n => n.area).area;
-            var areaPerProvince = largestWaterProvince;
+            var areaPerProvince = largestWaterProvince / 2;
 
             var unprocessedCells = waterProvince.Cells.ToDictionary(n => n.id, n => n);
             var provinces = new List<Province>();
@@ -317,6 +317,7 @@ public static class MapManager
         catch (Exception ex)
         {
             Debugger.Break();
+            throw;
         }
 
         var finalProvinces = provinces
@@ -390,7 +391,7 @@ public static class MapManager
         {
 
         }
-      
+
 
     }
     public static async Task DrawProvinces(Map map)
@@ -425,6 +426,7 @@ public static class MapManager
         catch (Exception ex)
         {
             Debugger.Break();
+            throw;
         }
     }
     public static async Task DrawHeightMap(Map map)
@@ -441,7 +443,8 @@ public static class MapManager
             var drawables = new Drawables();
 
             var waterPackCells = map.JsonMap.pack.cells.Where(n => n.biome != 0);
-            var waterGeoCells = map.GeoMap.features.Select(n => new {
+            var waterGeoCells = map.GeoMap.features.Select(n => new
+            {
                 Height = n.properties.height,
                 Id = n.properties.id,
                 C = n.geometry.coordinates
@@ -452,7 +455,7 @@ public static class MapManager
                 return new
                 {
                     Cells = c.C,
-                    Height = c.Height,
+                    c.Height,
                 };
             }).ToArray();
             var maxHeight = cells.MaxBy(n => n.Height)!.Height;
@@ -557,6 +560,7 @@ public static class MapManager
         catch (Exception ex)
         {
             Debugger.Break();
+            throw;
         }
     }
     public static async Task WriteDefinition(Map map)
@@ -585,7 +589,7 @@ $@"        {{
         });
         try
         {
-            var file = 
+            var file =
 $@"game_object_locator={{
 	name=""buildings""
 	clamp_to_water_level=yes
@@ -603,8 +607,9 @@ $@"game_object_locator={{
         catch (Exception e)
         {
             Debugger.Break();
+            throw;
         }
-      
+
     }
     private static async Task WriteSiegeLocators(Map map)
     {
@@ -642,6 +647,7 @@ $@"game_object_locator={{
         catch (Exception e)
         {
             Debugger.Break();
+            throw;
         }
     }
     private static async Task WriteCombatLocators(Map map)
@@ -680,6 +686,7 @@ $@"game_object_locator={{
         catch (Exception e)
         {
             Debugger.Break();
+            throw;
         }
     }
     private static async Task WritePlayerStackLocators(Map map)
@@ -732,6 +739,7 @@ $@"game_object_locator={{
         catch (Exception e)
         {
             Debugger.Break();
+            throw;
         }
     }
     public static async Task WriteLocators(Map map)
@@ -757,14 +765,14 @@ $@"game_object_locator={{
                 // Some of the provinces were deleted since they were empty or too small.
                 // Skip those deleted provinces.
                 var provinces = state.provinces.Select(n => map.Provinces.FirstOrDefault(m => m.Id == n)).Where(n => n is not null && !n.IsWater).ToArray();
-              
+
                 // Each county should have 4 or fewer counties.
                 var countyCount = state.provinces.Length / 4;
                 var unprocessedProvinces = provinces.Except(processedProvinces).ToHashSet();
                 var counties = new List<County>();
 
                 var currentProvince = provinces[0];
-              
+
                 do
                 {
                     for (int i = 0; i < 4 && !processedProvinces.Contains(currentProvince); i++)
@@ -782,7 +790,7 @@ $@"game_object_locator={{
 
                         unprocessedProvinces.Remove(currentProvince);
                         processedProvinces.Add(currentProvince);
-                     
+
                         counties.Last().baronies.Add(new Barony(bi++, currentProvince, currentProvince.Name, currentProvince.Color));
 
                         Province? neighbor = null;
@@ -813,7 +821,7 @@ $@"game_object_locator={{
                     // If empty then the loop will break anyways.
                     currentProvince = unprocessedProvinces.FirstOrDefault();
                 } while (unprocessedProvinces.Count > 0);
-              
+
                 duchies.Add(new Duchy(di++, counties.ToArray(), "Duchy of " + state.name, counties.First().Color, counties.First().CapitalName));
             }
             return duchies;
@@ -1044,7 +1052,7 @@ e_roman_empire = {{ landless = yes }}";
     }
     public static async Task WriteDefault(Map map)
     {
-        var waterProvinces = map.Provinces.Select((n, i) => (n,i)).Where(n => n.n.IsWater).Select(n => n.i);
+        var waterProvinces = map.Provinces.Select((n, i) => (n, i)).Where(n => n.n.IsWater).Select(n => n.i);
         var file = $@"#max_provinces = 1466
 definitions = ""definition.csv""
 provinces = ""provinces.png""
@@ -1129,8 +1137,9 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         catch (Exception ex)
         {
             Debugger.Break();
+            throw;
         }
-       
+
     }
     private static async Task WriteMask(IEnumerable<Cell> cells, Map map, string filename)
     {
@@ -1161,6 +1170,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         catch (Exception ex)
         {
             Debugger.Break();
+            throw;
         }
     }
     public static async Task WriteMasks(Map map)
@@ -1190,9 +1200,9 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             // drylands
             WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "drylands"), map, "drylands_01_mask"),
             // taiga
-            WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is var b && (b == "taiga" || (b == "drylands" && Helper.IsCellLowMountains(n.height) || b == "drylands" && Helper.IsCellMountains(n.height)))), map, "forest_pine_01_mask"),
+            WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is var b && (b == "taiga" || b == "drylands" && Helper.IsCellLowMountains(n.height) || b == "drylands" && Helper.IsCellMountains(n.height))), map, "forest_pine_01_mask"),
             // plains
-            WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "farmlands"), map, "farmland_01_mask"),
+            WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "plains"), map, "plains_01_mask"),
             // farmlands
             WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "farmlands"), map, "farmland_01_mask"),
             // Desert
@@ -1227,7 +1237,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
             await WriteMask(cells, map, "forest_leaf_01_mask");
         }
-      
+
         // wetlands
         {
             var cells = provinceBiomes.Where(n => n.Biome == "wetlands").SelectMany(n => n.Province.Cells).Where(n => Helper.MapBiome(n.biome) == "floodplains");
@@ -1246,7 +1256,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
             await WriteMask(cells, map, "floodplains_01_mask");
         }
-      
+
     }
 
     public static async Task WriteGraphics()
@@ -1272,6 +1282,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         {
             // Generated too many cultures.
             Debugger.Break();
+            throw new ArgumentException("Too many cultures were generated.");
         }
         var toOriginalCultureName = new string[totalCultures + 1];
         //// Consistent cultures for debugging
@@ -1285,7 +1296,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         // Randomized cultures
         {
             var indices = Enumerable.Range(0, originalCultureNames.Length).ToList();
-            var r = new Random();
+            var r = new Random(1);
 
             // cultureId starts from 1
             for (int i = 0; i < totalCultures + 1; i++)
@@ -1313,6 +1324,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         {
             // Generated too many cultures.
             Debugger.Break();
+            throw new ArgumentException("Too many religions were generated.");
         }
         var toOriginalReligionName = new string[totalReligions + 1];
         //// Consistent cultures for debugging
@@ -1326,7 +1338,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         // Randomized cultures
         {
             var indices = Enumerable.Range(0, originalReligionNames.Length).ToList();
-            var r = new Random();
+            var r = new Random(1);
 
             // cultureId starts from 1
             for (int i = 0; i < totalReligions + 1; i++)
@@ -1339,7 +1351,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
         return (baronyReligions, toOriginalReligionName);
     }
-  
+
     public static async Task<string[]> WriteHistoryProvinces(Map map)
     {
         var (baronyCultures, toOriginalCultureName) = await GetCultures(map);
@@ -1383,8 +1395,15 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     }
     public static async Task CopyOriginalReligions(Map map)
     {
-        // delete religion file from Total conversion sandbox mod.
-        File.Delete($"{OutputDirectory}/common/religion/religions/01_vanilla.txt");
+        try
+        {
+            // Delete religion file from Total conversion sandbox mod.
+            File.Delete($"{OutputDirectory}/common/religion/religions/01_vanilla.txt");
+        }
+        catch
+        {
+            // Do nothing.
+        }
 
         var religionsPath = $"{map.Settings.ck3Directory}/common/religion/religions";
         FileSystem.CopyDirectory(religionsPath, $"{OutputDirectory}/common/religion/religions", true);
@@ -1411,7 +1430,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             var isActiveStr = n.holySite?.is_active == "no" ? $"is_active = no" : null;
             var flagStr = string.IsNullOrEmpty(n.holySite?.flag) ? null : $"flag = {n.holySite.flag}";
             var characterModifierStr = string.Join("\n", n.holySite?.character_modifier?.Select(n => $"     {n.Key} = {n.Value}") ?? new string[0]);
-           
+
             return $@"{n.name} = {{
     county = c_{county.Id}
     {baronyStr}

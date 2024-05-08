@@ -7,6 +7,56 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
-        <Button Content="Start" HorizontalAlignment="Left" Margin="66,105,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.757,-1.914" Click="StartButtonClick"/>
+        <StackPanel Name="stackPanel">
+            <Grid Height="32" HorizontalAlignment="Left" VerticalAlignment="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+                <Label Content="Game path"  Height="32" VerticalAlignment="Top"/>
+                <TextBox x:Name="gamePathTextBox" Grid.Column="1" TextWrapping="Wrap" TextChanged="gamePathTextBox_TextChanged"/>
+            </Grid>
+            <Grid Height="32" HorizontalAlignment="Left" VerticalAlignment="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+                <Label Content="Total conversion mod workshop path" Height="32" VerticalAlignment="Top"/>
+                <TextBox x:Name="totalConversionModSandboxPath" Grid.Column="1" TextWrapping="Wrap" TextChanged="totalConversionModSandboxPath_TextChanged" />
+            </Grid>
+            <Grid Height="32" HorizontalAlignment="Left" VerticalAlignment="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+                <Label Content="Mods directory" Height="32" VerticalAlignment="Top"/>
+                <TextBox x:Name="modsDirectory" Grid.Column="1" TextWrapping="Wrap" TextChanged="modsDirectory_TextChanged" />
+            </Grid>
+            <Grid Height="32" HorizontalAlignment="Left" VerticalAlignment="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+                <Label Content="Mod name" Height="32" VerticalAlignment="Top"/>
+                <TextBox x:Name="modName" Grid.Column="1" TextWrapping="Wrap" TextChanged="modName_TextChanged" />
+            </Grid>
+            <Grid Height="32" HorizontalAlignment="Left" VerticalAlignment="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+                <Label Content="input.json path" Height="32" VerticalAlignment="Top"/>
+                <TextBox x:Name="inputJsonPath" Grid.Column="1" TextWrapping="Wrap" TextChanged="inputJsonPath_TextChanged" />
+            </Grid>
+            <Grid Height="32" HorizontalAlignment="Left" VerticalAlignment="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+                <Label Content="input.geojson path" Height="32" VerticalAlignment="Top"/>
+                <TextBox x:Name="inputGeojsonPath" Grid.Column="1" TextWrapping="Wrap" TextChanged="inputGeojsonPath_TextChanged"/>
+            </Grid>
+            <Button Content="Start" HorizontalAlignment="Left" VerticalAlignment="Top" Click="StartButtonClick"/>
+        </StackPanel>
     </Grid>
 </Window>

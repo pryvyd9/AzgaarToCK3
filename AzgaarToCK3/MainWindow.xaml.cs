@@ -1,4 +1,5 @@
 ﻿using ImageMagick;
+using Microsoft.VisualBasic.FileIO;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -26,15 +27,24 @@ using System.Windows.Shapes;
 
 namespace AzgaarToCK3;
 
-public record Settings(string modName, string modsFolderPath, string ck3Directory, string totalConversionSandboxPath);
+//public record Settings(string modName, string modsDirectory, string ck3Directory, string totalConversionSandboxPath);
+public class Settings 
+{
+    public string modName { get; set; }
+    public string modsDirectory { get; set; }
+    public string ck3Directory { get; set; }
+    public string totalConversionSandboxPath { get; set; }
+    public string inputJsonPath { get; set; }
+    public string inputGeojsonPath { get; set; }
+}
 
 /// <summary>
 /// Interaction logic for MainWindow.xaml
 /// </summary>
 public partial class MainWindow : Window
 {
-    private const string settingsFileName = "settings.json";
-    private static Settings _settings;
+    private static string settingsFileName = $"{Environment.CurrentDirectory}/settings.json";
+    public static Settings Settings { get; set; }
 
     private static string GetGameDirectory()
     {
@@ -72,7 +82,7 @@ public partial class MainWindow : Window
         var pathRegex = new Regex("\"path\"\\s*\"(.+)\"");
         var paths = pathRegex.Matches(libraries).Select(n => n.Groups[1].Value);
 
-        var ck3Directories = paths.Select(n => $"{n}/steamapps/workshop/1158310/2524797018").Where(Directory.Exists).ToArray();
+        var ck3Directories = paths.Select(n => $"{n}/steamapps/workshop/content/1158310/2524797018").Where(Directory.Exists).ToArray();
         if (ck3Directories.Length > 1)
         {
             Debugger.Break();
@@ -95,18 +105,21 @@ public partial class MainWindow : Window
         if (!File.Exists(settingsFileName))
         {
             var defaultModName = "MyMap";
-            _settings = new Settings(
-              defaultModName,
-              $"{Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)}/Paradox Interactive/Crusader Kings III/mod",
-              GetGameDirectory(),
-              GetTotalConversionSandboxDirectory()
-              );
-            File.WriteAllText(settingsFileName, JsonSerializer.Serialize(_settings));
+            Settings = new Settings
+            {
+                modName = defaultModName,
+                modsDirectory = $"{Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)}/Paradox Interactive/Crusader Kings III/mod",
+                ck3Directory = GetGameDirectory(),
+                totalConversionSandboxPath = GetTotalConversionSandboxDirectory(),
+                inputJsonPath = $"{Environment.CurrentDirectory}/input.json",
+                inputGeojsonPath = $"{Environment.CurrentDirectory}/input.geojson",
+            };
+            File.WriteAllText(settingsFileName, JsonSerializer.Serialize(Settings));
         }
         else
         {
             var settings = File.ReadAllText(settingsFileName);
-            _settings = JsonSerializer.Deserialize<Settings>(settings);
+            Settings = JsonSerializer.Deserialize<Settings>(settings);
         }
     }
     private static async Task<Map> LoadMap()
@@ -115,14 +128,44 @@ public partial class MainWindow : Window
         var geoMapRivers = new GeoMapRivers(Array.Empty<FeatureRivers>());
         var jsonMap = await MapManager.LoadJson();
         var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap);
-        map.Settings = _settings;
+        map.Settings = Settings;
         return map;
+    }
+
+    private static async Task CreateMod()
+    {
+        var outsideDescriptor = $@"version=""1.0""
+tags={{
+	""Total Conversion""
+}}
+name=""{Settings.modName}""
+supported_version=""1.12.4""
+path=""mod/{Settings.modName}""";
+
+        await File.WriteAllTextAsync($"{Settings.modsDirectory}/{Settings.modName}.mod", outsideDescriptor);
+
+        FileSystem.CopyDirectory(Settings.totalConversionSandboxPath, $"{Settings.modsDirectory}/{Settings.modName}", true);
+
+        var insideDescriptor = $@"version=""1.0""
+tags={{
+	""Total Conversion""
+}}
+name=""{Settings.modName}""
+supported_version=""1.12.4""";
+        await File.WriteAllTextAsync($"{Settings.modsDirectory}/{Settings.modName}/descriptor.mod", insideDescriptor);
     }
 
     public static async Task Run()
     {
         try
         {
+#if RELEASE
+            if (!Directory.Exists($"{Settings.modsDirectory}/{Settings.modName}"))
+            {
+                await CreateMod();
+            }
+#endif
+
             var map = await LoadMap();
 
             //await MapManager.DrawCells(map);
@@ -164,6 +207,17 @@ public partial class MainWindow : Window
         Configure();
 
         InitializeComponent();
+
+        this.DataContext = this;
+
+        gamePathTextBox.Text = Settings.ck3Directory;
+        totalConversionModSandboxPath.Text = Settings.totalConversionSandboxPath;
+        modsDirectory.Text = Settings.modsDirectory;
+        modName.Text = Settings.modName;
+        inputJsonPath.Text = Settings.inputJsonPath;
+        inputGeojsonPath.Text = Settings.inputGeojsonPath;
+
+
 #if DEBUG
         _ = Run();
 #endif
@@ -172,5 +226,35 @@ public partial class MainWindow : Window
     private void StartButtonClick(object sender, RoutedEventArgs e)
     {
         _ = Run();
+    }
+
+    private void gamePathTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        Settings.ck3Directory = ((TextBox)sender).Text;
+    }
+
+    private void totalConversionModSandboxPath_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        Settings.totalConversionSandboxPath = ((TextBox)sender).Text;
+    }
+
+    private void modsDirectory_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        Settings.modsDirectory = ((TextBox)sender).Text;
+    }
+
+    private void modName_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        Settings.modName = ((TextBox)sender).Text;
+    }
+
+    private void inputJsonPath_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        Settings.inputJsonPath = ((TextBox)sender).Text;
+    }
+
+    private void inputGeojsonPath_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        Settings.inputGeojsonPath = ((TextBox)sender).Text;
     }
 }
