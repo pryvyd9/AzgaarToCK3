@@ -3,6 +3,8 @@
 - Download latest release and extract it to any folder
 - Subscribe to [Total Conversion Sandbox](https://steamcommunity.com/sharedfiles/filedetails/?id=2524797018) mod on workshop
 
+Supported game version: `1.12.4`
+
 ## Quirks
 - Azgaar only has 2 titles and CK3 has 5:
 	- barony = province
