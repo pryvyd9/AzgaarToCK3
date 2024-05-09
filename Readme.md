@@ -25,7 +25,7 @@
 
 ## Multiplayer
 - use [[UMMS]Ultimate Modded Multiplayer Solver:null checksum](https://steamcommunity.com/sharedfiles/filedetails/?id=3227254722) mod
-- use IronyModManager to export playset with custom mod and friends should import the exported file
+- use [IronyModManager](https://bcssov.github.io/IronyModManager/) to export playset with custom mod and friends should import the exported file
 
 ## Usage
 1. Generate a map via https://azgaar.github.io/Fantasy-Map-Generator/
