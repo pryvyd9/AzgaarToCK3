@@ -62,7 +62,3 @@ Hopefully there not many of them.
 
 ## More Usage
 - You can delete the `settings.json` to reconfigure everything or edit `settings.json` to suit your needs
-
-### Thanks
-- [flinker](https://www.youtube.com/@flinkerCK) for helpful mod editing tutorials
-- [Azgaar](https://github.com/Azgaar) for help with integration
