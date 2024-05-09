@@ -11,6 +11,8 @@
 	- kingdom = all duchies of the same dominant culture
 	- empire = all kingdoms of the same dominant religion
 - Biome to terrain conversion is complicated and is WIP.
+- Detached single cell parts of provinces are reassigned to neighboring province.
+- Single cell provinces are deleted as it is not possible to put locators inside due to small size.
 - Characters are not generated yet to everyone starts as counts. Use [Entitled](https://steamcommunity.com/sharedfiles/filedetails/?id=2984126808) mod to as a workaround for now.
 - No heads of religion.
 - Holy sites are mapped to random provinces/counties.
