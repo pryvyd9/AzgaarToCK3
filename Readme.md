@@ -31,7 +31,7 @@ Supported game version: `1.12.4`
 - use [IronyModManager](https://bcssov.github.io/IronyModManager/) to export playset with custom mod and friends should import the exported file
 
 ## Usage
-1. Generate a map via https://azgaar.github.io/Fantasy-Map-Generator/
+1. Generate a map via https://pryvyd9.github.io/Fantasy-Map-Generator/ (It is a special version for better conversion)
 2. Export GeoJSON cells and JSON full
 ![screenshot](docs/photo_2024-05-08_21-40-06.jpg)
 3. Place these files in the extracted folder

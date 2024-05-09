@@ -195,7 +195,7 @@ public static class MapManager
             var cells = waterProvince.Cells;
 
             var largestWaterProvince = cells.MaxBy(n => n.area).area;
-            var areaPerProvince = largestWaterProvince * 1.5;
+            var areaPerProvince = largestWaterProvince / 2;
 
             var unprocessedCells = waterProvince.Cells.ToDictionary(n => n.id, n => n);
             var provinces = new List<Province>();
@@ -218,9 +218,9 @@ public static class MapManager
                 {
                     unprocessedCells.Remove(currentCell.id);
                     provinces.Last().Cells.Add(currentCell);
-                    currentArea += currentCell.area;
+                        currentArea += currentCell.area;
 
-                    foreach (var n in currentCell.neighbors.Where(n => unprocessedCells.ContainsKey(n)))
+                        foreach (var n in currentCell.neighbors.Where(n => unprocessedCells.ContainsKey(n)))
                     {
                         // If cell is not found then it's not water cell. So ignore it.
                         if (cells.FirstOrDefault(m => m.id == n) is { } cell)
@@ -385,15 +385,14 @@ public static class MapManager
 
             cellsMap.Draw(drawables);
             await cellsMap.WriteAsync($"{Environment.CurrentDirectory}/cells.png");
-
         }
         catch (Exception ex)
         {
-
+            Debugger.Break();
+            throw;
         }
-
-
     }
+ 
     public static async Task DrawProvinces(Map map)
     {
         try
