@@ -40,12 +40,12 @@
 ![screenshot](docs/Screenshot_2024-05-08_214628.png)
 10. Go to Map Objects Editor. Click on any territory in the list and select all with Ctrl+A hotkey
 ![screenshot](docs/Screenshot_2024-05-08_214847.png)
-11. Click on Automatically place... button
+11. Click on `Automatically place...` button
 ![screenshot](docs/Screenshot_2024-05-08_215322.png)
 12. Some of the territories failed to add locators properly. Click on Filter all entries that contain errors
 ![screenshot](docs/Screenshot_2024-05-08_215116.png)
 13. Repeat 10-12 until there are no entries with errors
-14. If some entries won't fix themselves select the entry, check what object fails and click on Configure Autonudge... button.
+14. If some entries won't fix themselves select the entry, check what object fails and click on `Configure Autonudge...` button.
 ![screenshot](docs/Screenshot_2024-05-08_215624.png)
 Then find settings related to that type of object and tweak them then retry 10-12.
 Usually changing some distance parameters helps.
