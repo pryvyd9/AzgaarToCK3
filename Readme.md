@@ -18,6 +18,7 @@
 - Holy sites are mapped to random provinces/counties.
 - Cultures are mapped to random existing cultures.
 - Religions are mapped to random existing religions.
+- Rivers are not generated.
 
 ## Known issues
 - Water provinces are rarely convex. It means that ship routes will look like navigators are all drunk.
