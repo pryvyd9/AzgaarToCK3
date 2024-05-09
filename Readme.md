@@ -1,7 +1,7 @@
 # Azgaar's Fantasy Map Generator to Crusaider Kings III
 ## Installation
 - Download latest release and extract it to any folder
-- Subscribe to "Total Conversion Sandbox" mod on workshop
+- Subscribe to [Total Conversion Sandbox](https://steamcommunity.com/sharedfiles/filedetails/?id=2524797018) mod on workshop
 
 ## Quirks
 - Azgaar only has 2 titles and CK3 has 5:
@@ -11,7 +11,7 @@
 	- kingdom = all duchies of the same dominant culture
 	- empire = all kingdoms of the same dominant religion
 - Biome to terrain conversion is complicated and is WIP.
-- Characters are not generated yet to everyone starts as counts. Use "Entitled" mod to as a workaround for now.
+- Characters are not generated yet to everyone starts as counts. Use [Entitled](https://steamcommunity.com/sharedfiles/filedetails/?id=2984126808) mod to as a workaround for now.
 - No heads of religion.
 - Holy sites are mapped to random provinces/counties.
 - Cultures are mapped to random existing cultures.
@@ -22,7 +22,7 @@
 - Map painting is not perfect.
 
 ## Multiplayer
-- use "[UMMS]Ultimate Modded Multiplayer Solver:null checksum" mod
+- use [[UMMS]Ultimate Modded Multiplayer Solver:null checksum](https://steamcommunity.com/sharedfiles/filedetails/?id=3227254722) mod
 - use IronyModManager to export playset with custom mod and friends should import the exported file
 
 ## Usage
@@ -32,7 +32,7 @@
 3. Place these files in the extracted folder
 4. Run the .exe file
 5. Follow the instructions
-6. Go to properties of CK3 in Steam and add "-mapeditor" parameter
+6. Go to properties of CK3 in Steam and add `-mapeditor` parameter
 7. Launch the game making sure the newly created mod is added to the playset and enabled
 8. Repack heightmap
 ![screenshot](docs/Screenshot_2024-05-08_214628.png)
