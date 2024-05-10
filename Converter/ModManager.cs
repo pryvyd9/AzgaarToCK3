@@ -51,10 +51,10 @@ supported_version=""1.12.4""";
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
 
-        await MapManager.DrawCells(map);
+        //await MapManager.DrawCells(map);
 
-        await MapManager.DrawProvinces(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
+        //await MapManager.DrawProvinces(map);
+        //Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         //await MapManager.DrawHeightMap(map);
         //Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
         //await MapManager.DrawRivers(map);
@@ -65,13 +65,17 @@ supported_version=""1.12.4""";
         //await MapManager.WriteLocators(map);
         //Console.WriteLine($"{i++}/{totalStageCount}. Locators created.");
 
-        //var titles = MapManager.CreateTitles(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Titles created.");
-        //map.Empires = titles;
-        //await MapManager.WriteLandedTitles(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Landed titles created.");
-        //await MapManager.WriteTitleLocalization(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
+        var titles = MapManager.CreateTitles(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Titles created.");
+        map.Empires = titles;
+        await MapManager.WriteLandedTitles(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Landed titles created.");
+        await MapManager.WriteTitleLocalization(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
+
+        map.Characters = await CharacterManager.CreateCharacters(map);
+        await CharacterManager.WriteHistoryCharacters(map);
+        await CharacterManager.WriteHistoryTitles(map);
 
         //var faiths = await MapManager.WriteHistoryProvinces(map);
         //Console.WriteLine($"{i++}/{totalStageCount}. Province history created.");
@@ -123,6 +127,10 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Landed titles created.");
         await MapManager.WriteTitleLocalization(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
+
+        map.Characters = await CharacterManager.CreateCharacters(map);
+        await CharacterManager.WriteHistoryCharacters(map);
+        await CharacterManager.WriteHistoryTitles(map);
 
         var faiths = await MapManager.WriteHistoryProvinces(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Province history created.");
