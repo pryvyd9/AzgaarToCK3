@@ -97,6 +97,11 @@ internal class Program
             }
         }
 
+#if DEBUG
+        SettingsManager.Save();
+        Environment.Exit(0);
+#endif
+
         Exit();
     }
     static async Task Main(string[] args)

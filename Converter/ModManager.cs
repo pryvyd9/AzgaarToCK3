@@ -46,7 +46,7 @@ supported_version=""1.12.4""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 16;
+        int totalStageCount = 19;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -74,8 +74,11 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
 
         map.Characters = await CharacterManager.CreateCharacters(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Characters created.");
         await CharacterManager.WriteHistoryCharacters(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. History characters created.");
         await CharacterManager.WriteHistoryTitles(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. History titles created.");
 
         //var faiths = await MapManager.WriteHistoryProvinces(map);
         //Console.WriteLine($"{i++}/{totalStageCount}. Province history created.");
@@ -94,7 +97,6 @@ supported_version=""1.12.4""";
         //await MapManager.WriteGraphics();
         //Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
 
-        Environment.Exit(0);
     }
 #endif
 #if RELEASE

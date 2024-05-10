@@ -780,7 +780,7 @@ $@"game_object_locator={{
                         {
                             counties.Add(new County()
                             {
-                                Id = ci++,
+                                id = ci++,
                                 Color = currentProvince.Color,
                                 CapitalName = currentProvince.Name,
                                 Name = "County of " + currentProvince.Name,
@@ -941,7 +941,7 @@ $@"game_object_locator={{
         {
             return counties.Select((n, i) =>
             {
-                ci = n.Id;
+                ci = n.id;
                 return $@"            c_{ci} = {{
                 color = {{ {n.Color.R} {n.Color.G} {n.Color.B} }}
                 color2 = {{ 255 255 255 }}
@@ -1012,7 +1012,7 @@ e_roman_empire = {{ landless = yes }}";
                     lines.Add($"d_{d.id}: \"{d.name}\"");
                     foreach (var c in d.counties)
                     {
-                        lines.Add($"c_{c.Id}: \"{c.Name}\"");
+                        lines.Add($"c_{c.id}: \"{c.Name}\"");
                         foreach (var b in c.baronies)
                         {
                             lines.Add($"b_{b.id}: \"{b.name}\"");
@@ -1431,7 +1431,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             var characterModifierStr = string.Join("\n", n.holySite?.character_modifier?.Select(n => $"     {n.Key} = {n.Value}") ?? new string[0]);
 
             return $@"{n.name} = {{
-    county = c_{county.Id}
+    county = c_{county.id}
     {baronyStr}
     {isActiveStr}
     {flagStr}

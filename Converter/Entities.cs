@@ -90,29 +90,47 @@ public class Province
 
 public record Character(string id);
 
-public record Barony(int id, Province province, string name, MagickColor color);
-public class County
+public interface ITitle
 {
-    public int Id { get; init; }
+    string Id { get; }
+}
+//public interface ICultureHolder
+//{
+//    string Culture { get; }
+//}
+
+public record Barony(int id, Province province, string name, MagickColor color);
+public class County : ITitle
+{
+    public int id { get; init; }
     public List<Barony> baronies = new();
     public string Name { get; init; }
     public MagickColor Color { get; init; }
     public string CapitalName { get; init; }
-    public Duchy liege;
+    public ITitle liege;
+
+    public Character holder;
+    public string Id => $"c_{id}";
 }
-public record Duchy(int id, County[] counties, string name, MagickColor color, string capitalName)
+public record Duchy(int id, County[] counties, string name, MagickColor color, string capitalName) : ITitle
 {
     public Character holder;
-    public Kingdom liege;
+    public ITitle liege;
+
+    public string Id => $"d_{id}";
+}
+public record Kingdom(int id, Duchy[] duchies, bool isAllowed, string name, MagickColor color, string capitalName) : ITitle
+{
+    public Character holder;
+    public ITitle liege;
+
+    public string Id => $"k_{id}";
 };
-public record Kingdom(int id, Duchy[] duchies, bool isAllowed, string name, MagickColor color, string capitalName)
+public record Empire(int id, Kingdom[] kingdoms, bool isAllowed, string name, MagickColor color, string capitalName) : ITitle
 {
     public Character holder;
-    public Empire liege;
-};
-public record Empire(int id, Kingdom[] kingdoms, bool isAllowed, string name, MagickColor color, string capitalName)
-{
-    public Character holder;
+
+    public string Id => $"e_{id}";
 };
 public class Map
 {

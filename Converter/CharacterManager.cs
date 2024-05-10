@@ -7,6 +7,7 @@ public static class CharacterManager
     public static string OutputDirectory => $"{SettingsManager.Settings.modsDirectory}/{SettingsManager.Settings.modName}";
 
     // Modifies titles by assigning title holder
+    // Generates titles only in the de ure capitals
     public static async Task<List<Character>> CreateCharacters(Map map)
     {
         // Generate title holders.
@@ -24,28 +25,42 @@ public static class CharacterManager
         {
             var isEmperor = IsYes(0.1);
             var isEmpire = isEmperor;
-            if (isEmperor) empire.holder = GetCharacter();
+            if (isEmperor) empire.holder = GetNewCharacter();
 
             foreach (var kingdom in empire.kingdoms)
             {
-                var isKing = isEmperor || IsYes(0.2);
+                var isKing = isEmperor || IsYes(0.3);
                 var isKingdom = isKing;
-                if (isKing) kingdom.holder = GetCharacter();
-                if (!isEmperor && isKing && IsYes(0.81)) kingdom.liege = empire;
+                if (isKing) kingdom.holder = GetNewCharacter();
+                else GetCharacter();
+                if (!isEmperor && isEmpire)
+                {
+                    if (isKing && IsYes(0.81)) kingdom.liege = empire;
+                }
 
                 foreach (var duchy in kingdom.duchies)
                 {
-                    var isDuke = isKing || IsYes(0.3);
+                    var isDuke = isKing || IsYes(0.6);
                     var isDukedom = isDuke;
-                    if (isDuke) duchy.holder = GetCharacter();
-                    if (!isKing && isDuke && IsYes(0.51)) duchy.liege = kingdom;
+                    if (isDuke) duchy.holder = GetNewCharacter();
+                    else GetCharacter();
+                    if (!isKing && isKingdom)
+                    {
+                        if (isDuke && IsYes(0.51)) duchy.liege = kingdom;
+                        else if (isEmpire && IsYes(0.81)) duchy.liege = empire;
+                    }
 
                     foreach (var county in duchy.counties)
                     {
-                        // Counties are aumatically generated.
-                        // No need to create characters here.
+                        if (IsYes(0.8)) county.holder = GetNewCharacter();
+                        else GetCharacter();
 
-                        if (!isDuke && IsYes(0.51)) county.liege = duchy;
+                        if (!isDuke && isDukedom)
+                        {
+                            if (IsYes(0.51)) county.liege = duchy;
+                            else if (isKingdom && IsYes(0.51)) county.liege = kingdom;
+                            else if (isEmpire && IsYes(0.81)) county.liege = empire;
+                        }
 
                         isEmperor = false;
                         isKing = false;
@@ -61,6 +76,10 @@ public static class CharacterManager
 
         bool IsYes(double probability) => rnd.NextSingle() < probability;
         Character GetCharacter() 
+        {
+            return characters.Last();
+        }
+        Character GetNewCharacter()
         {
             var c = new Character($"{SettingsManager.Settings.modName}{characterIndex}");
             characters.Add(c);
@@ -89,20 +108,20 @@ public static class CharacterManager
 
         foreach (var e in map.Empires)
         {
-            if (e.holder is not null) lines.Add($"e_{e.id} = {{ 1066.1.1 = {{ holder = {e.holder.id} }} }}");
+            if (e.holder is not null) lines.Add($"{e.Id} = {{ 1066.1.1 = {{ holder = {e.holder.id} }} }}");
             foreach (var k in e.kingdoms)
             {
-                var kliege = k.liege is not null ? $"liege = e_{k.liege.id}" : null;
-                if (k.holder is not null) lines.Add($"k_{k.id} = {{ 1066.1.1 = {{ holder = {k.holder.id} {kliege} }} }}");
+                var kliege = k.liege is not null ? $"liege = \"{k.liege.Id}\"" : null;
+                if (k.holder is not null) lines.Add($"{k.Id} = {{ 1066.1.1 = {{ holder = {k.holder.id} {kliege} }} }}");
                 foreach (var d in k.duchies)
                 {
-                    var dliege = d.liege is not null ? $"liege = k_{d.liege.id}" : null;
-                    if (d.holder is not null) lines.Add($"d_{d.id} = {{ 1066.1.1 = {{ holder = {d.holder.id} {dliege} }} }}");
+                    var dliege = d.liege is not null ? $"liege = \"{d.liege.Id}\"" : null;
+                    if (d.holder is not null) lines.Add($"{d.Id} = {{ 1066.1.1 = {{ holder = {d.holder.id} {dliege} }} }}");
 
                     foreach (var c in d.counties)
                     {
-                        var cliege = c.liege is not null ? $"liege = d_{c.liege.id}" : null;
-                        if (cliege is not null) lines.Add($"c_{c.Id} = {{ 1066.1.1 = {{ {cliege} }} }}");
+                        var cliege = c.liege is not null ? $"liege = \"{c.liege.Id}\"" : null;
+                        if (cliege is not null) lines.Add($"{c.Id} = {{ 1066.1.1 = {{ holder = {c.holder?.id} {cliege} }} }}");
                     }
                 }
             }
