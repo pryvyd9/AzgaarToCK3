@@ -15,9 +15,10 @@ Supported game version: `1.12.4`
 - Biome to terrain conversion is complicated and is WIP.
 - Detached single cell parts of provinces are reassigned to neighboring province.
 - Single cell provinces are deleted as it is not possible to put locators inside due to small size.
-- Characters are not generated yet to everyone starts as counts. Use [Entitled](https://steamcommunity.com/sharedfiles/filedetails/?id=2984126808) mod to as a workaround for now.
+- Dynasties are randomized based on basenames. They can repeat.
 - No heads of religion.
 - Holy sites are mapped to random provinces/counties.
+- Characters are created and assigned titles randomly. They may have too many domains which they will give out after unpausing.
 - Cultures are mapped to random existing cultures.
 - Religions are mapped to random existing religions.
 - Rivers are not generated.
