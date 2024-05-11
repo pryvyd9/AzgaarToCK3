@@ -53,17 +53,17 @@ supported_version=""1.12.4""";
 
         //await MapManager.DrawCells(map);
 
-        //await MapManager.DrawProvinces(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
-        //await MapManager.DrawHeightMap(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
-        //await MapManager.DrawRivers(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
-        //await MapManager.WriteDefinition(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Definition created.");
+        await MapManager.DrawProvinces(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
+        await MapManager.DrawHeightMap(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
+        await MapManager.DrawRivers(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
+        await MapManager.WriteDefinition(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Definition created.");
 
-        //await MapManager.WriteLocators(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Locators created.");
+        await MapManager.WriteLocators(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Locators created.");
 
         var titles = MapManager.CreateTitles(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Titles created.");
@@ -87,22 +87,22 @@ supported_version=""1.12.4""";
         await CharacterManager.WriteDynastyLocalization(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Dynasty localization created.");
 
-        //await MapManager.WriteHistoryProvinces(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Province history created.");
-        //await MapManager.CopyOriginalReligions(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Original religions copied.");
-        //await MapManager.WriteHolySites(map, faiths);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Holy sites created.");
+        await MapManager.WriteHistoryProvinces(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Province history created.");
+        await MapManager.CopyOriginalReligions(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Original religions copied.");
+        await MapManager.WriteHolySites(map, faiths);
+        Console.WriteLine($"{i++}/{totalStageCount}. Holy sites created.");
 
-        //await MapManager.WriteDefault(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Default file created.");
-        //await MapManager.WriteTerrain(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Terrain created.");
-        //await MapManager.WriteMasks(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Masks created.");
+        await MapManager.WriteDefault(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Default file created.");
+        await MapManager.WriteTerrain(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Terrain created.");
+        await MapManager.WriteMasks(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Masks created.");
 
-        //await MapManager.WriteGraphics();
-        //Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
+        await MapManager.WriteGraphics();
+        Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
 
     }
 #endif
@@ -129,9 +129,6 @@ supported_version=""1.12.4""";
         await MapManager.WriteLocators(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Locators created.");
 
-        var faiths = await MapManager.ApplyCultureReligion(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Culture, Religions created.");
-
         var titles = MapManager.CreateTitles(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Titles created.");
         map.Empires = titles;
@@ -139,6 +136,9 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Landed titles created.");
         await MapManager.WriteTitleLocalization(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
+
+        var faiths = await MapManager.ApplyCultureReligion(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Culture, Religions created.");
 
         map.Characters = await CharacterManager.CreateCharacters(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Characters created.");
