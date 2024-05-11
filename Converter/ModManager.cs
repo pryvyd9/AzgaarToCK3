@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualBasic.FileIO;
+using System.Diagnostics;
 
 namespace Converter;
 
@@ -35,7 +36,7 @@ supported_version=""1.12.4""";
     private static async Task<Map> LoadMap()
     {
         var geoMap = await MapManager.LoadGeojson();
-        var geoMapRivers = new GeoMapRivers(Array.Empty<FeatureRivers>());
+        var geoMapRivers = new GeoMapRivers([]);
         var jsonMap = await MapManager.LoadJson();
         var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap);
         map.Settings = SettingsManager.Settings;
@@ -65,12 +66,12 @@ supported_version=""1.12.4""";
         await MapManager.WriteLocators(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Locators created.");
 
-        var titles = MapManager.CreateTitles(map);
+        var titles = TitleManager.CreateTitles(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Titles created.");
         map.Empires = titles;
-        await MapManager.WriteLandedTitles(map);
+        await TitleManager.WriteLandedTitles(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Landed titles created.");
-        await MapManager.WriteTitleLocalization(map);
+        await TitleManager.WriteTitleLocalization(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
 
         var faiths = await MapManager.ApplyCultureReligion(map);
@@ -103,7 +104,6 @@ supported_version=""1.12.4""";
 
         await MapManager.WriteGraphics();
         Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
-
     }
 #endif
 #if RELEASE
@@ -129,12 +129,12 @@ supported_version=""1.12.4""";
         await MapManager.WriteLocators(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Locators created.");
 
-        var titles = MapManager.CreateTitles(map);
+        var titles = TitleManager.CreateTitles(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Titles created.");
         map.Empires = titles;
-        await MapManager.WriteLandedTitles(map);
+        await TitleManager.WriteLandedTitles(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Landed titles created.");
-        await MapManager.WriteTitleLocalization(map);
+        await TitleManager.WriteTitleLocalization(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
 
         var faiths = await MapManager.ApplyCultureReligion(map);
