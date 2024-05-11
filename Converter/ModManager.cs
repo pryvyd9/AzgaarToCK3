@@ -46,7 +46,7 @@ supported_version=""1.12.4""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 20;
+        int totalStageCount = 22;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -73,15 +73,19 @@ supported_version=""1.12.4""";
         await MapManager.WriteTitleLocalization(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
 
-        //var faiths = await MapManager.ApplyCultureReligion(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Culture, Religions created.");
+        var faiths = await MapManager.ApplyCultureReligion(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Culture, Religions created.");
 
-        //map.Characters = await CharacterManager.CreateCharacters(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Characters created.");
-        //await CharacterManager.WriteHistoryCharacters(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. History characters created.");
-        //await CharacterManager.WriteHistoryTitles(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. History titles created.");
+        map.Characters = await CharacterManager.CreateCharacters(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Characters created.");
+        await CharacterManager.WriteHistoryCharacters(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. History characters created.");
+        await CharacterManager.WriteHistoryTitles(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. History titles created.");
+        await CharacterManager.WriteDynasties(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Dynasties created.");
+        await CharacterManager.WriteDynastyLocalization(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Dynasty localization created.");
 
         //await MapManager.WriteHistoryProvinces(map);
         //Console.WriteLine($"{i++}/{totalStageCount}. Province history created.");
@@ -106,7 +110,7 @@ supported_version=""1.12.4""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 20;
+        int totalStageCount = 22;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -137,8 +141,15 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
 
         map.Characters = await CharacterManager.CreateCharacters(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Characters created.");
         await CharacterManager.WriteHistoryCharacters(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. History characters created.");
         await CharacterManager.WriteHistoryTitles(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. History titles created.");
+        await CharacterManager.WriteDynasties(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Dynasties created.");
+        await CharacterManager.WriteDynastyLocalization(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Dynasty localization created.");
 
         await MapManager.WriteHistoryProvinces(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Province history created.");

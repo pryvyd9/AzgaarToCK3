@@ -347,6 +347,15 @@ public static class MapManager
     {
         var provinces = CreateProvinces(geoMap, jsonMap);
 
+        var rnd = new Random(1);
+        var nameBase = jsonMap.nameBases[rnd.Next(jsonMap.nameBases.Length)];
+        var nameBaseNames = nameBase.b.Split(',')
+            .Select(n => 
+            {
+                var id = n.Replace("'", "").Replace(' ', '_').ToLowerInvariant();
+                return new NameBaseName(id, n);
+            }).ToArray();
+
         var map = new Map
         {
             GeoMap = geoMap,
@@ -354,6 +363,7 @@ public static class MapManager
             JsonMap = jsonMap,
             Provinces = provinces,
             IdToIndex = provinces.Select((n, i) => (n, i)).ToDictionary(n => n.n.Id, n => n.i),
+            NameBase = new NameBasePrepared(nameBase.name, nameBaseNames),
         };
 
         return map;

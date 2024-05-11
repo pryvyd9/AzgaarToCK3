@@ -59,7 +59,8 @@ public class Pack
     public PackCell[] cells { get; set; }
 }
 public record Info(int width, int height);
-public record JsonMap(Pack pack, MapCoordinates mapCoordinates, Info info);
+public record NameBase(string name, string b);
+public record JsonMap(Pack pack, MapCoordinates mapCoordinates, Info info, NameBase[] nameBases);
 
 public record Geometry(string type, float[][][] coordinates);
 public record Properties(int id, string type, int province, int state, int height, int[] neighbors, int culture, int religion);
@@ -88,7 +89,8 @@ public class Province
     public bool IsWater { get; set; }
 }
 
-public record Character(string id, string culture, string religion, int age, int stewardshipSkill);
+// dynasty can repeat.
+public record Character(string id, string culture, string religion, int age, int stewardshipSkill, NameBaseName dynastyName);
 
 public interface ITitle
 {
@@ -147,6 +149,9 @@ public record Empire(int id, Kingdom[] kingdoms, bool isAllowed, string name, Ma
     public string Culture { get; set; }
     public string Religion { get; set; }
 };
+
+public record NameBaseName(string id, string name);
+public record NameBasePrepared(string name, NameBaseName[] names);
 public class Map
 {
     public const int MapWidth = 8192;
@@ -170,5 +175,6 @@ public class Map
     public Settings Settings { get; set; }
 
     public List<Character> Characters { get; set; }
+    public NameBasePrepared NameBase { get; set; }
 }
 

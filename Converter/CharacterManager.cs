@@ -1,4 +1,5 @@
 ﻿using SixLabors.ImageSharp;
+using System.Text;
 
 namespace Converter;
 
@@ -156,7 +157,9 @@ public static class CharacterManager
         {
             var age = rnd.Next(4, 70);
             var stewardship = rnd.Next(age / 2, age - 2) / 2;
-            var c = new Character($"{SettingsManager.Settings.modName}{characters.Count}", crh.Culture, crh.Religion, age, stewardship);
+            var dynastyName = map.NameBase.names[rnd.Next(map.NameBase.names.Length)];
+
+            var c = new Character($"{SettingsManager.Settings.modName}{characters.Count}", crh.Culture, crh.Religion, age, stewardship, dynastyName);
             characters.Add(c);
             return c;
         }
@@ -166,6 +169,7 @@ public static class CharacterManager
     {
         var rnd = new Random(1);
         var lines = map.Characters.Select(n => $@"{n.id} = {{
+    dynasty = ""{n.dynastyName.id}""
     religion = ""{n.religion}""
     culture = ""{n.culture}""
     stewardship = {n.stewardshipSkill}
@@ -207,5 +211,39 @@ public static class CharacterManager
         var path = $"{OutputDirectory}/history/titles/all.txt";
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
+    }
+    public static async Task WriteDynasties(Map map)
+    {
+        var lines = map.Characters.DistinctBy(n => n.dynastyName).Select(n => $@"{n.dynastyName.id} = {{
+    name = ""dynn_{n.dynastyName.id}""
+    culture = ""{n.culture}""
+}}");
+        var file = string.Join('\n', lines);
+
+        var path = $"{OutputDirectory}/common/dynasties/all.txt";
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        await File.WriteAllTextAsync(path, file);
+    }
+    public static async Task WriteDynastyLocalization(Map map)
+    {
+        var lines = map.Characters.DistinctBy(n => n.dynastyName).Select(n => $"dynn_{n.dynastyName.id}: \"{n.dynastyName.name}\"");
+        var content = string.Join("\n ", lines);
+
+        {
+            var file = $@"l_english:
+ FOUNDER_BASED_NAME_POSTFIX:0 ""id""
+ {content}";
+            var path = $"{OutputDirectory}/localization/english/dynasties/dynasty_names_l_english.yml";
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
+        }
+        {
+            var file = $@"l_russian:
+ FOUNDER_BASED_NAME_POSTFIX:0 ""ид""
+ {content}";
+            var path = $"{OutputDirectory}/localization/russian/dynasties/dynasty_names_l_russian.yml";
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
+        }
     }
 }
