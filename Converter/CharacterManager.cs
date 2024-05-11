@@ -177,6 +177,9 @@ public static class CharacterManager
 }}").ToArray();
         var file = string.Join('\n', lines);
 
+        // Delete existing characters.
+        Directory.EnumerateFiles($"{OutputDirectory}/history/characters").ToList().ForEach(File.Delete);
+
         var path = $"{OutputDirectory}/history/characters/all.txt";
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
@@ -208,6 +211,9 @@ public static class CharacterManager
 
         var file = string.Join('\n', lines);
 
+        // Delete existing titles.
+        Directory.EnumerateFiles($"{OutputDirectory}/history/titles").ToList().ForEach(File.Delete);
+
         var path = $"{OutputDirectory}/history/titles/all.txt";
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
@@ -219,6 +225,9 @@ public static class CharacterManager
     culture = ""{n.culture}""
 }}");
         var file = string.Join('\n', lines);
+
+        // Delete existing dynasties.
+        Directory.EnumerateFiles($"{OutputDirectory}/common/dynasties").ToList().ForEach(File.Delete);
 
         var path = $"{OutputDirectory}/common/dynasties/all.txt";
         Directory.CreateDirectory(Path.GetDirectoryName(path));

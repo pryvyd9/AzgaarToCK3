@@ -9,7 +9,9 @@ using System.Text.Json.Serialization;
 
 namespace Converter;
 
-[JsonSerializable(typeof(GeoMap))] public partial class GeoMapJsonContext : JsonSerializerContext {}
+// These are needed for AOT compilation.
+[JsonSerializable(typeof(GeoMap))]
+public partial class GeoMapJsonContext : JsonSerializerContext {}
 
 [JsonSerializable(typeof(PackProvince))]
 [JsonSerializable(typeof(JsonMap))]
@@ -171,22 +173,6 @@ public static class MapManager
         {
             Debugger.Break();
             throw;
-        }
-    }
-    public class WaterCellAreaComparerAscending : IComparer<Cell>
-    {
-        public int Compare(Cell? x, Cell? y)
-        {
-            if (x is null || y is null)
-            {
-                return 0;
-            }
-
-            var diff = x.area - y.area;
-
-            return diff == 0
-                ? 0
-                : diff / Math.Abs(diff);
         }
     }
     private static List<Province> CreateWaterProvinces(Province waterProvince)
@@ -619,7 +605,6 @@ $@"game_object_locator={{
             Debugger.Break();
             throw;
         }
-
     }
     private static async Task WriteSiegeLocators(Map map)
     {
@@ -865,12 +850,14 @@ $@"game_object_locator={{
                     .MaxBy(n => n.Value)
                     .Key;
 
-                if (!duchyCultures.ContainsKey(primaryDuchyCultureId))
+                if (duchyCultures.TryGetValue(primaryDuchyCultureId, out var dc))
                 {
-                    duchyCultures[primaryDuchyCultureId] = new List<Duchy>();
+                    dc.Add(duchy);
                 }
-
-                duchyCultures[primaryDuchyCultureId].Add(duchy);
+                else
+                {
+                    duchyCultures[primaryDuchyCultureId] = [duchy];
+                }
             }
 
             var ki = 1;
@@ -901,12 +888,14 @@ $@"game_object_locator={{
                     .MaxBy(n => n.Value)
                     .Key;
 
-                if (!kingdomReligions.ContainsKey(primaryDuchyReligionId))
+                if (kingdomReligions.TryGetValue(primaryDuchyReligionId, out var krs))
                 {
-                    kingdomReligions[primaryDuchyReligionId] = new List<Kingdom>();
+                    krs.Add(kingdom);
                 }
-
-                kingdomReligions[primaryDuchyReligionId].Add(kingdom);
+                else
+                {
+                    kingdomReligions[primaryDuchyReligionId] = [kingdom];
+                }
             }
 
             var ei = 1;
