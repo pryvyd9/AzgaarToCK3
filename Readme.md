@@ -1,7 +1,7 @@
-# Azgaar's Fantasy Map Generator to Crusaider Kings III
+# Azgaar's Fantasy Map Generator to Crusader Kings III
 ## Installation
-- Download latest release and extract it to any folder
-- Subscribe to [Total Conversion Sandbox](https://steamcommunity.com/sharedfiles/filedetails/?id=2524797018) mod on workshop
+- Download the latest release and extract it to any folder
+- Subscribe to [Total Conversion Sandbox](https://steamcommunity.com/sharedfiles/filedetails/?id=2524797018) mod on the workshop
 
 Supported game version: `1.12.4`
 
@@ -13,7 +13,7 @@ Supported game version: `1.12.4`
 	- kingdom = all duchies of the same dominant culture
 	- empire = all kingdoms of the same dominant religion
 - Biome to terrain conversion is complicated and is WIP.
-- Detached single cell parts of provinces are reassigned to neighboring province.
+- Detached single cell parts of provinces are reassigned to neighboring provinces.
 - Single cell provinces are deleted as it is not possible to put locators inside due to small size.
 - Dynasties are randomized based on basenames. They can repeat.
 - No heads of religion.
@@ -29,7 +29,7 @@ Supported game version: `1.12.4`
 
 ## Multiplayer
 - use [[UMMS]Ultimate Modded Multiplayer Solver:null checksum](https://steamcommunity.com/sharedfiles/filedetails/?id=3227254722) mod
-- use [IronyModManager](https://bcssov.github.io/IronyModManager/) to export playset with custom mod and friends should import the exported file
+- use [IronyModManager](https://bcssov.github.io/IronyModManager/) to export the playset with the custom mod and friends should import the exported file
 
 ## Usage
 1. Generate a map via https://pryvyd9.github.io/Fantasy-Map-Generator/ (It is a special version for better conversion)
