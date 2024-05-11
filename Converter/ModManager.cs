@@ -106,7 +106,7 @@ supported_version=""1.12.4""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 16;
+        int totalStageCount = 20;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -125,6 +125,9 @@ supported_version=""1.12.4""";
         await MapManager.WriteLocators(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Locators created.");
 
+        var faiths = await MapManager.ApplyCultureReligion(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Culture, Religions created.");
+
         var titles = MapManager.CreateTitles(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Titles created.");
         map.Empires = titles;
@@ -137,7 +140,7 @@ supported_version=""1.12.4""";
         await CharacterManager.WriteHistoryCharacters(map);
         await CharacterManager.WriteHistoryTitles(map);
 
-        var faiths = await MapManager.WriteHistoryProvinces(map);
+        await MapManager.WriteHistoryProvinces(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Province history created.");
         await MapManager.CopyOriginalReligions(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Original religions copied.");

@@ -5,8 +5,15 @@ using SixLabors.ImageSharp.Processing;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Converter;
+
+[JsonSerializable(typeof(GeoMap))] public partial class GeoMapJsonContext : JsonSerializerContext {}
+
+[JsonSerializable(typeof(PackProvince))]
+[JsonSerializable(typeof(JsonMap))]
+public partial class JsonMapJsonContext : JsonSerializerContext {}
 
 public static class MapManager
 {
@@ -15,13 +22,13 @@ public static class MapManager
     //public static string OutputDirectory { get; set; } = $"{Environment.CurrentDirectory}/mod";
     public static string OutputDirectory => $"{SettingsManager.Settings.modsDirectory}/{SettingsManager.Settings.modName}";
 
-
+ 
     public static async Task<GeoMap> LoadGeojson()
     {
         try
         {
             var file = await File.ReadAllTextAsync("input.geojson");
-            var geomap = JsonSerializer.Deserialize<GeoMap>(file);
+            var geomap = JsonSerializer.Deserialize(file, GeoMapJsonContext.Default.GeoMap);
             return geomap;
         }
         catch (Exception e)
@@ -30,27 +37,26 @@ public static class MapManager
             throw;
         }
     }
-    public static async Task<GeoMapRivers> LoadGeojsonRivers()
-    {
-        try
-        {
-            var file = await File.ReadAllTextAsync("inputRivers.geojson");
-            var geomap = JsonSerializer.Deserialize<GeoMapRivers>(file);
-            return geomap;
-        }
-        catch (Exception e)
-        {
-            Debugger.Break();
-            throw;
-        }
-    }
+    //public static async Task<GeoMapRivers> LoadGeojsonRivers()
+    //{
+    //    try
+    //    {
+    //        var file = await File.ReadAllTextAsync("inputRivers.geojson");
+    //        var geomap = JsonSerializer.Deserialize<GeoMapRivers>(file);
+    //        return geomap;
+    //    }
+    //    catch (Exception e)
+    //    {
+    //        Debugger.Break();
+    //        throw;
+    //    }
+    //}
     public static async Task<JsonMap> LoadJson()
     {
         try
         {
             var file = await File.ReadAllTextAsync("input.json");
-
-            var jsonmap = JsonSerializer.Deserialize<JsonMap>(file);
+            var jsonmap = JsonSerializer.Deserialize(file, JsonMapJsonContext.Default.JsonMap);
             return jsonmap;
         }
         catch (Exception e)
