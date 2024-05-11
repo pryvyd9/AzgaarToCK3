@@ -18,31 +18,42 @@ public static class CharacterManager
         // as long as they hold either two titles of lower Rank or one title of equal or higher Rank;
         // empire titles require at least 81% of their De Jure Counties.
         var rnd = new Random(1);
-        var characterIndex = 0;
         var characters = new List<Character>();
+
+        // The average starting limit is 4 but we assume
+        const double HoldingLimit = 2;
+        int i = 0;
 
         foreach (var empire in map.Empires)
         {
             var isEmperor = IsYes(0.1);
             var isEmpire = isEmperor;
-            if (isEmperor) empire.holder = GetNewCharacter();
+            if (isEmperor) empire.holder = GetNewCharacter(empire);
+
+            int empireHoldingCount = 0;
+            double empireHoldingLimit = isEmperor ? GetCharacter().stewardshipSkill / 6 + HoldingLimit : 0;
+            double GetEmpireEncoragement() => empireHoldingCount > 0 ? (empireHoldingCount / empireHoldingLimit) : 0;
 
             foreach (var kingdom in empire.kingdoms)
             {
                 var isKing = isEmperor || IsYes(0.3);
                 var isKingdom = isKing;
-                if (isKing) kingdom.holder = GetNewCharacter();
+                if (isKing) kingdom.holder = GetNewCharacter(kingdom);
                 else GetCharacter();
                 if (!isEmperor && isEmpire)
                 {
                     if (isKing && IsYes(0.81)) kingdom.liege = empire;
                 }
 
+                int kingdomHoldingCount = 0;
+                double kingdomHoldingLimit = isKing ? GetCharacter().stewardshipSkill / 6 + HoldingLimit : 0;
+                double GetKingdomEncoragement() => kingdomHoldingCount > 0 ? (kingdomHoldingCount / kingdomHoldingLimit) : 0;
+
                 foreach (var duchy in kingdom.duchies)
                 {
                     var isDuke = isKing || IsYes(0.6);
                     var isDukedom = isDuke;
-                    if (isDuke) duchy.holder = GetNewCharacter();
+                    if (isDuke) duchy.holder = GetNewCharacter(duchy);
                     else GetCharacter();
                     if (!isKing && isKingdom)
                     {
@@ -50,24 +61,86 @@ public static class CharacterManager
                         else if (isEmpire && IsYes(0.81)) duchy.liege = empire;
                     }
 
+                    int duchyHoldingCount = 0;
+                    double duchyHoldingLimit = isDuke ? GetCharacter().stewardshipSkill / 6 + HoldingLimit : 0;
+                    double GetDuchyEncoragement() => duchyHoldingCount > 0 ? (duchyHoldingCount / duchyHoldingLimit) : 0;
+
+                    var countyHoldingCount = 0;
+                    double countyHoldingLimit = HoldingLimit;
+                    double GetCountyEncoragement() => countyHoldingCount > 0 ? (countyHoldingCount / countyHoldingLimit) : 0;
+
                     foreach (var county in duchy.counties)
                     {
-                        if (IsYes(0.8)) county.holder = GetNewCharacter();
-                        else GetCharacter();
-
-                        if (!isDuke && isDukedom)
+                        // The more holdings upper titles hold the more the probability to create a separate count.
+                        var separateHoldingEncouragement =
+                            GetEmpireEncoragement() * 0.395 +
+                            GetKingdomEncoragement() * 0.3 +
+                            GetDuchyEncoragement() * 0.18 +
+                            GetCountyEncoragement() * 0.125;
+                        //var separateHoldingEncouragement =
+                        //   GetEmpireEncoragement() * 0.125 +
+                        //   GetKingdomEncoragement() * 0.18 +
+                        //   GetDuchyEncoragement() * 0.3 +
+                        //   GetCountyEncoragement() * 0.395;
+                        if (IsYes(separateHoldingEncouragement))
                         {
-                            if (IsYes(0.51)) county.liege = duchy;
-                            else if (isKingdom && IsYes(0.51)) county.liege = kingdom;
-                            else if (isEmpire && IsYes(0.81)) county.liege = empire;
+                            county.holder = GetNewCharacter(county);
+                        }
+                        else
+                        {
+                            GetCharacter();
+                            countyHoldingCount++;
+                        }
+
+                        // Only assign liege 1 time
+                        if (countyHoldingCount == 1)
+                        {
+                            if (!isDuke && isDukedom)
+                            {
+                                if (IsYes(0.51 - GetDuchyEncoragement()))
+                                {
+                                    county.liege = duchy;
+                                    duchyHoldingCount++;
+                                }
+                                else if (isKingdom && IsYes(0.51 - GetKingdomEncoragement()))
+                                {
+                                    county.liege = kingdom;
+                                    kingdomHoldingCount++;
+                                }
+                                else if (isEmpire && IsYes(0.81 - GetEmpireEncoragement()))
+                                {
+                                    county.liege = empire;
+                                    empireHoldingCount++;
+                                }
+                            }
+                            else if (!isKing && isKingdom)
+                            {
+                                if (isKingdom && IsYes(0.51 - GetKingdomEncoragement()))
+                                {
+                                    county.liege = kingdom;
+                                    kingdomHoldingCount++;
+                                }
+                                else if (isEmpire && IsYes(0.81 - GetEmpireEncoragement()))
+                                {
+                                    county.liege = empire;
+                                    empireHoldingCount++;
+                                }
+                            }
+                            else if (!isEmperor && isEmpire)
+                            {
+                                if (isEmpire && IsYes(0.81 - GetEmpireEncoragement()))
+                                {
+                                    county.liege = empire;
+                                    empireHoldingCount++;
+                                }
+                            }
                         }
 
                         isEmperor = false;
                         isKing = false;
                         isDuke = false;
+                        i++;
                     }
-
-                    characterIndex++;
                 }
             }
         }
@@ -75,25 +148,28 @@ public static class CharacterManager
         return characters;
 
         bool IsYes(double probability) => rnd.NextSingle() < probability;
-        Character GetCharacter() 
+        Character GetCharacter()
         {
             return characters.Last();
         }
-        Character GetNewCharacter()
+        Character GetNewCharacter(ICultureReligionHolder crh)
         {
-            var c = new Character($"{SettingsManager.Settings.modName}{characterIndex}");
+            var age = rnd.Next(4, 70);
+            var stewardship = rnd.Next(age / 2, age - 2) / 2;
+            var c = new Character($"{SettingsManager.Settings.modName}{characters.Count}", crh.Culture, crh.Religion, age, stewardship);
             characters.Add(c);
             return c;
         }
     }
+
     public static async Task WriteHistoryCharacters(Map map)
     {
+        var rnd = new Random(1);
         var lines = map.Characters.Select(n => $@"{n.id} = {{
-    name = ""Begli"" #anachronistic king of Baguirmi
-	dynasty = saodyn001
-	religion = west_african_bori_pagan
-	culture = sao
-    1033.1.1 = {{ birth = yes }}
+    religion = ""{n.religion}""
+    culture = ""{n.culture}""
+    stewardship = {n.stewardshipSkill}
+    {(1066 - n.age)}.1.1 = {{ birth = ""{(1066 - n.age)}.1.1"" }}
 }}").ToArray();
         var file = string.Join('\n', lines);
 
@@ -117,11 +193,10 @@ public static class CharacterManager
                 {
                     var dliege = d.liege is not null ? $"liege = \"{d.liege.Id}\"" : null;
                     if (d.holder is not null) lines.Add($"{d.Id} = {{ 1066.1.1 = {{ holder = {d.holder.id} {dliege} }} }}");
-
                     foreach (var c in d.counties)
                     {
                         var cliege = c.liege is not null ? $"liege = \"{c.liege.Id}\"" : null;
-                        if (cliege is not null) lines.Add($"{c.Id} = {{ 1066.1.1 = {{ holder = {c.holder?.id} {cliege} }} }}");
+                        if (c.holder is not null) lines.Add($"{c.Id} = {{ 1066.1.1 = {{ holder = {c.holder?.id} {cliege} }} }}");
                     }
                 }
             }

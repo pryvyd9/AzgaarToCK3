@@ -88,19 +88,26 @@ public class Province
     public bool IsWater { get; set; }
 }
 
-public record Character(string id);
+public record Character(string id, string culture, string religion, int age, int stewardshipSkill);
 
 public interface ITitle
 {
     string Id { get; }
 }
-//public interface ICultureHolder
-//{
-//    string Culture { get; }
-//}
+public interface ICultureReligionHolder
+{
+    string Culture { get; }
+    string Religion { get; }
+}
 
-public record Barony(int id, Province province, string name, MagickColor color);
-public class County : ITitle
+public record Barony(int id, Province province, string name, MagickColor color) : ICultureReligionHolder, ITitle
+{
+    public string Culture { get; set; }
+    public string Religion { get; set; }
+
+    public string Id => $"b_{id}";
+}
+public class County : ITitle, ICultureReligionHolder
 {
     public int id { get; init; }
     public List<Barony> baronies = new();
@@ -111,26 +118,34 @@ public class County : ITitle
 
     public Character holder;
     public string Id => $"c_{id}";
+    public string Culture { get; set; }
+    public string Religion { get; set; }
 }
-public record Duchy(int id, County[] counties, string name, MagickColor color, string capitalName) : ITitle
+public record Duchy(int id, County[] counties, string name, MagickColor color, string capitalName) : ITitle, ICultureReligionHolder
 {
     public Character holder;
     public ITitle liege;
 
     public string Id => $"d_{id}";
+    public string Culture { get; set; }
+    public string Religion { get; set; }
 }
-public record Kingdom(int id, Duchy[] duchies, bool isAllowed, string name, MagickColor color, string capitalName) : ITitle
+public record Kingdom(int id, Duchy[] duchies, bool isAllowed, string name, MagickColor color, string capitalName) : ITitle, ICultureReligionHolder
 {
     public Character holder;
     public ITitle liege;
 
     public string Id => $"k_{id}";
+    public string Culture { get; set; }
+    public string Religion { get; set; }
 };
-public record Empire(int id, Kingdom[] kingdoms, bool isAllowed, string name, MagickColor color, string capitalName) : ITitle
+public record Empire(int id, Kingdom[] kingdoms, bool isAllowed, string name, MagickColor color, string capitalName) : ITitle, ICultureReligionHolder
 {
     public Character holder;
 
     public string Id => $"e_{id}";
+    public string Culture { get; set; }
+    public string Religion { get; set; }
 };
 public class Map
 {

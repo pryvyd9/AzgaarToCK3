@@ -2,14 +2,9 @@
 using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Converter;
 
@@ -929,7 +924,7 @@ $@"game_object_locator={{
         {
             return baronies.Select((n, i) =>
             {
-                return $@"                b_{n.id} = {{
+                return $@"                {n.Id} = {{
                     color = {{ {n.color.R} {n.color.G} {n.color.B} }}
                     color2 = {{ 255 255 255 }}
                     province = {map.IdToIndex[n.province.Id]}
@@ -942,9 +937,10 @@ $@"game_object_locator={{
             return counties.Select((n, i) =>
             {
                 ci = n.id;
-                return $@"            c_{ci} = {{
+                return $@"            {n.Id} = {{
                 color = {{ {n.Color.R} {n.Color.G} {n.Color.B} }}
                 color2 = {{ 255 255 255 }}
+                definite_form = yes
 {string.Join("\n", GetBaronies(n.baronies.ToArray()))}
             }}";
             }).ToArray();
@@ -952,20 +948,22 @@ $@"game_object_locator={{
 
         string[] GetDuchies(Duchy[] duchies)
         {
-            return duchies.Select((d, i) => $@"        d_{d.id} = {{
+            return duchies.Select((d, i) => $@"        {d.Id} = {{
             color = {{ {d.color.R} {d.color.G} {d.color.B} }}
             color2 = {{ 255 255 255 }}
             capital = c_{ci}
+            definite_form = yes
 {string.Join("\n", GetCounties(d.counties))}
         }}").ToArray();
         }
 
         string[] GetKingdoms(Kingdom[] kingdoms)
         {
-            return kingdoms.Select((k, i) => $@"    k_{k.id} = {{
+            return kingdoms.Select((k, i) => $@"    {k.Id} = {{
         color = {{ {k.color.R} {k.color.G} {k.color.B} }}
         color2 = {{ 255 255 255 }}
         capital = c_{ci}
+        definite_form = yes
         {(k.isAllowed ? "" : "allow = { always = no }")}
 {string.Join("\n", GetDuchies(k.duchies))}
     }}").ToArray();
@@ -973,7 +971,7 @@ $@"game_object_locator={{
 
         string[] GetEmpires()
         {
-            return map.Empires.Select((e, i) => $@"e_{e.id} = {{
+            return map.Empires.Select((e, i) => $@"{e.Id} = {{
     color = {{ {e.color.R} {e.color.G} {e.color.B} }}
     color2 = {{ 255 255 255 }}
     capital = c_{ci}
@@ -1003,19 +1001,19 @@ e_roman_empire = {{ landless = yes }}";
 
         foreach (var e in map.Empires)
         {
-            lines.Add($"e_{e.id}: \"{e.name}\"");
+            lines.Add($"{e.Id}: \"{e.name}\"");
             foreach (var k in e.kingdoms)
             {
-                lines.Add($"k_{k.id}: \"{k.name}\"");
+                lines.Add($"{k.Id}: \"{k.name}\"");
                 foreach (var d in k.duchies)
                 {
-                    lines.Add($"d_{d.id}: \"{d.name}\"");
+                    lines.Add($"{d.Id}: \"{d.name}\"");
                     foreach (var c in d.counties)
                     {
-                        lines.Add($"c_{c.id}: \"{c.Name}\"");
+                        lines.Add($"{c.Id}: \"{c.Name}\"");
                         foreach (var b in c.baronies)
                         {
-                            lines.Add($"b_{b.id}: \"{b.name}\"");
+                            lines.Add($"{b.Id}: \"{b.name}\"");
                         }
                     }
                 }
@@ -1350,12 +1348,41 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
         return (baronyReligions, toOriginalReligionName);
     }
-
-    public static async Task<string[]> WriteHistoryProvinces(Map map)
+    public static async Task<string[]> ApplyCultureReligion(Map map)
     {
         var (baronyCultures, toOriginalCultureName) = await GetCultures(map);
         var (baronyReligions, toOriginalReligionName) = await GetReligions(map);
 
+        foreach (var empire in map.Empires)
+        {
+            foreach (var kingdom in empire.kingdoms)
+            {
+                foreach (var duchy in kingdom.duchies)
+                {
+                    foreach (var county in duchy.counties)
+                    {
+                        foreach (var barony in county.baronies)
+                        {
+                            barony.Culture = toOriginalCultureName[baronyCultures[barony.id]];
+                            barony.Religion = toOriginalReligionName[baronyReligions[barony.id]];
+                        }
+                        county.Culture = county.baronies[0].Culture;
+                        county.Religion = county.baronies[0].Religion;
+                    }
+                    duchy.Culture = duchy.counties[0].Culture;
+                    duchy.Religion = duchy.counties[0].Religion;
+                }
+                kingdom.Culture = kingdom.duchies[0].Culture;
+                kingdom.Religion = kingdom.duchies[0].Religion;
+            }
+            empire.Culture = empire.kingdoms[0].Culture;
+            empire.Religion = empire.kingdoms[0].Religion;
+        }
+
+        return toOriginalReligionName;
+    }
+    public static async Task WriteHistoryProvinces(Map map)
+    {
         foreach (var empire in map.Empires)
         {
             foreach (var kingdom in empire.kingdoms)
@@ -1366,8 +1393,8 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     .Select(n =>
                     {
                         var str = $@"{map.IdToIndex[n.province.Id]} = {{
-    culture = {toOriginalCultureName[baronyCultures[n.id]]}
-    religion = {toOriginalReligionName[baronyReligions[n.id]]}
+    culture = {n.Culture}
+    religion = {n.Religion}
     holding = auto
 }}";
                         return str;
@@ -1389,8 +1416,6 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         {
             File.WriteAllText(provincesPath + Path.GetFileName(p), "");
         }
-
-        return toOriginalReligionName;
     }
     public static async Task CopyOriginalReligions(Map map)
     {
