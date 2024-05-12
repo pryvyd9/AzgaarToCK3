@@ -9,7 +9,7 @@ $version = $a.Matches[0].Groups[1]
 # Move tag to the latest commit
 if (git tag -l $version) { git tag -d $version }
 git tag $version
-git push --tags
+git push --tags -f
 
 Remove-Item "$OutDir" -Recurse
 
