@@ -361,3 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/AzgaarToCK3_1.2.2_win-arm.zip
+/AzgaarToCK3_1.2.2_win-x86.zip

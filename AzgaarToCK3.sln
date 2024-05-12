@@ -5,25 +5,31 @@ VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{28F2516B-387D-498D-8E9D-5AEBE8D76CDD}"
 	ProjectSection(SolutionItems) = preProject
+		changelog.md = changelog.md
 		Readme.md = Readme.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleUI", "ConsoleUI\ConsoleUI.csproj", "{B8E697C9-C0DD-4DDB-BCB2-BDDE1C9872D5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleUI", "ConsoleUI\ConsoleUI.csproj", "{B8E697C9-C0DD-4DDB-BCB2-BDDE1C9872D5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Converter", "Converter\Converter.csproj", "{5680C0A2-084A-4449-A3A0-BF37FA7318BB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Converter", "Converter\Converter.csproj", "{5680C0A2-084A-4449-A3A0-BF37FA7318BB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Publish|Any CPU = Publish|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{B8E697C9-C0DD-4DDB-BCB2-BDDE1C9872D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B8E697C9-C0DD-4DDB-BCB2-BDDE1C9872D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8E697C9-C0DD-4DDB-BCB2-BDDE1C9872D5}.Publish|Any CPU.ActiveCfg = Publish|Any CPU
+		{B8E697C9-C0DD-4DDB-BCB2-BDDE1C9872D5}.Publish|Any CPU.Build.0 = Publish|Any CPU
 		{B8E697C9-C0DD-4DDB-BCB2-BDDE1C9872D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B8E697C9-C0DD-4DDB-BCB2-BDDE1C9872D5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5680C0A2-084A-4449-A3A0-BF37FA7318BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5680C0A2-084A-4449-A3A0-BF37FA7318BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5680C0A2-084A-4449-A3A0-BF37FA7318BB}.Publish|Any CPU.ActiveCfg = Publish|Any CPU
+		{5680C0A2-084A-4449-A3A0-BF37FA7318BB}.Publish|Any CPU.Build.0 = Publish|Any CPU
 		{5680C0A2-084A-4449-A3A0-BF37FA7318BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5680C0A2-084A-4449-A3A0-BF37FA7318BB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection

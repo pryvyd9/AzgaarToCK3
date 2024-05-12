@@ -106,7 +106,7 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
     }
 #endif
-#if RELEASE
+#if RELEASE || PUBLISH
     public static async Task Run()
     {
         int i = 1;
