@@ -1,3 +1,6 @@
+# 1.2.4
+- Added MacOS folder detection.
+
 # 1.2.3
 - Switched to AOT compilation for publishing.
 - Added MacOS (not AOT as cross-OS compilationis not possible).
