@@ -1,11 +1,12 @@
 # 1.2.7
-- switched to ProcessPath
+- switched to ProcessPath.
+- added input search.
 
 # 1.2.6
-- changed to userProfile
+- changed to userProfile.
 
 # 1.2.5
-- Added `~` to mac paths
+- Added `~` to mac paths.
 
 # 1.2.4
 - Added MacOS folder detection.

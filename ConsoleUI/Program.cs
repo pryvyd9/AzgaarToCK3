@@ -57,6 +57,22 @@ internal class Program
             }
         }
 
+        // Try find placed inputs
+        if (ModManager.TryFindJson() is ({ } jsonName, { } geojsonName) && 
+            (SettingsManager.Settings.inputJsonPath != jsonName || SettingsManager.Settings.inputGeojsonPath != geojsonName))
+        {
+            Console.WriteLine($"Found 2 files in the directory: ");
+            Console.WriteLine(Path.GetFileName(jsonName));
+            Console.WriteLine(Path.GetFileName(geojsonName));
+            Console.WriteLine("Use them as inputs?");
+
+            if (YesNo())
+            {
+                SettingsManager.Settings.inputJsonPath = jsonName;
+                SettingsManager.Settings.inputGeojsonPath = geojsonName;
+            }
+        }
+
         if (SettingsManager.Settings.shouldOverride ?? false)
         {
             Console.WriteLine($"Mod will be overriden in all future runs. If you wish to change it change '{nameof(SettingsManager.Settings.shouldOverride)}' in 'settings.json' file.");

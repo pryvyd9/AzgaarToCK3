@@ -157,9 +157,9 @@ public static class SettingsManager
                     .Replace(@"\\", "/").Replace(@"\", "/"),
                 totalConversionSandboxPath = GetTotalConversionSandboxDirectoryWindows()
                     .Replace(@"\\", "/").Replace(@"\", "/"),
-                inputJsonPath = $"{Environment.ProcessPath}/input.json"
+                inputJsonPath = $"{ExecutablePath}/input.json"
                     .Replace(@"\\", "/").Replace(@"\", "/"),
-                inputGeojsonPath = $"{Environment.ProcessPath}/input.geojson"
+                inputGeojsonPath = $"{ExecutablePath}/input.geojson"
                     .Replace(@"\\", "/").Replace(@"\", "/"),
             };
         }
@@ -173,9 +173,9 @@ public static class SettingsManager
                     .Replace(@"\\", "/").Replace(@"\", "/"),
                 totalConversionSandboxPath = GetTotalConversionSandboxDirectoryMac()
                     .Replace(@"\\", "/").Replace(@"\", "/"),
-                inputJsonPath = $"{Environment.ProcessPath}/input.json"
+                inputJsonPath = $"{ExecutablePath}/input.json"
                     .Replace(@"\\", "/").Replace(@"\", "/"),
-                inputGeojsonPath = $"{Environment.ProcessPath}/input.geojson"
+                inputGeojsonPath = $"{ExecutablePath}/input.geojson"
                     .Replace(@"\\", "/").Replace(@"\", "/"),
             };
         }
@@ -187,5 +187,7 @@ public static class SettingsManager
     {
         File.WriteAllText(settingsFileName, JsonSerializer.Serialize(Settings, SettingsJsonContext.Default.Settings));
     }
+
+    public static string ExecutablePath => Directory.GetParent(Environment.ProcessPath!)!.FullName;
 }
 

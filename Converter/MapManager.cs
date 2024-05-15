@@ -29,7 +29,7 @@ public static class MapManager
     {
         try
         {
-            var file = await File.ReadAllTextAsync("input.geojson");
+            var file = await File.ReadAllTextAsync(SettingsManager.Settings.inputGeojsonPath);
             var geomap = JsonSerializer.Deserialize(file, GeoMapJsonContext.Default.GeoMap);
             return geomap;
         }
@@ -57,7 +57,7 @@ public static class MapManager
     {
         try
         {
-            var file = await File.ReadAllTextAsync("input.json");
+            var file = await File.ReadAllTextAsync(SettingsManager.Settings.inputJsonPath);
             var jsonmap = JsonSerializer.Deserialize(file, JsonMapJsonContext.Default.JsonMap);
             return jsonmap;
         }

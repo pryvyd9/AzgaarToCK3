@@ -32,6 +32,30 @@ supported_version=""1.12.4""";
         return Directory.Exists($"{SettingsManager.Settings.modsDirectory}/{SettingsManager.Settings.modName}");
     }
 
+    public static (string? jsonName, string? geojsonName) TryFindJson()
+    {
+        string? jsonName = null;
+        string? geojsonName = null;
+
+        foreach (var f in Directory.EnumerateFiles(SettingsManager.ExecutablePath))
+        {
+            if (f.EndsWith(".json") && !f.EndsWith("settings.json"))
+            {
+                jsonName = f;
+            }
+            else if (f.EndsWith(".geojson"))
+            {
+                geojsonName = f;
+            }
+
+            if (jsonName is not null && geojsonName is not null)
+            {
+                break;
+            }
+        }
+
+        return (jsonName, geojsonName);
+    }
 
     private static async Task<Map> LoadMap()
     {
@@ -54,10 +78,13 @@ supported_version=""1.12.4""";
 
         //await MapManager.DrawCells(map);
 
-        await MapManager.DrawProvinces(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
+        //await MapManager.DrawProvinces(map);
+        //Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
+
+        await MapManager.CreatePackedHeightMap(map);
+
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
         await MapManager.WriteDefinition(map);
