@@ -36,30 +36,29 @@ Supported game version: `1.12.4`
 2. Export GeoJSON cells and JSON full
 ![screenshot](docs/photo_2024-05-08_21-40-06.jpg)
 3. Place these files in the extracted folder
-4. Run the .exe file
-5. Follow the instructions
-6. Go to properties of CK3 in Steam and add `-mapeditor` parameter
-7. Launch the game making sure the newly created mod is added to the playset and enabled
-8. Repack heightmap
-![screenshot](docs/Screenshot_2024-05-08_214628.png)
-10. Go to Map Objects Editor. Click on any territory in the list and select all with Ctrl+A hotkey
-![screenshot](docs/Screenshot_2024-05-08_214847.png)
-11. Click on `Automatically place...` button
-![screenshot](docs/Screenshot_2024-05-08_215322.png)
-12. Some of the territories failed to add locators properly. Click on Filter all entries that contain errors
-![screenshot](docs/Screenshot_2024-05-08_215116.png)
-13. Repeat 10-12 until there are no entries with errors
-14. If some entries won't fix themselves select the entry, check what object fails and click on `Configure Autonudge...` button.
-![screenshot](docs/Screenshot_2024-05-08_215624.png)
-Then find settings related to that type of object and tweak them then retry 10-12.
-Usually changing some distance parameters helps.
-If that still did not help then select the object and move it by hand.
-Hopefully there not many of them.
-15. Make any other changes in map editor.
-16. Save all and exit (Alt+F4 if it restarts the game instead of exit)
-![screenshot](docs/Screenshot_2024-05-08_220216.png)
-17. Remove -mapeditor launch option and run the game
-18. Enjoy!
+4. Rename json and geojson files to input.json and input.geojson
+5. Run `ConsoleUI` file
+6. Follow the instructions
+7. Go to properties of CK3 in Steam and add `-mapeditor` parameter
+8. Launch the game making sure the newly created mod is added to the playset and enabled
+9. Map Editing:
+    1. Repack heightmap
+		![screenshot](docs/Screenshot_2024-05-08_214628.png)
+	2. Go to Map Objects Editor. Click on any territory in the list and select all with Ctrl+A hotkey
+		![screenshot](docs/Screenshot_2024-05-08_214847.png)
+	3. Click on `Automatically place...` button
+		![screenshot](docs/Screenshot_2024-05-08_215322.png)
+	4. Some of the territories failed to add locators properly. Click on Filter all entries that contain errors
+	    ![screenshot](docs/Screenshot_2024-05-08_215116.png)
+	5. Repeat 10-12 until there are no entries with errors
+	6. If some entries won't fix themselves select the entry, check what object fails and click on `Configure Autonudge...` button.
+	    ![screenshot](docs/Screenshot_2024-05-08_215624.png)
+	Then find settings related to that type of object and tweak them then retry 10-12. Usually changing some distance parameters helps. If that still did not help then select the object and move it by hand. Hopefully there not many of them.
+	7. Make any other changes in map editor.
+	8. Save all and exit (Alt+F4 if it restarts the game instead of exit)
+	    ![screenshot](docs/Screenshot_2024-05-08_220216.png)
+10. Remove -mapeditor launch option and run the game
+11. Enjoy!
 
 ## More Usage
 - You can delete the `settings.json` to reconfigure everything or edit `settings.json` to suit your needs
