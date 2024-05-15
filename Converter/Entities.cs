@@ -1,11 +1,6 @@
 ﻿using ImageMagick;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Converter;
 
@@ -20,6 +15,9 @@ public record GeoMapRivers(FeatureRivers[] features);
 
 public record PackProvince(int i, int state, int burg, string name);
 
+[JsonSerializable(typeof(PackProvince[]))]
+public partial class PackProinvceArrayJsonContext : JsonSerializerContext { }
+
 // For some reason the first element in the array isn't an object but a number.
 // Need custom converter to skip the number and parse all other provinces.
 public class PackProvinceJsonConverter : JsonConverter<PackProvince[]>
@@ -32,7 +30,7 @@ public class PackProvinceJsonConverter : JsonConverter<PackProvince[]>
         // replace 0 with empty province (sea).
         var escapedStr = string.Concat(str.AsSpan(0, 1), "{}", str.AsSpan(2));
 
-        var provinces = JsonSerializer.Deserialize<PackProvince[]>(escapedStr);
+        var provinces = JsonSerializer.Deserialize(escapedStr, PackProinvceArrayJsonContext.Default.PackProvinceArray);
 
         return provinces;
     }

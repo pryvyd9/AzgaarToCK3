@@ -1,5 +1,4 @@
 ﻿using Converter;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace ConsoleUI;
 

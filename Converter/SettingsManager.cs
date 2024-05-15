@@ -2,6 +2,7 @@
 using Microsoft.Win32;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using System.Text.Json.Serialization;
 
 namespace Converter;
 
@@ -15,6 +16,9 @@ public class Settings
     public string inputGeojsonPath { get; set; }
     public bool? shouldOverride { get; set; } = null;
 }
+
+[JsonSerializable(typeof(Settings))]
+public partial class SettingsJsonContext : JsonSerializerContext { }
 
 public static class SettingsManager
 {
@@ -80,14 +84,22 @@ public static class SettingsManager
     }
     public static bool TryLoad()
     {
-        if (!File.Exists(settingsFileName))
+        try
         {
+            if (!File.Exists(settingsFileName))
+            {
+                return false;
+            }
+
+            var settings = File.ReadAllText(settingsFileName);
+            Settings = JsonSerializer.Deserialize(settings, SettingsJsonContext.Default.Settings)!;
+            return true;
+        } 
+        catch (Exception e)
+        {
+            Console.WriteLine($"Failed to load settings: {e.Message} {e.StackTrace}");
             return false;
         }
-
-        var settings = File.ReadAllText(settingsFileName);
-        Settings = JsonSerializer.Deserialize<Settings>(settings)!;
-        return true;
     }
     public static void CreateDefault()
     {
@@ -109,7 +121,7 @@ public static class SettingsManager
 
     public static void Save()
     {
-        File.WriteAllText(settingsFileName, JsonSerializer.Serialize(Settings));
+        File.WriteAllText(settingsFileName, JsonSerializer.Serialize(Settings, SettingsJsonContext.Default.Settings));
     }
 }
 

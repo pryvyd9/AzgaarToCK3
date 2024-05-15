@@ -1,14 +1,16 @@
 ﻿using SixLabors.ImageSharp;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static Converter.ConfigReader;
 
 namespace Converter;
+
+[JsonSerializable(typeof(Dictionary<string, CK3HolySite>))]
+public partial class CK3HolySitesJsonContext : JsonSerializerContext { }
 
 public static class ConfigReader
 {
@@ -100,7 +102,7 @@ public static class ConfigReader
         var json = ToJson(file);
         try
         {
-            var holySites = JsonSerializer.Deserialize<Dictionary<string, CK3HolySite>>(json);
+            var holySites = JsonSerializer.Deserialize(json, CK3HolySitesJsonContext.Default.DictionaryStringCK3HolySite);
 
             return holySites;
         }

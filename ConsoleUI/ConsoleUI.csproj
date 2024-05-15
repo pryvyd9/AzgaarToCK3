@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Publish</Configurations>
@@ -12,7 +12,7 @@
     <ProjectReference Include="..\Converter\Converter.csproj" />
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)'=='Publish' And '$(BuildingInsideVisualStudio)' == 'true'" >
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)'=='Publish' And '$(BuildingInsideVisualStudio)' == 'true'">
     <Exec Command="powershell -ExecutionPolicy Unrestricted $(ProjectDir)afterPublishBuild.ps1 -ProjectDir $(ProjectDir) -OutDir $(OutDir)" />
   </Target>
 </Project>
