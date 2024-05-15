@@ -1,3 +1,6 @@
+# 1.2.7
+- switched to ProcessPath
+
 # 1.2.6
 - changed to userProfile
 

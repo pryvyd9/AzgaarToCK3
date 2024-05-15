@@ -157,9 +157,9 @@ public static class SettingsManager
                     .Replace(@"\\", "/").Replace(@"\", "/"),
                 totalConversionSandboxPath = GetTotalConversionSandboxDirectoryWindows()
                     .Replace(@"\\", "/").Replace(@"\", "/"),
-                inputJsonPath = $"{Environment.CurrentDirectory}/input.json"
+                inputJsonPath = $"{Environment.ProcessPath}/input.json"
                     .Replace(@"\\", "/").Replace(@"\", "/"),
-                inputGeojsonPath = $"{Environment.CurrentDirectory}/input.geojson"
+                inputGeojsonPath = $"{Environment.ProcessPath}/input.geojson"
                     .Replace(@"\\", "/").Replace(@"\", "/"),
             };
         }
@@ -173,9 +173,9 @@ public static class SettingsManager
                     .Replace(@"\\", "/").Replace(@"\", "/"),
                 totalConversionSandboxPath = GetTotalConversionSandboxDirectoryMac()
                     .Replace(@"\\", "/").Replace(@"\", "/"),
-                inputJsonPath = $"{Environment.CurrentDirectory}/input.json"
+                inputJsonPath = $"{Environment.ProcessPath}/input.json"
                     .Replace(@"\\", "/").Replace(@"\", "/"),
-                inputGeojsonPath = $"{Environment.CurrentDirectory}/input.geojson"
+                inputGeojsonPath = $"{Environment.ProcessPath}/input.geojson"
                     .Replace(@"\\", "/").Replace(@"\", "/"),
             };
         }
