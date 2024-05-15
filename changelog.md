@@ -1,3 +1,6 @@
+# 1.2.5
+- Added `~` to mac paths
+
 # 1.2.4
 - Added MacOS folder detection.
 
