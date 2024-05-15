@@ -52,7 +52,7 @@ public static class SettingsManager
     }
     private static string GetGameDirectoryMac()
     {
-        var steamPath = "~/Library/Application Support/Steam";
+        var steamPath = $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/Library/Application Support/Steam";
         var libraries = File.ReadAllText($"{steamPath}/steamapps/libraryfolders.vdf");
         var pathRegex = new Regex("\"path\"\\s*\"(.+)\"");
         var paths = pathRegex.Matches(libraries).Select(n => n.Groups[1].Value);
@@ -99,7 +99,7 @@ public static class SettingsManager
     }
     private static string GetTotalConversionSandboxDirectoryMac()
     {
-        var steamPath = "~/Library/Application Support/Steam";
+        var steamPath = $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/Library/Application Support/Steam";
         var libraries = File.ReadAllText($"{steamPath}/steamapps/libraryfolders.vdf");
         var pathRegex = new Regex("\"path\"\\s*\"(.+)\"");
         var paths = pathRegex.Matches(libraries).Select(n => n.Groups[1].Value);

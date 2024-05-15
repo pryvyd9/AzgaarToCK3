@@ -1,3 +1,6 @@
+# 1.2.6
+- changed to userProfile
+
 # 1.2.5
 - Added `~` to mac paths
 
