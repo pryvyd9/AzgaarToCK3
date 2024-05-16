@@ -156,7 +156,7 @@ internal class Program
 
     private static void TryFindInputs()
     {
-        if (ModManager.TryFindJson() is ({ } jsonName, { } geojsonName) &&
+        if (ModManager.TryFindInputs() is ({ } jsonName, { } geojsonName) &&
           (SettingsManager.Instance.inputJsonPath != jsonName || SettingsManager.Instance.inputGeojsonPath != geojsonName))
         {
             Console.WriteLine($"Found 2 files in the directory: ");

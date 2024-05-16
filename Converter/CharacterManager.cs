@@ -178,9 +178,9 @@ public static class CharacterManager
         var file = string.Join('\n', lines);
 
         // Delete existing characters.
-        Directory.EnumerateFiles($"{OutputDirectory}/history/characters").ToList().ForEach(File.Delete);
+        Directory.EnumerateFiles(Path.Combine(OutputDirectory, "history", "characters")).ToList().ForEach(File.Delete);
 
-        var path = $"{OutputDirectory}/history/characters/all.txt";
+        var path = Path.Combine(OutputDirectory, "history", "characters", "all.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -212,9 +212,9 @@ public static class CharacterManager
         var file = string.Join('\n', lines);
 
         // Delete existing titles.
-        Directory.EnumerateFiles($"{OutputDirectory}/history/titles").ToList().ForEach(File.Delete);
+        Directory.EnumerateFiles(Path.Combine(OutputDirectory, "history", "titles")).ToList().ForEach(File.Delete);
 
-        var path = $"{OutputDirectory}/history/titles/all.txt";
+        var path = Path.Combine(OutputDirectory, "history", "titles", "all.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -227,9 +227,9 @@ public static class CharacterManager
         var file = string.Join('\n', lines);
 
         // Delete existing dynasties.
-        Directory.EnumerateFiles($"{OutputDirectory}/common/dynasties").ToList().ForEach(File.Delete);
+        Directory.EnumerateFiles(Path.Combine(OutputDirectory, "common", "dynasties")).ToList().ForEach(File.Delete);
 
-        var path = $"{OutputDirectory}/common/dynasties/all.txt";
+        var path = Path.Combine(OutputDirectory, "common", "dynasties", "all.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -242,7 +242,7 @@ public static class CharacterManager
             var file = $@"l_english:
  FOUNDER_BASED_NAME_POSTFIX:0 ""id""
  {content}";
-            var path = $"{OutputDirectory}/localization/english/dynasties/dynasty_names_l_english.yml";
+            var path = Path.Combine(OutputDirectory, "localization", "english", "dynasties", "dynasty_names_l_english.yml");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
         }
@@ -250,7 +250,7 @@ public static class CharacterManager
             var file = $@"l_russian:
  FOUNDER_BASED_NAME_POSTFIX:0 ""ид""
  {content}";
-            var path = $"{OutputDirectory}/localization/russian/dynasties/dynasty_names_l_russian.yml";
+            var path = Path.Combine(OutputDirectory, "localization", "russian", "dynasties", "dynasty_names_l_russian.yml");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
         }

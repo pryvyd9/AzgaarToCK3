@@ -1,3 +1,6 @@
+# 1.2.9
+- used Path everywhere.
+
 # 1.2.8
 - used Path methods for paths.
 

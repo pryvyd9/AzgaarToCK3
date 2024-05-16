@@ -258,7 +258,7 @@ e_hre = {{ landless = yes }}
 e_byzantium = {{ landless = yes }}
 e_roman_empire = {{ landless = yes }}";
 
-        var path = $"{OutputDirectory}/common/landed_titles/00_landed_titles.txt";
+        var path = Path.Combine(OutputDirectory, "common", "landed_titles", "00_landed_titles.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -297,7 +297,7 @@ e_roman_empire = {{ landless = yes }}";
  TITLE_TIER_AS_NAME:0 ""$TIER|U$""
 
  {string.Join("\n ", lines)}";
-            var path = $"{OutputDirectory}/localization/english/titles_l_english.yml";
+            var path = Path.Combine(OutputDirectory, "localization", "english", "titles_l_english.txt");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
         }
@@ -310,7 +310,7 @@ e_roman_empire = {{ landless = yes }}";
  TITLE_TIER_AS_NAME:0 ""$TIER|U$""
 
  {string.Join("\n ", lines)}";
-            var path = $"{OutputDirectory}/localization/russian/titles_l_russian.yml";
+            var path = Path.Combine(OutputDirectory, "localization", "russian", "titles_l_russian.txt");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
         }
