@@ -21,8 +21,7 @@ public static class MapManager
 {
     private const int WaterLevelHeight = 30;
 
-    //public static string OutputDirectory { get; set; } = $"{Environment.CurrentDirectory}/mod";
-    public static string OutputDirectory => $"{SettingsManager.Instance.modsDirectory}/{SettingsManager.Instance.modName}";
+    public static string OutputDirectory => Path.Combine(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName);
 
  
     public static async Task<GeoMap> LoadGeojson()

@@ -29,7 +29,7 @@ supported_version=""1.12.4""";
     }
     public static bool DoesModExist()
     {
-        return Directory.Exists($"{SettingsManager.Instance.modsDirectory}/{SettingsManager.Instance.modName}");
+        return Directory.Exists(Path.Combine(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName));
     }
 
     public static (string? jsonName, string? geojsonName) TryFindInputs()

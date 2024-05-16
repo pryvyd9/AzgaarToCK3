@@ -5,7 +5,7 @@ namespace Converter;
 
 public static class CharacterManager
 {
-    private static string OutputDirectory => $"{SettingsManager.Instance.modsDirectory}/{SettingsManager.Instance.modName}";
+    private static string OutputDirectory => Path.Combine(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName);
 
     // Modifies titles by assigning title holder
     // Generates titles only in the de ure capitals
