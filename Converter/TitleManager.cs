@@ -6,7 +6,7 @@ namespace Converter;
 
 public static class TitleManager
 {
-    private static string OutputDirectory => $"{SettingsManager.Settings.modsDirectory}/{SettingsManager.Settings.modName}";
+    private static string OutputDirectory => $"{SettingsManager.Instance.modsDirectory}/{SettingsManager.Instance.modName}";
 
     private static List<Duchy> CreateDuchies(Map map)
     {

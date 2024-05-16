@@ -12,9 +12,9 @@ internal class Program
             Console.WriteLine("Default Settings file has been created.");
         }
 
-        foreach (var property in SettingsManager.Settings.GetType().GetProperties())
+        foreach (var property in SettingsManager.Instance.GetType().GetProperties())
         {
-            Console.WriteLine($"{property.Name,-30}: {property.GetValue(SettingsManager.Settings)}");
+            Console.WriteLine($"{property.Name,-30}: {property.GetValue(SettingsManager.Instance)}");
         }
 
         // Configure NumberDecimalSeparator. Writing files will not work otherwise.
@@ -24,70 +24,25 @@ internal class Program
         Console.WriteLine("The app has been configured. Feel free to change the settings in 'settings.json' file.");
         Console.WriteLine();
 
-        if (string.IsNullOrWhiteSpace(SettingsManager.Settings.modName))
+        if (string.IsNullOrWhiteSpace(SettingsManager.Instance.modName))
         {
             Console.Write("Name your mod: ");
-            SettingsManager.Settings.modName = Console.ReadLine()!;
+            SettingsManager.Instance.modName = Console.ReadLine()!;
         }
 
-        while (ModManager.DoesModExist())
-        {
-            if (SettingsManager.Settings.shouldOverride is not null)
-            {
-                break;
-            }
+        CheckIfShouldOverride();
+        TryFindInputs();
 
-            Console.WriteLine("Mod already exists. Override?");
-            SettingsManager.Settings.shouldOverride = YesNo();
-            if (!SettingsManager.Settings.shouldOverride.Value)
-            {
-                Console.WriteLine("ChangeModName?");
-                if (!YesNo())
-                {
-                    Console.WriteLine("Exiting... Please, change mod name in 'settings.json' if needed and try again");
-                    Exit();
-                }
-                Console.WriteLine("Name your mod:");
-                SettingsManager.Settings.modName = Console.ReadLine()!;
-                break;
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        // Try find placed inputs
-        if (ModManager.TryFindJson() is ({ } jsonName, { } geojsonName) && 
-            (SettingsManager.Settings.inputJsonPath != jsonName || SettingsManager.Settings.inputGeojsonPath != geojsonName))
-        {
-            Console.WriteLine($"Found 2 files in the directory: ");
-            Console.WriteLine(Path.GetFileName(jsonName));
-            Console.WriteLine(Path.GetFileName(geojsonName));
-            Console.WriteLine("Use them as inputs?");
-
-            if (YesNo())
-            {
-                SettingsManager.Settings.inputJsonPath = jsonName;
-                SettingsManager.Settings.inputGeojsonPath = geojsonName;
-            }
-        }
-
-        if (SettingsManager.Settings.shouldOverride ?? false)
-        {
-            Console.WriteLine($"Mod will be overriden in all future runs. If you wish to change it change '{nameof(SettingsManager.Settings.shouldOverride)}' in 'settings.json' file.");
-        }
-
-        if (!File.Exists(SettingsManager.Settings.inputJsonPath))
+        if (!File.Exists(SettingsManager.Instance.inputJsonPath))
         {
             Console.WriteLine($".json file has not been found.");
-            Console.WriteLine($"Please, place it in '{SettingsManager.Settings.inputJsonPath}' or change '{nameof(SettingsManager.Settings.inputJsonPath)}' in 'settings.json'.");
+            Console.WriteLine($"Please, place it in '{SettingsManager.Instance.inputJsonPath}' or change '{nameof(SettingsManager.Instance.inputJsonPath)}' in 'settings.json'.");
             Exit();
         }
-        if (!File.Exists(SettingsManager.Settings.inputGeojsonPath))
+        if (!File.Exists(SettingsManager.Instance.inputGeojsonPath))
         {
             Console.WriteLine($".geojson file has not been found.");
-            Console.WriteLine($"Please, place it in '{SettingsManager.Settings.inputGeojsonPath}' or change '{nameof(SettingsManager.Settings.inputGeojsonPath)}' in 'settings.json'.");
+            Console.WriteLine($"Please, place it in '{SettingsManager.Instance.inputGeojsonPath}' or change '{nameof(SettingsManager.Instance.inputGeojsonPath)}' in 'settings.json'.");
             Exit();
         }
 
@@ -162,35 +117,59 @@ internal class Program
         SettingsManager.Save();
         Environment.Exit(0);
     }
-    //private static int GetResponse(params string[] options)
-    //{
-    //    for (int i = 0; i < options.Length; i++)
-    //    {
-    //        Console.WriteLine($"{i,-2}. {options[i]}.");
-    //    }
+    
+    private static void CheckIfShouldOverride()
+    {
+        while (ModManager.DoesModExist())
+        {
+            if (SettingsManager.Instance.shouldOverride is not null)
+            {
+                break;
+            }
 
-    //    return Console.Read();
-    //}
-    //private static void Act(params KeyValuePair<string, Action>[] options)
-    //{
-    //    for (int i = 0; i < options.Length; i++)
-    //    {
-    //        Console.WriteLine($"{i,-2}. {options[i].Key}.");
-    //    }
+            Console.WriteLine("Mod already exists. Override?");
+            SettingsManager.Instance.shouldOverride = YesNo();
+            if (!SettingsManager.Instance.shouldOverride.Value)
+            {
+                Console.WriteLine("ChangeModName?");
+                if (!YesNo())
+                {
+                    Console.WriteLine("Exiting... Please, change mod name in 'settings.json' if needed and try again");
+                    Exit();
+                }
+                Console.WriteLine("Name your mod:");
+                SettingsManager.Instance.modName = Console.ReadLine()!;
+                break;
+            }
+            else
+            {
+                break;
+            }
+        }
 
-    //    var response = Console.Read();
-    //    options[response].Value();
-    //}
+        if (SettingsManager.Instance.shouldOverride ?? false)
+        {
+            Console.WriteLine($"Mod will be overriden in all future runs. If you wish to change it change '{nameof(SettingsManager.Instance.shouldOverride)}' in 'settings.json' file.");
+        }
 
-    //private static void Act(params (string, Action)[] options)
-    //{
-    //    for (int i = 0; i < options.Length; i++)
-    //    {
-    //        Console.WriteLine($"{i,-2}. {options[i].Item1}.");
-    //    }
+    }
 
-    //    var response = Console.Read();
-    //    options[response].Item2();
-    //}
+    private static void TryFindInputs()
+    {
+        if (ModManager.TryFindJson() is ({ } jsonName, { } geojsonName) &&
+          (SettingsManager.Instance.inputJsonPath != jsonName || SettingsManager.Instance.inputGeojsonPath != geojsonName))
+        {
+            Console.WriteLine($"Found 2 files in the directory: ");
+            Console.WriteLine(Path.GetFileName(jsonName));
+            Console.WriteLine(Path.GetFileName(geojsonName));
+            Console.WriteLine("Use them as inputs?");
+
+            if (YesNo())
+            {
+                SettingsManager.Instance.inputJsonPath = jsonName;
+                SettingsManager.Instance.inputGeojsonPath = geojsonName;
+            }
+        }
+    }
 
 }

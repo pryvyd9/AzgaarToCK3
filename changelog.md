@@ -1,3 +1,6 @@
+# 1.2.8
+- used Path methods for paths.
+
 # 1.2.7
 - switched to ProcessPath.
 - added input search.

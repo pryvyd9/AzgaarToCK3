@@ -11,25 +11,25 @@ public static class ModManager
 tags={{
 	""Total Conversion""
 }}
-name=""{SettingsManager.Settings.modName}""
+name=""{SettingsManager.Instance.modName}""
 supported_version=""1.12.4""
-path=""mod/{SettingsManager.Settings.modName}""";
+path=""mod/{SettingsManager.Instance.modName}""";
 
-        await File.WriteAllTextAsync($"{SettingsManager.Settings.modsDirectory}/{SettingsManager.Settings.modName}.mod", outsideDescriptor);
+        await File.WriteAllTextAsync($"{SettingsManager.Instance.modsDirectory}/{SettingsManager.Instance.modName}.mod", outsideDescriptor);
 
-        FileSystem.CopyDirectory(SettingsManager.Settings.totalConversionSandboxPath, $"{SettingsManager.Settings.modsDirectory}/{SettingsManager.Settings.modName}", true);
+        FileSystem.CopyDirectory(SettingsManager.Instance.totalConversionSandboxPath, $"{SettingsManager.Instance.modsDirectory}/{SettingsManager.Instance.modName}", true);
 
         var insideDescriptor = $@"version=""1.0""
 tags={{
 	""Total Conversion""
 }}
-name=""{SettingsManager.Settings.modName}""
+name=""{SettingsManager.Instance.modName}""
 supported_version=""1.12.4""";
-        await File.WriteAllTextAsync($"{SettingsManager.Settings.modsDirectory}/{SettingsManager.Settings.modName}/descriptor.mod", insideDescriptor);
+        await File.WriteAllTextAsync($"{SettingsManager.Instance.modsDirectory}/{SettingsManager.Instance.modName}/descriptor.mod", insideDescriptor);
     }
     public static bool DoesModExist()
     {
-        return Directory.Exists($"{SettingsManager.Settings.modsDirectory}/{SettingsManager.Settings.modName}");
+        return Directory.Exists($"{SettingsManager.Instance.modsDirectory}/{SettingsManager.Instance.modName}");
     }
 
     public static (string? jsonName, string? geojsonName) TryFindJson()
@@ -39,9 +39,13 @@ supported_version=""1.12.4""";
 
         foreach (var f in Directory.EnumerateFiles(SettingsManager.ExecutablePath))
         {
-            if (f.EndsWith(".json") && !f.EndsWith("settings.json"))
+            if (f.EndsWith(".json"))
             {
-                jsonName = f;
+                var p = Path.GetFileName(f);
+                if (!p.EndsWith("settings.json") && !p.StartsWith("ConsoleUI"))
+                {
+                    jsonName = f;
+                }
             }
             else if (f.EndsWith(".geojson"))
             {
@@ -63,7 +67,7 @@ supported_version=""1.12.4""";
         var geoMapRivers = new GeoMapRivers([]);
         var jsonMap = await MapManager.LoadJson();
         var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap);
-        map.Settings = SettingsManager.Settings;
+        map.Settings = SettingsManager.Instance;
         return map;
     }
 

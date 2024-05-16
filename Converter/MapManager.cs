@@ -22,14 +22,14 @@ public static class MapManager
     private const int WaterLevelHeight = 30;
 
     //public static string OutputDirectory { get; set; } = $"{Environment.CurrentDirectory}/mod";
-    public static string OutputDirectory => $"{SettingsManager.Settings.modsDirectory}/{SettingsManager.Settings.modName}";
+    public static string OutputDirectory => $"{SettingsManager.Instance.modsDirectory}/{SettingsManager.Instance.modName}";
 
  
     public static async Task<GeoMap> LoadGeojson()
     {
         try
         {
-            var file = await File.ReadAllTextAsync(SettingsManager.Settings.inputGeojsonPath);
+            var file = await File.ReadAllTextAsync(SettingsManager.Instance.inputGeojsonPath);
             var geomap = JsonSerializer.Deserialize(file, GeoMapJsonContext.Default.GeoMap);
             return geomap;
         }
@@ -57,7 +57,7 @@ public static class MapManager
     {
         try
         {
-            var file = await File.ReadAllTextAsync(SettingsManager.Settings.inputJsonPath);
+            var file = await File.ReadAllTextAsync(SettingsManager.Instance.inputJsonPath);
             var jsonmap = JsonSerializer.Deserialize(file, JsonMapJsonContext.Default.JsonMap);
             return jsonmap;
         }

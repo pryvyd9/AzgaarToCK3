@@ -5,7 +5,7 @@ namespace Converter;
 
 public static class CharacterManager
 {
-    private static string OutputDirectory => $"{SettingsManager.Settings.modsDirectory}/{SettingsManager.Settings.modName}";
+    private static string OutputDirectory => $"{SettingsManager.Instance.modsDirectory}/{SettingsManager.Instance.modName}";
 
     // Modifies titles by assigning title holder
     // Generates titles only in the de ure capitals
@@ -159,7 +159,7 @@ public static class CharacterManager
             var stewardship = rnd.Next(age / 2, age - 2) / 2;
             var dynastyName = map.NameBase.names[rnd.Next(map.NameBase.names.Length)];
 
-            var c = new Character($"{SettingsManager.Settings.modName}{characters.Count}", crh.Culture, crh.Religion, age, stewardship, dynastyName);
+            var c = new Character($"{SettingsManager.Instance.modName}{characters.Count}", crh.Culture, crh.Religion, age, stewardship, dynastyName);
             characters.Add(c);
             return c;
         }
