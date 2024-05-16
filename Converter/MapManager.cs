@@ -1108,8 +1108,8 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
         // Make original culture history empty
         // Otherwise it will override newly created culture
-        var originalProvincesPath = $"{map.Settings.ck3Directory}/history/provinces";
-        var provincesPath = $"{OutputDirectory}/history/provinces/";
+        var originalProvincesPath = Path.Combine(map.Settings.ck3Directory, "history", "provinces");
+        var provincesPath = Path.Combine(OutputDirectory, "history", "provinces");
         foreach (var p in Directory.EnumerateFiles(originalProvincesPath))
         {
             File.WriteAllText(provincesPath + Path.GetFileName(p), "");
@@ -1127,8 +1127,8 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             // Do nothing.
         }
 
-        var religionsPath = $"{map.Settings.ck3Directory}/common/religion/religions";
-        FileSystem.CopyDirectory(religionsPath, $"{OutputDirectory}/common/religion/religions", true);
+        var religionsPath = Path.Combine(map.Settings.ck3Directory, "common", "religion", "religions");
+        FileSystem.CopyDirectory(religionsPath, Path.Combine(OutputDirectory, "common", "religion", "religions"), true);
     }
     // Maps original holy sites to newly created provinces.
     public static async Task WriteHolySites(Map map, string[] pickedFaiths)
