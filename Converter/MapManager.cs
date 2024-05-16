@@ -840,7 +840,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     {
         try
         {
-            using var cellsMap = new MagickImage("template_mask.png");
+            using var cellsMap = new MagickImage(Path.Combine(SettingsManager.ExecutablePath, "template_mask.png"));
 
             var drawables = new Drawables();
             foreach (var cell in cells.Select(n => n.cells))
