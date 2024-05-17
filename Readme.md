@@ -3,7 +3,7 @@
 - Download the latest release and extract it to any folder
 - Subscribe to [Total Conversion Sandbox](https://steamcommunity.com/sharedfiles/filedetails/?id=2524797018) mod on the workshop
 
-Supported game version: `1.12.4`
+Supported game version: `1.12.5`
 
 ## Quirks
 - Azgaar only has 2 titles and CK3 has 5:

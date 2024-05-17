@@ -22,13 +22,13 @@ public partial class SettingsJsonContext : JsonSerializerContext { }
 
 public static class SettingsManager
 {
-    private static readonly string settingsFileName = Path.Combine(ExecutablePath, "settings.json");
-    private static readonly string defaultModsDirectory = Path.Combine(MyDocuments, "Paradox Interactive", "Crusader Kings III", "mod");
-    private static readonly string defaultInputJsonPath = Path.Combine(ExecutablePath, "input.json");
-    private static readonly string defaultInputGeojsonPath = Path.Combine(ExecutablePath, "input.geojson");
-    private static string MyDocuments => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-
-    public static string ExecutablePath => Directory.GetParent(Environment.ProcessPath!)!.FullName;
+    private static readonly string settingsFileName = Helper.GetPath(ExecutablePath, "settings.json");
+    private static readonly string defaultModsDirectory = Helper.GetPath(MyDocuments, "Paradox Interactive", "Crusader Kings III", "mod");
+    private static readonly string defaultInputJsonPath = Helper.GetPath(ExecutablePath, "input.json");
+    private static readonly string defaultInputGeojsonPath = Helper.GetPath(ExecutablePath, "input.geojson");
+    private static string MyDocuments => Helper.GetPath(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
+    public static string ExecutablePath => Helper.GetPath(Directory.GetParent(Environment.ProcessPath!)!.FullName);
+    public static string OutputDirectory => Helper.GetPath(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName);
 
     public static Settings Instance { get; private set; }
 
@@ -41,12 +41,12 @@ public static class SettingsManager
                 : "HKEY_LOCAL_MACHINE\\SOFTWARE\\Valve\\Steam";
 
             var steamPath = (string)Registry.GetValue(steamRegistryKey, "InstallPath", null)!;
-            return Path.Combine(steamPath, "steamapps", "libraryfolders.vdf");
+            return Helper.GetPath(steamPath, "steamapps", "libraryfolders.vdf");
         }
         else if (OperatingSystem.IsMacOS())
         {
-            var steamPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support", "Steam");
-            return Path.Combine(steamPath, "steamapps", "libraryfolders.vdf");
+            var steamPath = Helper.GetPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support", "Steam");
+            return Helper.GetPath(steamPath, "steamapps", "libraryfolders.vdf");
         }
         else
         {
@@ -60,7 +60,7 @@ public static class SettingsManager
         var pathRegex = new Regex("\"path\"\\s*\"(.+)\"");
         var paths = pathRegex.Matches(libraries).Select(n => n.Groups[1].Value);
         
-        var ck3Directories = paths.Select(n => Path.Combine(n, "steamapps", "common", "Crusader Kings III", "game")).Where(Directory.Exists).ToArray();
+        var ck3Directories = paths.Select(n => Helper.GetPath(n, "steamapps", "common", "Crusader Kings III", "game")).Where(Directory.Exists).ToArray();
         if (ck3Directories.Length > 1)
         {
             Debugger.Break();
@@ -80,7 +80,7 @@ public static class SettingsManager
         var pathRegex = new Regex("\"path\"\\s*\"(.+)\"");
         var paths = pathRegex.Matches(libraries).Select(n => n.Groups[1].Value);
 
-        var ck3Directories = paths.Select(n => Path.Combine(n, "steamapps", "workshop", "content", "1158310", "2524797018")).Where(Directory.Exists).ToArray();
+        var ck3Directories = paths.Select(n => Helper.GetPath(n, "steamapps", "workshop", "content", "1158310", "2524797018")).Where(Directory.Exists).ToArray();
         if (ck3Directories.Length > 1)
         {
             Debugger.Break();

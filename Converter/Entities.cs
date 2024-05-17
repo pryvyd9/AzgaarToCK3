@@ -88,7 +88,7 @@ public class Province
 }
 
 // dynasty can repeat.
-public record Character(string id, string culture, string religion, int age, int stewardshipSkill, NameBaseName dynastyName);
+public record Character(string id, NameBaseName name, string culture, string religion, int age, int stewardshipSkill, NameBaseName dynastyName);
 
 public interface ITitle
 {

@@ -21,7 +21,6 @@ public static class MapManager
 {
     private const int WaterLevelHeight = 30;
 
-    public static string OutputDirectory => Path.Combine(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName);
 
  
     public static async Task<GeoMap> LoadGeojson()
@@ -380,7 +379,7 @@ public static class MapManager
             }
 
             cellsMap.Draw(drawables);
-            await cellsMap.WriteAsync($"{Environment.CurrentDirectory}/cells.png");
+            await cellsMap.WriteAsync(Helper.GetPath($"{Environment.CurrentDirectory}/cells.png"));
         }
         catch (Exception ex)
         {
@@ -414,7 +413,7 @@ public static class MapManager
             }
 
             cellsMap.Draw(drawables);
-            var path = Path.Combine(OutputDirectory, "map_data", "provinces.png");
+            var path = Helper.GetPath(SettingsManager.OutputDirectory, "map_data", "provinces.png");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await cellsMap.WriteAsync(path);
         }
@@ -472,7 +471,7 @@ public static class MapManager
             }
 
             cellsMap.Draw(drawables);
-            var path = Path.Combine(OutputDirectory, "map_data", "heightmap.png");
+            var path = Helper.GetPath(SettingsManager.OutputDirectory, "map_data", "heightmap.png");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await cellsMap.WriteAsync(path);
 
@@ -522,7 +521,7 @@ public static class MapManager
             }
 
             cellsMap.Draw(drawables);
-            var path = Path.Combine(OutputDirectory, "map_data", "rivers.png");
+            var path = Helper.GetPath(SettingsManager.OutputDirectory, "map_data", "rivers.png");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
 
             cellsMap.Settings.SetDefine("png:color-type", "1");
@@ -561,7 +560,7 @@ public static class MapManager
     public static async Task WriteDefinition(Map map)
     {
         var lines = map.Provinces.Select((n, i) => $"{i};{n.Color.R};{n.Color.G};{n.Color.B};{n.Name};x;");
-        var path = Path.Combine(OutputDirectory, "map_data", "definition.csv");
+        var path = Helper.GetPath(SettingsManager.OutputDirectory, "map_data", "definition.csv");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllLinesAsync(path, lines);
     }
@@ -595,7 +594,7 @@ $@"game_object_locator={{
 {string.Join("\n", lines)}
     }}
 }}";
-            var path = Path.Combine(OutputDirectory, "gfx", "map", "map_object_data", "building_locators.txt");
+            var path = Helper.GetPath(SettingsManager.OutputDirectory, "gfx", "map", "map_object_data", "building_locators.txt");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file);
         }
@@ -634,7 +633,7 @@ $@"game_object_locator={{
 {string.Join("\n", lines)}
     }}
 }}";
-            var path = Path.Combine(OutputDirectory, "gfx", "map", "map_object_data", "siege_locators.txt");
+            var path = Helper.GetPath(SettingsManager.OutputDirectory, "gfx", "map", "map_object_data", "siege_locators.txt");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file);
         }
@@ -673,7 +672,7 @@ $@"game_object_locator={{
 {string.Join("\n", lines)}
     }}
 }}";
-            var path = Path.Combine(OutputDirectory, "gfx", "map", "map_object_data", "combat_locators.txt");
+            var path = Helper.GetPath(SettingsManager.OutputDirectory, "gfx", "map", "map_object_data", "combat_locators.txt");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file);
         }
@@ -726,7 +725,7 @@ $@"game_object_locator={{
 {string.Join("\n", lines)}
     }}
 }}";
-            var path = Path.Combine(OutputDirectory, "gfx", "map", "map_object_data", "player_stack_locators.txt");
+            var path = Helper.GetPath(SettingsManager.OutputDirectory, "gfx", "map", "map_object_data", "player_stack_locators.txt");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file);
         }
@@ -795,7 +794,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 # They are probably not visible anywhere on the map, so feel free to reuse them (after double checking that they are actually missing).
 ";
 
-        var path = Path.Combine(OutputDirectory, "map_data", "default.map");
+        var path = Helper.GetPath(SettingsManager.OutputDirectory, "map_data", "default.map");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -824,7 +823,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
             var file = $@"default=plains
 {string.Join("\n", provinceBiomes)}";
-            var path = Path.Combine(OutputDirectory, "common", "province_terrain", "00_province_terrain.txt");
+            var path = Helper.GetPath(SettingsManager.OutputDirectory, "common", "province_terrain", "00_province_terrain.txt");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file);
         }
@@ -839,7 +838,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     {
         try
         {
-            using var cellsMap = new MagickImage(Path.Combine(SettingsManager.ExecutablePath, "template_mask.png"));
+            using var cellsMap = new MagickImage(Helper.GetPath(SettingsManager.ExecutablePath, "template_mask.png"));
 
             var drawables = new Drawables();
             foreach (var cell in cells.Select(n => n.cells))
@@ -853,7 +852,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
             cellsMap.Draw(drawables);
 
-            var path = Path.Combine(OutputDirectory, "gfx", "map", "terrain", $"{filename}.png");
+            var path = Helper.GetPath(SettingsManager.OutputDirectory, "gfx", "map", "terrain", $"{filename}.png");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await cellsMap.WriteAsync(path, MagickFormat.Png00);
 
@@ -955,15 +954,15 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
     public static async Task WriteGraphics()
     {
-        var path = Path.Combine(OutputDirectory, "common", "defines", "graphic", "00_graphics.txt");
+        var path = Helper.GetPath(SettingsManager.OutputDirectory, "common", "defines", "graphic", "00_graphics.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
-        File.Copy(Path.Combine(SettingsManager.ExecutablePath, "00_graphics.txt"), path, true);
+        File.Copy(Helper.GetPath(SettingsManager.ExecutablePath, "00_graphics.txt"), path, true);
     }
 
 
     private static async Task<(Dictionary<int, int> baronyCultures, string[] toOriginalCultureName)> GetCultures(Map map)
     {
-        var originalCultureNames = await File.ReadAllLinesAsync(Path.Combine(SettingsManager.ExecutablePath, "originalCultures.txt"));
+        var originalCultureNames = await File.ReadAllLinesAsync(Helper.GetPath(SettingsManager.ExecutablePath, "originalCultures.txt"));
         var baronyCultures = map.Empires
             .SelectMany(n => n.kingdoms)
             .SelectMany(n => n.duchies)
@@ -1099,7 +1098,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     .ToArray();
 
                 var file = string.Join('\n', baronies);
-                var path = Path.Combine(OutputDirectory, "history", "provinces", $"k_{kingdom.id}.txt");
+                var path = Helper.GetPath(SettingsManager.OutputDirectory, "history", "provinces", $"k_{kingdom.id}.txt");
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 await File.WriteAllTextAsync(path, file);
             }
@@ -1107,8 +1106,8 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
         // Make original culture history empty
         // Otherwise it will override newly created culture
-        var originalProvincesPath = Path.Combine(map.Settings.ck3Directory, "history", "provinces");
-        var provincesPath = Path.Combine(OutputDirectory, "history", "provinces");
+        var originalProvincesPath = Helper.GetPath(map.Settings.ck3Directory, "history", "provinces");
+        var provincesPath = Helper.GetPath(SettingsManager.OutputDirectory, "history", "provinces");
         foreach (var p in Directory.EnumerateFiles(originalProvincesPath))
         {
             File.WriteAllText(provincesPath + Path.GetFileName(p), "");
@@ -1119,15 +1118,15 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         try
         {
             // Delete religion file from Total conversion sandbox mod.
-            File.Delete($"{OutputDirectory}/common/religion/religions/01_vanilla.txt");
+            File.Delete(Helper.GetPath(SettingsManager.OutputDirectory, "common", "religion", "religions", "01_vanilla.txt"));
         }
         catch
         {
             // Do nothing.
         }
 
-        var religionsPath = Path.Combine(map.Settings.ck3Directory, "common", "religion", "religions");
-        FileSystem.CopyDirectory(religionsPath, Path.Combine(OutputDirectory, "common", "religion", "religions"), true);
+        var religionsPath = Helper.GetPath(map.Settings.ck3Directory, "common", "religion", "religions");
+        FileSystem.CopyDirectory(religionsPath, Helper.GetPath(SettingsManager.OutputDirectory, "common", "religion", "religions"), true);
     }
     // Maps original holy sites to newly created provinces.
     public static async Task WriteHolySites(Map map, string[] pickedFaiths)
@@ -1164,7 +1163,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         });
 
         var file = string.Join('\n', mappedHolySites);
-        var path = Path.Combine(OutputDirectory, "common", "religion", "holy_sites", "00_holy_sites.txt");
+        var path = Helper.GetPath(SettingsManager.OutputDirectory, "common", "religion", "holy_sites", "00_holy_sites.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }

@@ -51,7 +51,7 @@ public static class ConfigReader
     {
         var religions = new List<CK3Religion>();
 
-        var religionsPath = Path.Combine(settings.ck3Directory, "common", "religion", "religions");
+        var religionsPath = Helper.GetPath(settings.ck3Directory, "common", "religion", "religions");
         var religionFiles = Directory.EnumerateFiles(religionsPath).Where(n => n.EndsWith(".txt"));
 
         foreach (var religionFilename in religionFiles)
@@ -97,7 +97,7 @@ public static class ConfigReader
     }
     public static async Task<Dictionary<string, CK3HolySite>> GetCK3HolySites(Settings settings)
     {
-        var holySitesPath = Path.Combine(settings.ck3Directory, "common", "religion", "holy_sites", "00_holy_sites.txt");
+        var holySitesPath = Helper.GetPath(settings.ck3Directory, "common", "religion", "holy_sites", "00_holy_sites.txt");
         var file = await File.ReadAllTextAsync(holySitesPath);
         var json = ToJson(file);
         try

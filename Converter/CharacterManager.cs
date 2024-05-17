@@ -5,12 +5,21 @@ namespace Converter;
 
 public static class CharacterManager
 {
-    private static string OutputDirectory => Path.Combine(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName);
+    //private static string[] GetNames()
+    //{
+    //    var namesPath = Helper.GetPath(SettingsManager.Instance.ck3Directory, "localization\\english\\names/character_names_l_english.yml");
+    //    var lines = File.ReadAllLines(namesPath);
+    //    var nameRegex = new Regex(@"\s*(\w+)\s*:");
+    //    var names = lines.Select(n => nameRegex.Match(n) is { Groups: [_, { Value: { } name }] } ? name : null).Where(n => n is not null).ToArray();
+    //    return names;
+    //}
 
     // Modifies titles by assigning title holder
     // Generates titles only in the de ure capitals
     public static async Task<List<Character>> CreateCharacters(Map map)
     {
+        //var names = GetNames();
+
         // Generate title holders.
         // Capital is the first title in the group.
         // Primary title has all the way to county capital so keep the highest title holder all the way down.
@@ -159,7 +168,9 @@ public static class CharacterManager
             var stewardship = rnd.Next(age / 2, age - 2) / 2;
             var dynastyName = map.NameBase.names[rnd.Next(map.NameBase.names.Length)];
 
-            var c = new Character($"{SettingsManager.Instance.modName}{characters.Count}", crh.Culture, crh.Religion, age, stewardship, dynastyName);
+            //var name = names[rnd.Next(names.Length)];
+
+            var c = new Character($"{SettingsManager.Instance.modName}{characters.Count}", dynastyName, crh.Culture, crh.Religion, age, stewardship, dynastyName);
             characters.Add(c);
             return c;
         }
@@ -169,18 +180,19 @@ public static class CharacterManager
     {
         var rnd = new Random(1);
         var lines = map.Characters.Select(n => $@"{n.id} = {{
+    name = ""{n.name.name}""
     dynasty = ""{n.dynastyName.id}""
     religion = ""{n.religion}""
     culture = ""{n.culture}""
     stewardship = {n.stewardshipSkill}
-    {(1066 - n.age)}.1.1 = {{ birth = ""{(1066 - n.age)}.1.1"" }}
+    {1066 - n.age}.1.1 = {{ birth = ""{1066 - n.age}.1.1"" }}
 }}").ToArray();
         var file = string.Join('\n', lines);
 
         // Delete existing characters.
-        Directory.EnumerateFiles(Path.Combine(OutputDirectory, "history", "characters")).ToList().ForEach(File.Delete);
+        Directory.EnumerateFiles(Helper.GetPath(SettingsManager.OutputDirectory, "history", "characters")).ToList().ForEach(File.Delete);
 
-        var path = Path.Combine(OutputDirectory, "history", "characters", "all.txt");
+        var path = Helper.GetPath(SettingsManager.OutputDirectory, "history", "characters", "all.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -212,9 +224,9 @@ public static class CharacterManager
         var file = string.Join('\n', lines);
 
         // Delete existing titles.
-        Directory.EnumerateFiles(Path.Combine(OutputDirectory, "history", "titles")).ToList().ForEach(File.Delete);
+        Directory.EnumerateFiles(Helper.GetPath(SettingsManager.OutputDirectory, "history", "titles")).ToList().ForEach(File.Delete);
 
-        var path = Path.Combine(OutputDirectory, "history", "titles", "all.txt");
+        var path = Helper.GetPath(SettingsManager.OutputDirectory, "history", "titles", "all.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -227,9 +239,9 @@ public static class CharacterManager
         var file = string.Join('\n', lines);
 
         // Delete existing dynasties.
-        Directory.EnumerateFiles(Path.Combine(OutputDirectory, "common", "dynasties")).ToList().ForEach(File.Delete);
+        Directory.EnumerateFiles(Helper.GetPath(SettingsManager.OutputDirectory, "common", "dynasties")).ToList().ForEach(File.Delete);
 
-        var path = Path.Combine(OutputDirectory, "common", "dynasties", "all.txt");
+        var path = Helper.GetPath(SettingsManager.OutputDirectory, "common", "dynasties", "all.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -242,7 +254,7 @@ public static class CharacterManager
             var file = $@"l_english:
  FOUNDER_BASED_NAME_POSTFIX:0 ""id""
  {content}";
-            var path = Path.Combine(OutputDirectory, "localization", "english", "dynasties", "dynasty_names_l_english.yml");
+            var path = Helper.GetPath(SettingsManager.OutputDirectory, "localization", "english", "dynasties", "dynasty_names_l_english.yml");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
         }
@@ -250,7 +262,7 @@ public static class CharacterManager
             var file = $@"l_russian:
  FOUNDER_BASED_NAME_POSTFIX:0 ""ид""
  {content}";
-            var path = Path.Combine(OutputDirectory, "localization", "russian", "dynasties", "dynasty_names_l_russian.yml");
+            var path = Helper.GetPath(SettingsManager.OutputDirectory, "localization", "russian", "dynasties", "dynasty_names_l_russian.yml");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
         }

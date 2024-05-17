@@ -1,3 +1,7 @@
+# 1.2.13
+- fixed localization
+- added character names
+
 # 1.2.12
 - path
 

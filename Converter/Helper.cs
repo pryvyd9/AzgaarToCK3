@@ -5,6 +5,12 @@ namespace Converter;
 
 public static class Helper
 {
+    public static string GetPath(params string[] paths)
+    {
+        if (paths is null) return "";
+        return Path.Combine(paths.SelectMany(n => n.Replace(@"\\", "/").Replace(@"\", "/").Split("/")).ToArray());
+    }
+
     public static bool IsCellHighMountains(int height)
     {
         return height > 2000;

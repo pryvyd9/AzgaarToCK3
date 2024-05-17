@@ -15,9 +15,9 @@ name=""{SettingsManager.Instance.modName}""
 supported_version=""1.12.4""
 path=""mod/{SettingsManager.Instance.modName}""";
 
-        await File.WriteAllTextAsync(Path.Combine(SettingsManager.Instance.modsDirectory, $"{SettingsManager.Instance.modName}.mod"), outsideDescriptor);
+        await File.WriteAllTextAsync(Helper.GetPath(SettingsManager.Instance.modsDirectory, $"{SettingsManager.Instance.modName}.mod"), outsideDescriptor);
 
-        FileSystem.CopyDirectory(SettingsManager.Instance.totalConversionSandboxPath, Path.Combine(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName), true);
+        FileSystem.CopyDirectory(SettingsManager.Instance.totalConversionSandboxPath, Helper.GetPath(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName), true);
 
         var insideDescriptor = $@"version=""1.0""
 tags={{
@@ -25,11 +25,11 @@ tags={{
 }}
 name=""{SettingsManager.Instance.modName}""
 supported_version=""1.12.4""";
-        await File.WriteAllTextAsync(Path.Combine(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName, "descriptor.mod"), insideDescriptor);
+        await File.WriteAllTextAsync(Helper.GetPath(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName, "descriptor.mod"), insideDescriptor);
     }
     public static bool DoesModExist()
     {
-        return Directory.Exists(Path.Combine(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName));
+        return Directory.Exists(Helper.GetPath(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName));
     }
 
     public static (string? jsonName, string? geojsonName) TryFindInputs()
@@ -82,12 +82,12 @@ supported_version=""1.12.4""";
 
         //await MapManager.DrawCells(map);
 
-        //await MapManager.DrawProvinces(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
+        await MapManager.DrawProvinces(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
 
-        await MapManager.CreatePackedHeightMap(map);
+        //await MapManager.CreatePackedHeightMap(map);
 
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
