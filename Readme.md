@@ -50,10 +50,10 @@ Supported game version: `1.12.5`
 		![screenshot](docs/Screenshot_2024-05-08_215322.png)
 	4. Some of the territories failed to add locators properly. Click on Filter all entries that contain errors
 	    ![screenshot](docs/Screenshot_2024-05-08_215116.png)
-	5. Repeat 10-12 until there are no entries with errors
+	5. Repeat ii-iv until there are no entries with errors
 	6. If some entries won't fix themselves select the entry, check what object fails and click on `Configure Autonudge...` button.
 	    ![screenshot](docs/Screenshot_2024-05-08_215624.png)
-	Then find settings related to that type of object and tweak them then retry 10-12. Usually changing some distance parameters helps. If that still did not help then select the object and move it by hand. Hopefully there not many of them.
+	Then find settings related to that type of object and tweak them then retry steps ii-iv. Usually changing some distance parameters helps. If that still did not help then select the object and move it by hand. Hopefully there not many of them.
 	7. Make any other changes in map editor.
 	8. Save all and exit (Alt+F4 if it restarts the game instead of exit)
 	    ![screenshot](docs/Screenshot_2024-05-08_220216.png)
