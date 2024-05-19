@@ -3,7 +3,6 @@ using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -433,7 +432,7 @@ public static class MapManager
                 Height = Map.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:black", settings);
-
+            
             var drawables = new Drawables();
 
             var waterPackCells = map.JsonMap.pack.cells.Where(n => n.biome != 0);
@@ -475,9 +474,9 @@ public static class MapManager
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await cellsMap.WriteAsync(path);
 
-            using var file = await Image.LoadAsync(path);
-            file.Mutate(n => n.GaussianBlur(15));
-            file.Save(path);
+            //using var file = await Image.LoadAsync(path);
+            //file.Mutate(n => n.GaussianBlur(15));
+            //file.Save(path);
 
         }
         catch (Exception ex)
