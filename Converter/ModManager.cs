@@ -11,25 +11,25 @@ public static class ModManager
 tags={{
 	""Total Conversion""
 }}
-name=""{SettingsManager.Instance.modName}""
+name=""{Settings.Instance.modName}""
 supported_version=""1.12.4""
-path=""mod/{SettingsManager.Instance.modName}""";
+path=""mod/{Settings.Instance.modName}""";
 
-        await File.WriteAllTextAsync(Helper.GetPath(SettingsManager.Instance.modsDirectory, $"{SettingsManager.Instance.modName}.mod"), outsideDescriptor);
+        await File.WriteAllTextAsync(Helper.GetPath(Settings.Instance.modsDirectory, $"{Settings.Instance.modName}.mod"), outsideDescriptor);
 
-        FileSystem.CopyDirectory(SettingsManager.Instance.totalConversionSandboxPath, Helper.GetPath(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName), true);
+        FileSystem.CopyDirectory(Settings.Instance.totalConversionSandboxPath, Helper.GetPath(Settings.Instance.modsDirectory, Settings.Instance.modName), true);
 
         var insideDescriptor = $@"version=""1.0""
 tags={{
 	""Total Conversion""
 }}
-name=""{SettingsManager.Instance.modName}""
+name=""{Settings.Instance.modName}""
 supported_version=""1.12.4""";
-        await File.WriteAllTextAsync(Helper.GetPath(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName, "descriptor.mod"), insideDescriptor);
+        await File.WriteAllTextAsync(Helper.GetPath(Settings.Instance.modsDirectory, Settings.Instance.modName, "descriptor.mod"), insideDescriptor);
     }
     public static bool DoesModExist()
     {
-        return Directory.Exists(Helper.GetPath(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName));
+        return Directory.Exists(Helper.GetPath(Settings.Instance.modsDirectory, Settings.Instance.modName));
     }
 
     public static (string? jsonName, string? geojsonName) TryFindInputs()
@@ -67,7 +67,7 @@ supported_version=""1.12.4""";
         var geoMapRivers = new GeoMapRivers([]);
         var jsonMap = await MapManager.LoadJson();
         var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap);
-        map.Settings = SettingsManager.Instance;
+        map.Settings = Settings.Instance;
         return map;
     }
 

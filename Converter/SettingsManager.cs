@@ -8,16 +8,21 @@ namespace Converter;
 
 public class Settings
 {
-    public string modName { get; set; }
-    public string modsDirectory { get; set; }
-    public string ck3Directory { get; set; }
-    public string totalConversionSandboxPath { get; set; }
+    public string modsDirectory { get; init; }
+    public string ck3Directory { get; init; }
+    public string totalConversionSandboxPath { get; init; }
     public string inputJsonPath { get; set; }
     public string inputGeojsonPath { get; set; }
+    public string modName { get; set; }
     public bool? shouldOverride { get; set; } = null;
+    public bool everyoneIsCount { get; set; } = false;
+
+    [JsonIgnore]
+    public static Settings Instance { get; set; }
 }
 
 [JsonSerializable(typeof(Settings))]
+[JsonSourceGenerationOptions(WriteIndented = true, AllowTrailingCommas = true, PropertyNameCaseInsensitive = false)]
 public partial class SettingsJsonContext : JsonSerializerContext { }
 
 public static class SettingsManager
@@ -28,9 +33,7 @@ public static class SettingsManager
     private static readonly string defaultInputGeojsonPath = Helper.GetPath(ExecutablePath, "input.geojson");
     private static string MyDocuments => Helper.GetPath(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
     public static string ExecutablePath => Helper.GetPath(Directory.GetParent(Environment.ProcessPath!)!.FullName);
-    public static string OutputDirectory => Helper.GetPath(SettingsManager.Instance.modsDirectory, SettingsManager.Instance.modName);
-
-    public static Settings Instance { get; private set; }
+    public static string OutputDirectory => Helper.GetPath(Settings.Instance.modsDirectory, Settings.Instance.modName);
 
     private static string GetSteamLibraryFoldersPath()
     {
@@ -112,7 +115,7 @@ public static class SettingsManager
             }
 
             settings = File.ReadAllText(settingsFileName);
-            Instance = JsonSerializer.Deserialize(settings, SettingsJsonContext.Default.Settings)!;
+            Settings.Instance = JsonSerializer.Deserialize(settings, SettingsJsonContext.Default.Settings)!;
             return true;
         } 
         catch (Exception e)
@@ -124,7 +127,7 @@ public static class SettingsManager
     }
     public static void CreateDefault()
     {
-        Instance = new Settings
+        Settings.Instance = new Settings
         {
             modsDirectory = defaultModsDirectory,
             inputJsonPath = defaultInputJsonPath,
@@ -138,7 +141,7 @@ public static class SettingsManager
 
     public static void Save()
     {
-        File.WriteAllText(settingsFileName, JsonSerializer.Serialize(Instance, SettingsJsonContext.Default.Settings));
+        File.WriteAllText(settingsFileName, JsonSerializer.Serialize(Settings.Instance, SettingsJsonContext.Default.Settings));
     }
 }
 

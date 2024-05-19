@@ -7,7 +7,7 @@ public static class CharacterManager
 {
     //private static string[] GetNames()
     //{
-    //    var namesPath = Helper.GetPath(SettingsManager.Instance.ck3Directory, "localization\\english\\names/character_names_l_english.yml");
+    //    var namesPath = Helper.GetPath(Settings.Instance.ck3Directory, "localization\\english\\names/character_names_l_english.yml");
     //    var lines = File.ReadAllLines(namesPath);
     //    var nameRegex = new Regex(@"\s*(\w+)\s*:");
     //    var names = lines.Select(n => nameRegex.Match(n) is { Groups: [_, { Value: { } name }] } ? name : null).Where(n => n is not null).ToArray();
@@ -170,7 +170,7 @@ public static class CharacterManager
 
             //var name = names[rnd.Next(names.Length)];
 
-            var c = new Character($"{SettingsManager.Instance.modName}{characters.Count}", dynastyName, crh.Culture, crh.Religion, age, stewardship, dynastyName);
+            var c = new Character($"{Settings.Instance.modName}{characters.Count}", dynastyName, crh.Culture, crh.Religion, age, stewardship, dynastyName);
             characters.Add(c);
             return c;
         }

@@ -27,7 +27,7 @@ public static class MapManager
     {
         try
         {
-            var file = await File.ReadAllTextAsync(SettingsManager.Instance.inputGeojsonPath);
+            var file = await File.ReadAllTextAsync(Settings.Instance.inputGeojsonPath);
             var geomap = JsonSerializer.Deserialize(file, GeoMapJsonContext.Default.GeoMap);
             return geomap;
         }
@@ -55,7 +55,7 @@ public static class MapManager
     {
         try
         {
-            var file = await File.ReadAllTextAsync(SettingsManager.Instance.inputJsonPath);
+            var file = await File.ReadAllTextAsync(Settings.Instance.inputJsonPath);
             var jsonmap = JsonSerializer.Deserialize(file, JsonMapJsonContext.Default.JsonMap);
             return jsonmap;
         }
