@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualBasic.FileIO;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Converter;
 
@@ -11,33 +12,42 @@ public static class ModManager
 tags={{
 	""Total Conversion""
 }}
-name=""{Settings.Instance.modName}""
+name=""{Settings.Instance.ModName}""
 supported_version=""1.12.4""
-path=""mod/{Settings.Instance.modName}""";
+path=""mod/{Settings.Instance.ModName}""";
 
-        await File.WriteAllTextAsync(Helper.GetPath(Settings.Instance.modsDirectory, $"{Settings.Instance.modName}.mod"), outsideDescriptor);
+        await File.WriteAllTextAsync(Helper.GetPath(Settings.Instance.ModsDirectory, $"{Settings.Instance.ModName}.mod"), outsideDescriptor);
 
-        FileSystem.CopyDirectory(Settings.Instance.totalConversionSandboxPath, Helper.GetPath(Settings.Instance.modsDirectory, Settings.Instance.modName), true);
+        FileSystem.CopyDirectory(Settings.Instance.TotalConversionSandboxPath, Helper.GetPath(Settings.Instance.ModsDirectory, Settings.Instance.ModName), true);
 
         var insideDescriptor = $@"version=""1.0""
 tags={{
 	""Total Conversion""
 }}
-name=""{Settings.Instance.modName}""
+name=""{Settings.Instance.ModName}""
 supported_version=""1.12.4""";
-        await File.WriteAllTextAsync(Helper.GetPath(Settings.Instance.modsDirectory, Settings.Instance.modName, "descriptor.mod"), insideDescriptor);
+        await File.WriteAllTextAsync(Helper.GetPath(Settings.Instance.ModsDirectory, Settings.Instance.ModName, "descriptor.mod"), insideDescriptor);
     }
     public static bool DoesModExist()
     {
-        return Directory.Exists(Helper.GetPath(Settings.Instance.modsDirectory, Settings.Instance.modName));
+        return Directory.Exists(Helper.GetPath(Settings.Instance.ModsDirectory, Settings.Instance.ModName));
     }
 
-    public static (string? jsonName, string? geojsonName) TryFindInputs()
+    public static (string? jsonName, string? geojsonName) FindLatestInputs()
     {
         string? jsonName = null;
         string? geojsonName = null;
 
-        foreach (var f in Directory.EnumerateFiles(SettingsManager.ExecutablePath))
+        var filesToCheck = new DirectoryInfo(SettingsManager.ExecutablePath)
+            .EnumerateFiles()
+            .OrderByDescending(n => n.CreationTime)
+            .Select(n => n.Name)
+            .Where(n => Settings.Instance.InputJsonPath != n && Settings.Instance.InputGeojsonPath != n);
+
+        //var filesToCheck = Directory.EnumerateFiles(SettingsManager.ExecutablePath)
+        //    .Where(n => Settings.Instance.InputJsonPath != n && Settings.Instance.InputGeojsonPath != n);
+
+        foreach (var f in filesToCheck)
         {
             if (f.EndsWith(".json"))
             {
@@ -108,7 +118,14 @@ supported_version=""1.12.4""";
         var faiths = await MapManager.ApplyCultureReligion(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Culture, Religions created.");
 
-        map.Characters = await CharacterManager.CreateCharacters(map);
+        if (Settings.Instance.OnlyCounts)
+        {
+            map.Characters = await CharacterManager.CreateCharactersCountOnly(map);
+        }
+        else
+        {
+            map.Characters = await CharacterManager.CreateCharacters(map);
+        }
         Console.WriteLine($"{i++}/{totalStageCount}. Characters created.");
         await CharacterManager.WriteHistoryCharacters(map);
         Console.WriteLine($"{i++}/{totalStageCount}. History characters created.");
@@ -171,7 +188,14 @@ supported_version=""1.12.4""";
         var faiths = await MapManager.ApplyCultureReligion(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Culture, Religions created.");
 
-        map.Characters = await CharacterManager.CreateCharacters(map);
+        if (Settings.Instance.OnlyCounts)
+        {
+            map.Characters = await CharacterManager.CreateCharactersCountOnly(map);
+        }
+        else
+        {
+            map.Characters = await CharacterManager.CreateCharacters(map);
+        }
         Console.WriteLine($"{i++}/{totalStageCount}. Characters created.");
         await CharacterManager.WriteHistoryCharacters(map);
         Console.WriteLine($"{i++}/{totalStageCount}. History characters created.");

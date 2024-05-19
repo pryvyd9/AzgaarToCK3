@@ -1,3 +1,7 @@
+# 1.3
+- added onlyCounts option.
+- improved input search.
+
 # 1.2.13
 - fixed localization
 - added character names

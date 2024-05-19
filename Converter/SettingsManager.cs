@@ -8,32 +8,47 @@ namespace Converter;
 
 public class Settings
 {
-    public string modsDirectory { get; init; }
-    public string ck3Directory { get; init; }
-    public string totalConversionSandboxPath { get; init; }
-    public string inputJsonPath { get; set; }
-    public string inputGeojsonPath { get; set; }
-    public string modName { get; set; }
-    public bool? shouldOverride { get; set; } = null;
-    public bool everyoneIsCount { get; set; } = false;
+    public required string ModsDirectory { get; init; }
+    public required string Ck3Directory { get; init; }
+    public required string TotalConversionSandboxPath { get; init; }
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+    public string InputJsonPath { get; set; }
+    public string InputGeojsonPath { get; set; }
+    public string ModName { get; set; }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+    public bool? ShouldOverride { get; set; } = null;
+    public bool OnlyCounts { get; set; } = false;
 
     [JsonIgnore]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public static Settings Instance { get; set; }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+    [JsonIgnore]
+    public static string OutputDirectory => Helper.GetPath(Instance.ModsDirectory, Instance.ModName);
+
+
+    public override string ToString()
+    {
+        var lines = new List<string>();
+        foreach (var property in Instance.GetType().GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public))
+        {
+            lines.Add($"{property.Name,-30}: {property.GetValue(Instance)}");
+        }
+
+        return string.Join('\n', lines);
+    }
 }
 
 [JsonSerializable(typeof(Settings))]
-[JsonSourceGenerationOptions(WriteIndented = true, AllowTrailingCommas = true, PropertyNameCaseInsensitive = false)]
+[JsonSourceGenerationOptions(WriteIndented = true, AllowTrailingCommas = true, PropertyNameCaseInsensitive = true)]
 public partial class SettingsJsonContext : JsonSerializerContext { }
 
 public static class SettingsManager
 {
     private static readonly string settingsFileName = Helper.GetPath(ExecutablePath, "settings.json");
     private static readonly string defaultModsDirectory = Helper.GetPath(MyDocuments, "Paradox Interactive", "Crusader Kings III", "mod");
-    private static readonly string defaultInputJsonPath = Helper.GetPath(ExecutablePath, "input.json");
-    private static readonly string defaultInputGeojsonPath = Helper.GetPath(ExecutablePath, "input.geojson");
     private static string MyDocuments => Helper.GetPath(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
     public static string ExecutablePath => Helper.GetPath(Directory.GetParent(Environment.ProcessPath!)!.FullName);
-    public static string OutputDirectory => Helper.GetPath(Settings.Instance.modsDirectory, Settings.Instance.modName);
 
     private static string GetSteamLibraryFoldersPath()
     {
@@ -129,11 +144,9 @@ public static class SettingsManager
     {
         Settings.Instance = new Settings
         {
-            modsDirectory = defaultModsDirectory,
-            inputJsonPath = defaultInputJsonPath,
-            inputGeojsonPath = defaultInputGeojsonPath,
-            totalConversionSandboxPath = GetTotalConversionSandboxDirectory(),
-            ck3Directory = GetGameDirectory(),
+            ModsDirectory = defaultModsDirectory,
+            TotalConversionSandboxPath = GetTotalConversionSandboxDirectory(),
+            Ck3Directory = GetGameDirectory(),
         };
 
         Save();

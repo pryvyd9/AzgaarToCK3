@@ -81,18 +81,7 @@ public static class CharacterManager
 
                     foreach (var county in duchy.counties)
                     {
-                        // The more holdings upper titles hold the more the probability to create a separate count.
-                        var separateHoldingEncouragement =
-                            GetEmpireEncoragement() * 0.395 +
-                            GetKingdomEncoragement() * 0.3 +
-                            GetDuchyEncoragement() * 0.18 +
-                            GetCountyEncoragement() * 0.125;
-                        //var separateHoldingEncouragement =
-                        //   GetEmpireEncoragement() * 0.125 +
-                        //   GetKingdomEncoragement() * 0.18 +
-                        //   GetDuchyEncoragement() * 0.3 +
-                        //   GetCountyEncoragement() * 0.395;
-                        if (IsYes(separateHoldingEncouragement))
+                        if (IsYes(GetCountyEncoragement()))
                         {
                             county.holder = GetNewCharacter(county);
                         }
@@ -170,11 +159,55 @@ public static class CharacterManager
 
             //var name = names[rnd.Next(names.Length)];
 
-            var c = new Character($"{Settings.Instance.modName}{characters.Count}", dynastyName, crh.Culture, crh.Religion, age, stewardship, dynastyName);
+            var c = new Character($"{Settings.Instance.ModName}{characters.Count}", dynastyName, crh.Culture, crh.Religion, age, stewardship, dynastyName);
             characters.Add(c);
             return c;
         }
     }
+
+    public static async Task<List<Character>> CreateCharactersCountOnly(Map map)
+    {
+        // Generate title holders.
+        // Capital is the first title in the group.
+        // Primary title has all the way to county capital so keep the highest title holder all the way down.
+
+        var rnd = new Random(1);
+        var characters = new List<Character>();
+
+        var counties = map.Empires.SelectMany(n => n.kingdoms).SelectMany(n => n.duchies).SelectMany(n => n.counties).ToArray();
+        foreach (var county in counties)
+        {
+            if (IsYes(0.8))
+            {
+                county.holder = GetNewCharacter(county);
+            }
+            else
+            {
+                GetCharacter();
+            }
+        }
+        
+        return characters;
+
+        bool IsYes(double probability) => rnd.NextSingle() < probability;
+        Character GetCharacter()
+        {
+            return characters.Last();
+        }
+        Character GetNewCharacter(ICultureReligionHolder crh)
+        {
+            var age = rnd.Next(4, 70);
+            var stewardship = rnd.Next(age / 2, age - 2) / 2;
+            var dynastyName = map.NameBase.names[rnd.Next(map.NameBase.names.Length)];
+
+            //var name = names[rnd.Next(names.Length)];
+
+            var c = new Character($"{Settings.Instance.ModName}{characters.Count}", dynastyName, crh.Culture, crh.Religion, age, stewardship, dynastyName);
+            characters.Add(c);
+            return c;
+        }
+    }
+
 
     public static async Task WriteHistoryCharacters(Map map)
     {
@@ -190,9 +223,9 @@ public static class CharacterManager
         var file = string.Join('\n', lines);
 
         // Delete existing characters.
-        Directory.EnumerateFiles(Helper.GetPath(SettingsManager.OutputDirectory, "history", "characters")).ToList().ForEach(File.Delete);
+        Directory.EnumerateFiles(Helper.GetPath(Settings.OutputDirectory, "history", "characters")).ToList().ForEach(File.Delete);
 
-        var path = Helper.GetPath(SettingsManager.OutputDirectory, "history", "characters", "all.txt");
+        var path = Helper.GetPath(Settings.OutputDirectory, "history", "characters", "all.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -224,9 +257,9 @@ public static class CharacterManager
         var file = string.Join('\n', lines);
 
         // Delete existing titles.
-        Directory.EnumerateFiles(Helper.GetPath(SettingsManager.OutputDirectory, "history", "titles")).ToList().ForEach(File.Delete);
+        Directory.EnumerateFiles(Helper.GetPath(Settings.OutputDirectory, "history", "titles")).ToList().ForEach(File.Delete);
 
-        var path = Helper.GetPath(SettingsManager.OutputDirectory, "history", "titles", "all.txt");
+        var path = Helper.GetPath(Settings.OutputDirectory, "history", "titles", "all.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -239,9 +272,9 @@ public static class CharacterManager
         var file = string.Join('\n', lines);
 
         // Delete existing dynasties.
-        Directory.EnumerateFiles(Helper.GetPath(SettingsManager.OutputDirectory, "common", "dynasties")).ToList().ForEach(File.Delete);
+        Directory.EnumerateFiles(Helper.GetPath(Settings.OutputDirectory, "common", "dynasties")).ToList().ForEach(File.Delete);
 
-        var path = Helper.GetPath(SettingsManager.OutputDirectory, "common", "dynasties", "all.txt");
+        var path = Helper.GetPath(Settings.OutputDirectory, "common", "dynasties", "all.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -254,7 +287,7 @@ public static class CharacterManager
             var file = $@"l_english:
  FOUNDER_BASED_NAME_POSTFIX:0 ""id""
  {content}";
-            var path = Helper.GetPath(SettingsManager.OutputDirectory, "localization", "english", "dynasties", "dynasty_names_l_english.yml");
+            var path = Helper.GetPath(Settings.OutputDirectory, "localization", "english", "dynasties", "dynasty_names_l_english.yml");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
         }
@@ -262,7 +295,7 @@ public static class CharacterManager
             var file = $@"l_russian:
  FOUNDER_BASED_NAME_POSTFIX:0 ""ид""
  {content}";
-            var path = Helper.GetPath(SettingsManager.OutputDirectory, "localization", "russian", "dynasties", "dynasty_names_l_russian.yml");
+            var path = Helper.GetPath(Settings.OutputDirectory, "localization", "russian", "dynasties", "dynasty_names_l_russian.yml");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
         }

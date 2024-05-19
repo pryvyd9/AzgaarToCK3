@@ -256,7 +256,7 @@ e_hre = {{ landless = yes }}
 e_byzantium = {{ landless = yes }}
 e_roman_empire = {{ landless = yes }}";
 
-        var path = Helper.GetPath(SettingsManager.OutputDirectory, "common", "landed_titles", "00_landed_titles.txt");
+        var path = Helper.GetPath(Settings.OutputDirectory, "common", "landed_titles", "00_landed_titles.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
     }
@@ -296,7 +296,7 @@ e_roman_empire = {{ landless = yes }}";
  TITLE_CLAN_TIERED_WITH_UNDERLYING_NAME_DEFINITE_FORM:0 ""the $NAME$ $TIER|U$ #F ($BASE_NAME$) #!""
  TITLE_TIER_AS_NAME:0 ""$TIER|U$""
  {string.Join("\n ", lines)}";
-            var path = Helper.GetPath(SettingsManager.OutputDirectory, "localization", "english", "titles_l_english.yml");
+            var path = Helper.GetPath(Settings.OutputDirectory, "localization", "english", "titles_l_english.yml");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
         }
@@ -310,7 +310,7 @@ e_roman_empire = {{ landless = yes }}";
  TITLE_CLAN_TIERED_WITH_UNDERLYING_NAME_DEFINITE_FORM: ""$TIER|U$ $NAME$ов #F ($BASE_NAME$) #!""
  TITLE_TIER_AS_NAME: ""$TIER|U$""
  {string.Join("\n ", lines)}";
-            var path = Helper.GetPath(SettingsManager.OutputDirectory, "localization", "russian", "titles_l_russian.yml");
+            var path = Helper.GetPath(Settings.OutputDirectory, "localization", "russian", "titles_l_russian.yml");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
         }

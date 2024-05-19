@@ -12,37 +12,36 @@ internal class Program
             Console.WriteLine("Default Settings file has been created.");
         }
 
-        foreach (var property in Settings.Instance.GetType().GetProperties())
-        {
-            Console.WriteLine($"{property.Name,-30}: {property.GetValue(Settings.Instance)}");
-        }
+        // Print settings
+        Console.WriteLine(Settings.Instance);
 
         // Configure NumberDecimalSeparator. Writing files will not work otherwise.
         SettingsManager.Configure();
 
         Console.WriteLine();
         Console.WriteLine("The app has been configured. Feel free to change the settings in 'settings.json' file.");
+        Console.WriteLine("Check https://github.com/pryvyd9/AzgaarToCK3 for instructions or feedback.");
         Console.WriteLine();
 
-        if (string.IsNullOrWhiteSpace(Settings.Instance.modName))
+        if (string.IsNullOrWhiteSpace(Settings.Instance.ModName))
         {
             Console.Write("Name your mod: ");
-            Settings.Instance.modName = Console.ReadLine()!;
+            Settings.Instance.ModName = Console.ReadLine()!;
         }
 
         CheckIfShouldOverride();
-        TryFindInputs();
+        FindInputs();
 
-        if (!File.Exists(Settings.Instance.inputJsonPath))
+        if (!File.Exists(Settings.Instance.InputJsonPath))
         {
             Console.WriteLine($".json file has not been found.");
-            Console.WriteLine($"Please, place it in '{Settings.Instance.inputJsonPath}' or change '{nameof(Settings.Instance.inputJsonPath)}' in 'settings.json'.");
+            Console.WriteLine($"Please, place it in '{Settings.Instance.InputJsonPath}' or change '{nameof(Settings.Instance.InputJsonPath)}' in 'settings.json'.");
             Exit();
         }
-        if (!File.Exists(Settings.Instance.inputGeojsonPath))
+        if (!File.Exists(Settings.Instance.InputGeojsonPath))
         {
             Console.WriteLine($".geojson file has not been found.");
-            Console.WriteLine($"Please, place it in '{Settings.Instance.inputGeojsonPath}' or change '{nameof(Settings.Instance.inputGeojsonPath)}' in 'settings.json'.");
+            Console.WriteLine($"Please, place it in '{Settings.Instance.InputGeojsonPath}' or change '{nameof(Settings.Instance.InputGeojsonPath)}' in 'settings.json'.");
             Exit();
         }
 
@@ -71,6 +70,8 @@ internal class Program
         SettingsManager.Save();
         Environment.Exit(0);
 #endif
+
+        Console.WriteLine("Map conversion finished successfully!");
 
         Exit();
     }
@@ -122,14 +123,14 @@ internal class Program
     {
         while (ModManager.DoesModExist())
         {
-            if (Settings.Instance.shouldOverride is not null)
+            if (Settings.Instance.ShouldOverride is not null)
             {
                 break;
             }
 
             Console.WriteLine("Mod already exists. Override?");
-            Settings.Instance.shouldOverride = YesNo();
-            if (!Settings.Instance.shouldOverride.Value)
+            Settings.Instance.ShouldOverride = YesNo();
+            if (!Settings.Instance.ShouldOverride.Value)
             {
                 Console.WriteLine("ChangeModName?");
                 if (!YesNo())
@@ -138,7 +139,7 @@ internal class Program
                     Exit();
                 }
                 Console.WriteLine("Name your mod:");
-                Settings.Instance.modName = Console.ReadLine()!;
+                Settings.Instance.ModName = Console.ReadLine()!;
                 break;
             }
             else
@@ -147,27 +148,67 @@ internal class Program
             }
         }
 
-        if (Settings.Instance.shouldOverride ?? false)
+        if (Settings.Instance.ShouldOverride ?? false)
         {
-            Console.WriteLine($"Mod will be overriden in all future runs. If you wish to change it change '{nameof(Settings.Instance.shouldOverride)}' in 'settings.json' file.");
+            Console.WriteLine($"Mod will be overriden in all future runs. If you wish to change it change '{nameof(Settings.Instance.ShouldOverride)}' in 'settings.json' file.");
         }
 
     }
 
-    private static void TryFindInputs()
+    private static void FindInputs()
     {
-        if (ModManager.TryFindInputs() is ({ } jsonName, { } geojsonName) &&
-          (Settings.Instance.inputJsonPath != jsonName || Settings.Instance.inputGeojsonPath != geojsonName))
+        if (ModManager.FindLatestInputs() is ({ } jsonName, { } geojsonName) && 
+            (jsonName != Settings.Instance.InputJsonPath || geojsonName != Settings.Instance.InputGeojsonPath))
         {
-            Console.WriteLine($"Found 2 files in the directory: ");
+            Console.WriteLine("Found new inputs in the directory:");
             Console.WriteLine(Path.GetFileName(jsonName));
             Console.WriteLine(Path.GetFileName(geojsonName));
             Console.WriteLine("Use them as inputs?");
 
             if (YesNo())
             {
-                Settings.Instance.inputJsonPath = jsonName;
-                Settings.Instance.inputGeojsonPath = geojsonName;
+                Settings.Instance.InputJsonPath = jsonName;
+                Settings.Instance.InputGeojsonPath = geojsonName;
+            }
+            else
+            {
+                EnsureInputsExist();
+
+                Console.WriteLine("Previously used inputs will be used:");
+                Console.WriteLine(Settings.Instance.InputJsonPath);
+                Console.WriteLine(Settings.Instance.InputGeojsonPath);
+            }
+        }
+        else
+        {
+            EnsureInputsExist();
+        }
+
+        // Exit if inputs not found
+        static void EnsureInputsExist()
+        {
+            var jsonExists = File.Exists(Settings.Instance.InputJsonPath);
+            var geojsonExists = File.Exists(Settings.Instance.InputGeojsonPath);
+
+            if (!jsonExists)
+            {
+                Console.WriteLine(".json input was not found.");
+            }
+            if (!geojsonExists)
+            {
+                Console.WriteLine(".geojson input was not found.");
+            }
+
+            if (!jsonExists || !geojsonExists)
+            {
+                Console.WriteLine($"-------------------------------------------------");
+                Console.WriteLine($"Put your exported .json, .geojson files to this app's folder ({SettingsManager.ExecutablePath}).");
+                Console.WriteLine("Make sure they are they have the latest 'modification date'.");
+                Console.WriteLine("If the wrong files are found delete other exported .json, .geojson files from the folder.");
+                Console.WriteLine("If the files cannot be found open 'settings.json' and modify 'InputJsonPath' and 'InputGeojsonPath' values to point to your files.");
+                Console.WriteLine($"-------------------------------------------------");
+
+                Exit();
             }
         }
     }
