@@ -435,16 +435,16 @@ public static class MapManager
             
             var drawables = new Drawables();
 
-            var waterPackCells = map.JsonMap.pack.cells.Where(n => n.biome != 0);
-            var waterGeoCells = map.GeoMap.features.Select(n => new
+            var landPackCells = map.JsonMap.pack.cells.Where(n => n.biome != 0);
+            var landGeoCells = map.GeoMap.features.Select(n => new
             {
                 Height = n.properties.height,
                 Id = n.properties.id,
                 C = n.geometry.coordinates
             }).ToDictionary(n => n.Id, n => n);
-            var cells = waterPackCells.Select(n =>
+            var cells = landPackCells.Select(n =>
             {
-                var c = waterGeoCells[n.i];
+                var c = landGeoCells[n.i];
                 return new
                 {
                     Cells = c.C,

@@ -97,7 +97,16 @@ supported_version=""1.12.4""";
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
 
-        await PackedMapManager.CreatePackedHeightMap(map);
+        var packedHeightmap = await PackedMapManager.CreatePackedHeightMap(map);
+        await PackedMapManager.WritePackedHeightMap(packedHeightmap);
+
+        var cells = map.Provinces.Select(n => n.Cells);
+        var baronyCells = map.Empires
+            .SelectMany(n => n.kingdoms)
+            .SelectMany(n => n.duchies)
+            .SelectMany(n => n.counties)
+            .SelectMany(n => n.baronies)
+            .Select(n => n.province);
 
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
