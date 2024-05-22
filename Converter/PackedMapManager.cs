@@ -1,14 +1,18 @@
 ﻿using ImageMagick;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using System.Diagnostics;
+using System.Drawing;
 using System.Numerics;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Converter;
 
 public static class PackedMapManager
 {
     private static readonly int[] detailSize = [31, 15, 9, 5, 3];
-    private const int packedWidth = 264;
+    //private const int packedWidth = 264;
+    private const int packedWidth = 768;
     private const int indirectionProportion = 32;
 
     private static Vector2[,] Gradient(byte[] values, int width, int height)
@@ -157,6 +161,7 @@ public static class PackedMapManager
                 {
                     gradientAreas.Add(GetArea(secondDerivative, hi, vi, samplesPerNode, samplesPerNode));
                     heightAreas.Add(GetArea(pixels, hi, vi, samplesPerNode, samplesPerNode, heightMap.Width, heightMap.Height));
+                    //areaCoordinates.Add(new Vector2(hi / samplesPerNode, vi / samplesPerNode));
                     areaCoordinates.Add(new Vector2(hi, vi));
                 }
             }
@@ -260,9 +265,7 @@ public static class PackedMapManager
     }
     public static async Task WritePackedHeightMap(PackedHeightmap heightmap)
     {
-        //int totalLineCount = 0;
         byte[] someNumbers = [1, 2, 4, 8, 16];
-
 
         using var packed_heightmap = new MagickImage("xc:black", new MagickReadSettings()
         {
@@ -270,13 +273,13 @@ public static class PackedMapManager
             Height = heightmap.PixelHeight,
         });
         var phDrawables = new Drawables();
+        //using var heightmap = new MagickImage(Helper.GetPath(SettingsManager.ExecutablePath, "indirection_heightmap_template.png"));
 
-        using var indirection_heightmap = new MagickImage("xc:black", new MagickReadSettings()
-        {
-            Width = heightmap.MapWidth / indirectionProportion,
-            Height = heightmap.MapHeight / indirectionProportion,
-        });
+        //using var indirection_heightmap = new MagickImage("xc:black", new MagickReadSettings()
+        using var indirection_heightmap = new MagickImage(Helper.GetPath(SettingsManager.ExecutablePath, "indirection_heightmap_template.png"));
         var ihDrawables = new Drawables();
+
+        Rgba32[] indirection_heightmap_pixelArray = new Rgba32[heightmap.MapWidth / indirectionProportion * heightmap.MapHeight / indirectionProportion];
 
         int verticalOffset = 0;
         int lineI = 0;
@@ -317,21 +320,28 @@ public static class PackedMapManager
                                 .StrokeColor(phColor)
                                 .FillColor(phColor)
                                 .Point(phX, heightmap.PixelHeight - verticalOffset + sy);
-
-                            byte ihRowIndex = (byte)(packedWidth / detailSize[di] - (d.StartOffset / detailSize[di] + si));
-                            byte ihLineIndex = (byte)(heightmap.LineCount - lineI);
-                            byte ihDetailSize = someNumbers[di];
-                            byte ihDetailI = (byte)di;
-                            var ihColor = new MagickColor(ihRowIndex, ihLineIndex, ihDetailSize, ihDetailI);
-
-                            var ihXY = d.Coordinates[ci] / indirectionProportion;
-                            ihDrawables
-                                .DisableStrokeAntialias()
-                                .StrokeColor(ihColor)
-                                .FillColor(ihColor)
-                                .Point(ihXY.X, ihXY.Y);
                         }
                     }
+
+                    //byte ihRowIndex = (byte)(packedWidth / detailSize[di] - (d.StartOffset / detailSize[di] + si));
+                    byte ihRowIndex = (byte)((li == 0 ? d.StartOffset : 0) / detailSize[di] + si);
+                    //byte ihLineIndex = (byte)(heightmap.LineCount - lineI - 1);
+                    byte ihLineIndex = (byte)(heightmap.LineCount - lineI);
+                    //byte ihLineIndex = (byte)lineI;
+                    byte ihDetailSize = someNumbers[di];
+                    byte ihDetailI = (byte)di;
+                    var ihColor = new MagickColor(ihRowIndex, ihLineIndex, ihDetailSize, ihDetailI);
+
+                    if (ihLineIndex > 128)
+                    {
+
+                    }
+                    var ihXY = d.Coordinates[ci] / indirectionProportion;
+                    indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * (int)ihXY.Y + (int)ihXY.X] = new Rgba32(ihRowIndex, ihLineIndex, ihDetailSize, ihDetailI);
+                    ihDrawables
+                        .DisableStrokeAntialias()
+                        .FillColor(ihColor)
+                        .Point((int)ihXY.X, (int)ihXY.Y);
                 }
             }
         }
@@ -341,9 +351,17 @@ public static class PackedMapManager
         Directory.CreateDirectory(Path.GetDirectoryName(phPath));
         await packed_heightmap.WriteAsync(phPath);
 
-        indirection_heightmap.Draw(ihDrawables);
+
+        //indirection_heightmap.Draw(ihDrawables);
         var ihPath = Helper.GetPath(Settings.OutputDirectory, "map_data", "indirection_heightmap.png");
         Directory.CreateDirectory(Path.GetDirectoryName(ihPath));
-        await indirection_heightmap.WriteAsync(ihPath);
+        //await indirection_heightmap.WriteAsync(ihPath);
+
+        using var ss1 = new MagickImage(Helper.GetPath(SettingsManager.ExecutablePath, "indirection_heightmap_template.png"));
+        using var ss = new MagickImage(Helper.GetPath(Settings.OutputDirectory, "map_data", "indirection_heightmap.png"));
+
+
+        using var indirection_heightmap2 = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(indirection_heightmap_pixelArray, heightmap.MapWidth / indirectionProportion, heightmap.MapHeight / indirectionProportion);
+        indirection_heightmap2.Save(ihPath);
     }
 }

@@ -151,8 +151,11 @@ public record NameBaseName(string id, string name);
 public record NameBasePrepared(string name, NameBaseName[] names);
 public class Map
 {
-    public const int MapWidth = 8192;
-    public const int MapHeight = 4096;
+    //public const int MapWidth = 8192;
+    //public const int MapHeight = 4096;
+    public const int MapWidth = 8192 / 8;
+    public const int MapHeight = 4096 / 8;
+
 
     public GeoMap GeoMap { get; set; }
     public GeoMapRivers Rivers { get; set; }

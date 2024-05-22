@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualBasic.FileIO;
+﻿using ImageMagick;
+using Microsoft.VisualBasic.FileIO;
 using System.Diagnostics;
 using System.Linq;
 
@@ -84,6 +85,48 @@ supported_version=""1.12.4""";
 #if DEBUG
     public static async Task Run()
     {
+        //{
+        //    using var heightmap = new MagickImage(Helper.GetPath(SettingsManager.ExecutablePath, "indirection_heightmap_template.png"));
+        //    //using var heightmap = new MagickImage("f:\\Projects\\Paradox Interactive\\Crusader Kings III\\mod\\Test\\map_data\\indirection_heightmap.png");
+
+        //    using var testImage = new MagickImage("xc:transparent", new MagickReadSettings()
+        //    {
+        //        Width = 2,
+        //        Height = 2,
+
+        //        ColorType = ColorType.TrueColorAlpha,
+        //        StrokeAntiAlias = false,
+        //    });
+
+        //    testImage.Format = MagickFormat.Png;
+        //    testImage.SetCompression(CompressionMethod.Zip);
+
+        //    var testdrawables = new Drawables();
+
+        //    var c0 = new MagickColor(0, 0, 0, 0);
+        //    var c1 = new MagickColor(63, 0, 0, 1);
+        //    var c2 = new MagickColor(127, 0, 0, 0);
+        //    var c3 = new MagickColor(255, 0, 0, 0);
+        //    testdrawables
+        //        .StrokeColor(c0)
+        //        .FillColor(c0)
+        //        .Point(0, 0)
+        //        .StrokeColor(c1)
+        //        .FillColor(c1)
+        //        .Point(0, 1)
+        //        .StrokeColor(c2)
+        //        .FillColor(c2)
+        //        .Point(1, 1)
+        //        .StrokeColor(c3)
+        //        .FillColor(c3)
+        //        .Point(1, 0);
+
+        //    testImage.Draw(testdrawables);
+        //    var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "test_map.png");
+        //    Directory.CreateDirectory(Path.GetDirectoryName(path));
+        //    await testImage.WriteAsync(path, MagickFormat.Png32);
+        //}
+
         int i = 1;
         int totalStageCount = 22;
 

@@ -202,9 +202,9 @@ public static class MapManager
                 {
                     unprocessedCells.Remove(currentCell.id);
                     provinces.Last().Cells.Add(currentCell);
-                        currentArea += currentCell.area;
+                    currentArea += currentCell.area;
 
-                        foreach (var n in currentCell.neighbors.Where(n => unprocessedCells.ContainsKey(n)))
+                    foreach (var n in currentCell.neighbors.Where(unprocessedCells.ContainsKey))
                     {
                         // If cell is not found then it's not water cell. So ignore it.
                         if (cells.FirstOrDefault(m => m.id == n) is { } cell)
