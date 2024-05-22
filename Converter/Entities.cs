@@ -75,14 +75,14 @@ public record Cell(int id, int height, float[][] cells, int[] neighbors, int cul
 }
 public class Province
 {
-    public List<Cell> Cells { get; set; } = new();
+    public List<Cell> Cells { get; set; } = [];
     // Town
     public Burg Burg { get; set; }
     public MagickColor Color { get; set; }
     public string Name { get; set; }
     public int Id { get; set; }
     public int StateId { get; set; }
-    public Province[] Neighbors { get; set; } = Array.Empty<Province>();
+    public Province[] Neighbors { get; set; } = [];
     public bool IsWater { get; set; }
 }
 
