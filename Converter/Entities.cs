@@ -153,8 +153,8 @@ public class Map
 {
     //public const int MapWidth = 8192;
     //public const int MapHeight = 4096;
-    public const int MapWidth = 8192 / 8;
-    public const int MapHeight = 4096 / 8;
+    public const int MapWidth = 8192 / 2;
+    public const int MapHeight = 4096 / 2;
 
 
     public GeoMap GeoMap { get; set; }
