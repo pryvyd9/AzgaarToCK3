@@ -18,7 +18,7 @@ public partial class JsonMapJsonContext : JsonSerializerContext {}
 
 public static class MapManager
 {
-    private const int WaterLevelHeight = 30;
+    private const int WaterLevelHeight = 20;
 
 
  
@@ -477,6 +477,9 @@ public static class MapManager
             //using var file = await Image.LoadAsync(path);
             //file.Mutate(n => n.GaussianBlur(15));
             //file.Save(path);
+            using var file = await Image.LoadAsync(path);
+            file.Mutate(n => n.GaussianBlur(6));
+            file.Save(path);
 
         }
         catch (Exception ex)
