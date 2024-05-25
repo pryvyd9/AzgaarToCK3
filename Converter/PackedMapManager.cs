@@ -3,7 +3,9 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Numerics;
+using static Converter.PackedMapManager;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace Converter;
@@ -12,7 +14,8 @@ public static class PackedMapManager
 {
     private static readonly int[] detailSize = [31, 15, 9, 5, 3];
     //private const int packedWidth = 264;
-    private const int packedWidth = 768;
+    //private const int packedWidth = 768;
+    private const int packedWidth = 256*9;
     private const int indirectionProportion = 32;
 
     private static Vector2[,] Gradient(byte[] values, int width, int height)
@@ -22,16 +25,26 @@ public static class PackedMapManager
         {
             for (int hi = 1; hi < width; hi++)
             {
-                // currentI
-                var ci = vi * width + hi;
-                // leftI
-                var li = ci - 1;
-                // upI
-                var up = ci - width;
+                try
+                {
+                    // currentI
+                    //var ci = vi * width + hi;
+                    var ci = (height - vi - 1) * width + hi;
+                    // leftI
+                    var li = ci - 1;
+                    // upI
+                    var up = ci + width;
 
-                var h = values[ci] - values[li];
-                var v = values[ci] - values[up];
-                result[hi, vi] = new Vector2(h, v);
+                    var h = values[ci] - values[li];
+                    var v = values[ci] - values[up];
+                    result[hi, vi] = new Vector2(h, v);
+                }
+                catch(Exception ex)
+                {
+                    throw;
+
+                }
+             
             }
         }
         return result;
@@ -62,20 +75,43 @@ public static class PackedMapManager
         }
         return result;
     }
+    //private static byte[,] GetArea(byte[] values, int x, int y, int xl, int yl, int width, int height)
+    //{
+    //    byte[,] result = new byte[xl, yl];
+    //    for (int vi = y, j = 0; j < yl; vi++, j++)
+    //    {
+    //        for (int hi = x, i = 0; i < xl; hi++, i++)
+    //        {
+    //            // currentI
+    //            //var ci = vi * width + hi;
+    //            var ci = (height - vi - 1) * width + hi;
+    //            result[i, j] = values[ci];
+
+    //            if (result[i, j] > 0)
+    //            {
+
+    //            }
+    //        }
+    //    }
+    //    return result;
+    //}
     private static byte[,] GetArea(byte[] values, int x, int y, int xl, int yl, int width, int height)
     {
         byte[,] result = new byte[xl, yl];
-        for (int vi = y, j = 0; j < yl; vi++, j++)
+        for (int vi = y, j = yl - 1; j >= 0; vi++, j--)
         {
             for (int hi = x, i = 0; i < xl; hi++, i++)
             {
-                // currentI
-                var ci = vi * width + hi;
-                result[i, j] = values[ci];
-
-                if (result[i, j] > 0)
+                try
                 {
-
+                    // currentI
+                    //var ci = vi * width + hi;
+                    var ci = (height - vi - 1) * width + hi;
+                    result[i, j] = values[ci];
+                }
+                catch(Exception e)
+                {
+                    throw;
                 }
             }
         }
@@ -176,10 +212,6 @@ public static class PackedMapManager
     public class Detail
     {
         public byte[][][,] Lines;
-        public int EndOffset;
-        public int StartOffset;
-        public bool StartNewLine = false;
-        public bool HasMultipleLines => Lines.Length > 1;
         public Vector2[] Coordinates;
     }
     public static async Task<PackedHeightmap> CreatePackedHeightMap(Map map)
@@ -212,8 +244,7 @@ public static class PackedMapManager
                 }
             }
 
-            //var weightedDerivatives = gradientAreas.Select((n, i) => (i, heightArea: heightAreas[i], nonZeroP90: GetNonZeroP90Value(n), coordinates: areaCoordinates[i])).ToArray();
-            var weightedDerivatives = gradientAreas.Select((n, i) => (i, heightArea: heightAreas[i], nonZeroP90: GetNonZeroP90Value(n),coordinates: areaCoordinates[i])).ToArray();
+            var weightedDerivatives = gradientAreas.Select((n, i) => (i, heightArea: heightAreas[i], nonZeroP90: GetNonZeroP90Value(n), coordinates: areaCoordinates[i])).ToArray();
             //var detail = new[]
             //{
             //    weightedDerivatives.Where(n => n.nonZeroP90 >= 300).ToArray(),
@@ -223,15 +254,23 @@ public static class PackedMapManager
             //    weightedDerivatives.Where(n => n.nonZeroP90 < 50).ToArray(),
             //};
 
+            //var detail = new[]
+            //{
+            //    weightedDerivatives.Where(n => n.nonZeroP90 >= 4).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 3 and < 4).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 2 and < 3).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 1 and < 2).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 < 1).ToArray(),
+            //};
             var detail = new[]
-            {
-                weightedDerivatives.Where(n => n.nonZeroP90 >= 4).ToArray(),
-                weightedDerivatives.Where(n => n.nonZeroP90 is >= 3 and < 4).ToArray(),
-                weightedDerivatives.Where(n => n.nonZeroP90 is >= 2 and < 3).ToArray(),
-                weightedDerivatives.Where(n => n.nonZeroP90 is >= 1 and < 2).ToArray(),
-                weightedDerivatives.Where(n => n.nonZeroP90 < 1).ToArray(),
-            };
-          
+           {
+                 weightedDerivatives.Where(n => false).ToArray(),
+                 weightedDerivatives.Where(n => false).ToArray(),
+                 weightedDerivatives.Where(n => true).ToArray(),
+                 weightedDerivatives.Where(n => false).ToArray(),
+                 weightedDerivatives.Where(n => false).ToArray(),
+             };
+
             var detailSamples = detail.Select((d, i) => d.Select(n => GetPackedValues(n.heightArea, detailSize[i])).ToArray()).ToArray();
             
             var dPerLine = detailSize.Select(n => packedWidth / n).ToArray();
@@ -257,47 +296,16 @@ public static class PackedMapManager
                 // Largest detail has fewer checks
                 if (previousI == null)
                 {
-                    d.StartNewLine = true;
                     d.Lines = detailSamples[i].Chunk(dPerLine[i]).ToArray();
-                    d.EndOffset = d.Lines.Last().Length * detailSize[i];
                 }
                 else
                 {
-                    d.StartOffset = details[previousI.Value].EndOffset % detailSize[i] > 0
-                       ? (details[previousI.Value].EndOffset + detailSize[i]) / detailSize[i] * detailSize[i]
-                       : details[previousI.Value].EndOffset;
-                    if (d.StartOffset > packedWidth - detailSize[i])
-                    {
-                        d.StartOffset = 0;
-                        d.StartNewLine = true;
-                }
-                    d.Lines = d.StartNewLine
-                        ? detailSamples[i].Chunk(dPerLine[i]).ToArray()
-                        : (packedWidth - d.StartOffset) / detailSize[i] is var firstLineLength && firstLineLength < detailSamples[i].Length
-                        ? new[] { detailSamples[i].Take(firstLineLength).ToArray() }.Concat(detailSamples[i].Skip(firstLineLength).Chunk(dPerLine[i])).ToArray()
-                        : new[] { detailSamples[i] };
-                    d.EndOffset = d.HasMultipleLines
-                      ? d.Lines.Last().Length * detailSize[i]
-                      : d.StartOffset + d.Lines.Last().Length * detailSize[i];
+                    d.Lines = detailSamples[i].Chunk(dPerLine[i]).ToArray();
+                  
                 }
 
-                if (d.StartNewLine)
-                {
                 packedHeightPixels += d.Lines.Length * detailSize[i];
                 lineCount += d.Lines.Length;
-                }
-                else
-                {
-                    if (d.HasMultipleLines)
-                    {
-                        packedHeightPixels += (d.Lines.Length - 1) * detailSize[i];
-                        lineCount += d.Lines.Length - 1;
-                    }
-                    else
-                    {
-                        // Starts and ends on the same line. Don't increase height.
-                    }
-                }
 
                 if (detailSamples[i].Length != 0)
                 {
@@ -347,29 +355,22 @@ public static class PackedMapManager
 
             // coordinatesI
             int ci = 0;
-            int rowI = 0;
+            //int rowI = 0;
+            byte ColI = 0;
 
             for (int li = 0; li < d.Lines.Length; li++)
             {
+                //byte ColI = 0;
+
                 var line = d.Lines[li];
                 if (li == 0)
                 {
-                    if (d.StartNewLine)
-                    {
-                        levelOffsets[di] = verticalOffset;
-                    }
-                    else
-                    {
-                        levelOffsets[di] = verticalOffset - detailSize[di];
-                    }
+                    levelOffsets[di] = verticalOffset;
                 }
-                if (d.StartNewLine || li > 0)
-                {
-                    verticalOffset += detailSize[di];
-                    lineI++;
-                }
+                verticalOffset += detailSize[di];
+                lineI++;
                 
-                for (int si = 0; si < line.Length; si++, ci++, rowI++)
+                for (int si = 0; si < line.Length; si++, ci++, ColI++)
                 {
                     var sample = line[si];
 
@@ -379,34 +380,28 @@ public static class PackedMapManager
                         {
                             var c = sample[sx, sy];
                             var phColor = new MagickColor(c, c, c);
-
                             //phColor = isWhite ? new MagickColor(255, 255, 255) : new MagickColor(100, 100, 100);
-
-                            var phX = li == 0
-                                ? d.StartOffset + si * detailSize[di] + sx
-                                : si * detailSize[di] + sx;
-
                             phDrawables
                                 .DisableStrokeAntialias()
                                 .StrokeColor(phColor)
                                 .FillColor(phColor)
-                                .Point(phX, heightmap.PixelHeight - verticalOffset + sy);
+                                .Point(si * detailSize[di] + sx, heightmap.PixelHeight - verticalOffset + sy);
                         }
                     }
 
                     //byte ihRowIndex = (byte)(packedWidth / detailSize[di] - (d.StartOffset / detailSize[di] + si));
                     //byte ihRowIndex = (byte)((li == 0 ? d.StartOffset : 0) / detailSize[di] + si);
-                    byte ihRowIndex = (byte)(rowI);
+                    byte ihColumnIndex = (byte)(ColI);
                     byte ihLineIndex = (byte)(heightmap.LineCount - lineI);
                     //byte ihLineIndex = (byte)lineI;
                     byte ihDetailSize = someNumbers[di];
                     byte ihDetailI = (byte)di;
-                    var ihColor = new MagickColor(ihRowIndex, ihLineIndex, ihDetailSize, ihDetailI);
+                    var ihColor = new MagickColor(ihColumnIndex, ihLineIndex, ihDetailSize, ihDetailI);
 
                     isWhite = !isWhite;
 
                     var ihXY = d.Coordinates[ci] / indirectionProportion;
-                    indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * (int)ihXY.Y + (int)ihXY.X] = new Rgba32(ihRowIndex, ihLineIndex, ihDetailSize, ihDetailI);
+                    indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * (int)ihXY.Y + (int)ihXY.X] = new Rgba32(ihColumnIndex, ihLineIndex, ihDetailSize, ihDetailI);
                 }
             }
         }
@@ -426,12 +421,36 @@ indirection_file=""map_data/indirection_heightmap.png""
 original_heightmap_size={{ {heightmap.MapWidth} {heightmap.MapHeight} }}
 tile_size=33
 should_wrap_x=no
-level_offsets={{ {string.Join(' ', levelOffsets.Select((n, i) => $"{{ 0 {n} }}"))} }} }}
+level_offsets={{ {string.Join(' ', levelOffsets.Select((n, i) => $"{{ 0 {n} }}"))} }}
 max_compress_level=4
-empty_tile_offset={{ 0 0 }}
+empty_tile_offset={{ 255 127 }}
 ";
         var hhPath = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.heightmap");
         Directory.CreateDirectory(Path.GetDirectoryName(hhPath));
+        await File.WriteAllTextAsync(hhPath, heightmap_heightmap);
+    }
+
+    // Detail level = 3
+    // All tiles have the same detail level
+    public static async Task WritePackedHeightSimple(Map map)
+    {
+        File.Copy(Helper.GetPath(SettingsManager.ExecutablePath, "indirection_heightmap.png"), Helper.GetPath(Settings.OutputDirectory, "map_data", "indirection_heightmap.png"), true);
+
+        using var heightmap = new MagickImageCollection(Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png"));
+        heightmap[0].Resize(256 * 9, 128 * 9);
+        var phPath = Helper.GetPath(Settings.OutputDirectory, "map_data", "packed_heightmap.png");
+        await heightmap.WriteAsync(phPath);
+
+        var heightmap_heightmap = $@"heightmap_file=""map_data/packed_heightmap.png""
+indirection_file=""map_data/indirection_heightmap.png""
+original_heightmap_size={{ {Map.MapWidth} {Map.MapHeight} }}
+tile_size=33
+should_wrap_x=no
+level_offsets={{ {{ 0 0 }} {{ 0 0 }} {{ 0 0 }} {{ 0 0 }} {{ 0 0 }} }}
+max_compress_level=4
+empty_tile_offset={{ 255 127 }}
+";
+        var hhPath = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.heightmap");
         await File.WriteAllTextAsync(hhPath, heightmap_heightmap);
     }
 }

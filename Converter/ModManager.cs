@@ -86,7 +86,7 @@ supported_version=""1.12.4""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 22;
+        int totalStageCount = 23;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -98,16 +98,11 @@ supported_version=""1.12.4""";
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
 
-        var packedHeightmap = await PackedMapManager.CreatePackedHeightMap(map);
-        await PackedMapManager.WritePackedHeightMap(packedHeightmap);
+        //var packedHeightmap = await PackedMapManager.CreatePackedHeightMap(map);
+        //await PackedMapManager.WritePackedHeightMap(packedHeightmap);
 
-        var cells = map.Provinces.Select(n => n.Cells);
-        var baronyCells = map.Empires
-            .SelectMany(n => n.kingdoms)
-            .SelectMany(n => n.duchies)
-            .SelectMany(n => n.counties)
-            .SelectMany(n => n.baronies)
-            .Select(n => n.province);
+        await PackedMapManager.WritePackedHeightSimple(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Packed heightmap created.");
 
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
@@ -168,7 +163,7 @@ supported_version=""1.12.4""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 22;
+        int totalStageCount = 23;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -179,6 +174,8 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
+        await PackedMapManager.WritePackedHeightUnoptimized(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Packed heightmap created.");
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
         await MapManager.WriteDefinition(map);
