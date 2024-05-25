@@ -27,7 +27,7 @@ public class PackProvinceJsonConverter : JsonConverter<PackProvince[]>
         using var jsonDocument = JsonDocument.ParseValue(ref reader);
         var str = jsonDocument.RootElement.GetRawText();
 
-        // replace 0 with empty province (sea).
+        // replace 0 with empty province.
         var escapedStr = string.Concat(str.AsSpan(0, 1), "{}", str.AsSpan(2));
 
         var provinces = JsonSerializer.Deserialize(escapedStr, PackProinvceArrayJsonContext.Default.PackProvinceArray);
@@ -66,7 +66,6 @@ public record Feature(Geometry geometry, Properties properties);
 public record GeoMap(Feature[] features);
 
 
-//public record Province(List<float[][]> cells, MagickColor color);
 public record Cell(int id, int height, float[][] cells, int[] neighbors, int culture, int religion, int area, int biome)
 {
     public override string ToString()
@@ -76,14 +75,14 @@ public record Cell(int id, int height, float[][] cells, int[] neighbors, int cul
 }
 public class Province
 {
-    public List<Cell> Cells { get; set; } = new();
+    public List<Cell> Cells { get; set; } = [];
     // Town
     public Burg Burg { get; set; }
     public MagickColor Color { get; set; }
     public string Name { get; set; }
     public int Id { get; set; }
     public int StateId { get; set; }
-    public Province[] Neighbors { get; set; } = Array.Empty<Province>();
+    public Province[] Neighbors { get; set; } = [];
     public bool IsWater { get; set; }
 }
 
@@ -154,6 +153,7 @@ public class Map
 {
     public const int MapWidth = 8192;
     public const int MapHeight = 4096;
+
 
     public GeoMap GeoMap { get; set; }
     public GeoMapRivers Rivers { get; set; }

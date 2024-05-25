@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualBasic.FileIO;
+﻿using ImageMagick;
+using Microsoft.VisualBasic.FileIO;
 using System.Diagnostics;
 using System.Linq;
 
@@ -85,7 +86,7 @@ supported_version=""1.12.4""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 22;
+        int totalStageCount = 23;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -97,7 +98,11 @@ supported_version=""1.12.4""";
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
 
-        //await MapManager.CreatePackedHeightMap(map);
+        //var packedHeightmap = await PackedMapManager.CreatePackedHeightMap(map);
+        //await PackedMapManager.WritePackedHeightMap(packedHeightmap);
+
+        await PackedMapManager.WritePackedHeightSimple(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Packed heightmap created.");
 
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
@@ -158,7 +163,7 @@ supported_version=""1.12.4""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 22;
+        int totalStageCount = 23;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -169,6 +174,8 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
+        await PackedMapManager.WritePackedHeightSimple(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Packed heightmap created.");
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
         await MapManager.WriteDefinition(map);

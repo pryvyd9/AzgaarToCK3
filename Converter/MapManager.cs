@@ -3,7 +3,6 @@ using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -19,7 +18,7 @@ public partial class JsonMapJsonContext : JsonSerializerContext {}
 
 public static class MapManager
 {
-    private const int WaterLevelHeight = 30;
+    private const int WaterLevelHeight = 20;
 
 
  
@@ -203,9 +202,9 @@ public static class MapManager
                 {
                     unprocessedCells.Remove(currentCell.id);
                     provinces.Last().Cells.Add(currentCell);
-                        currentArea += currentCell.area;
+                    currentArea += currentCell.area;
 
-                        foreach (var n in currentCell.neighbors.Where(n => unprocessedCells.ContainsKey(n)))
+                    foreach (var n in currentCell.neighbors.Where(unprocessedCells.ContainsKey))
                     {
                         // If cell is not found then it's not water cell. So ignore it.
                         if (cells.FirstOrDefault(m => m.id == n) is { } cell)
@@ -433,19 +432,19 @@ public static class MapManager
                 Height = Map.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:black", settings);
-
+            
             var drawables = new Drawables();
 
-            var waterPackCells = map.JsonMap.pack.cells.Where(n => n.biome != 0);
-            var waterGeoCells = map.GeoMap.features.Select(n => new
+            var landPackCells = map.JsonMap.pack.cells.Where(n => n.biome != 0);
+            var landGeoCells = map.GeoMap.features.Select(n => new
             {
                 Height = n.properties.height,
                 Id = n.properties.id,
                 C = n.geometry.coordinates
             }).ToDictionary(n => n.Id, n => n);
-            var cells = waterPackCells.Select(n =>
+            var cells = landPackCells.Select(n =>
             {
-                var c = waterGeoCells[n.i];
+                var c = landGeoCells[n.i];
                 return new
                 {
                     Cells = c.C,
@@ -475,8 +474,11 @@ public static class MapManager
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             await cellsMap.WriteAsync(path);
 
+            //using var file = await Image.LoadAsync(path);
+            //file.Mutate(n => n.GaussianBlur(15));
+            //file.Save(path);
             using var file = await Image.LoadAsync(path);
-            file.Mutate(n => n.GaussianBlur(15));
+            file.Mutate(n => n.GaussianBlur(6));
             file.Save(path);
 
         }
