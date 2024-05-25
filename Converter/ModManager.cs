@@ -93,8 +93,8 @@ supported_version=""1.12.4""";
 
         //await MapManager.DrawCells(map);
 
-        //await MapManager.DrawProvinces(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
+        await MapManager.DrawProvinces(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
 
@@ -174,7 +174,7 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
-        await PackedMapManager.WritePackedHeightUnoptimized(map);
+        await PackedMapManager.WritePackedHeightSimple(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Packed heightmap created.");
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
