@@ -1,3 +1,6 @@
+# 1.4.0
+- added writing packed_heightmap.
+
 # 1.3.0
 - added onlyCounts option.
 - improved input search.
