@@ -17,9 +17,9 @@ public static class PackedMapManager
 {
     private static readonly int[] detailSize = [31, 17, 9, 5, 3];
     private static readonly int[] averageSize = [1, 2, 4, 8, 16];
-    //private const int maxColumnN = 256;
-    private const int maxColumnN = 64;
-    private const int packedWidth = (int)(maxColumnN * 3) - 1;
+    private const int maxColumnN = 256;
+    //private const int maxColumnN = 64;
+    private const int packedWidth = (int)(maxColumnN * 9);
     private const int indirectionProportion = 32;
 
     private static Vector2[,] Gradient(byte[] values, int width, int height)
@@ -237,9 +237,9 @@ public static class PackedMapManager
             {
                  weightedDerivatives.Where(n => false).ToArray(),
                  weightedDerivatives.Where(n => false).ToArray(),
-                 weightedDerivatives.Where(n => false).ToArray(),
-                 weightedDerivatives.Where(n => false).ToArray(),
                  weightedDerivatives.Where(n => true).ToArray(),
+                 weightedDerivatives.Where(n => false).ToArray(),
+                 weightedDerivatives.Where(n => false).ToArray(),
              };
 
             var detailSamples = detail.Select((d, i) =>
@@ -247,7 +247,7 @@ public static class PackedMapManager
                     new Tile
                     {
                         values = GetPackedArea(pixels, Map.MapHeight - (int)n.coordinates.Y, (int)n.coordinates.X, i, Map.MapHeight, Map.MapWidth),
-                        i = (Map.MapHeight - (int)n.coordinates.Y) / indirectionProportion,
+                        i = (int)n.coordinates.Y / indirectionProportion,
                         j = (int)n.coordinates.X / indirectionProportion,
                     }).ToArray()
                 )
@@ -377,9 +377,17 @@ public static class PackedMapManager
 
                     isWhite = !isWhite;
 
-                    //var ihXY = d.Coordinates[ci] / indirectionProportion;
-                    //indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * (int)ihXY.Y + (int)ihXY.X] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
-                    indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * tile.i + tile.j] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
+                    try
+                    {
+                        //var ihXY = d.Coordinates[ci] / indirectionProportion;
+                        //indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * (int)ihXY.Y + (int)ihXY.X] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
+                        indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * tile.i + tile.j] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debugger.Break();
+                        throw;
+                    }
                 }
             }
         }
