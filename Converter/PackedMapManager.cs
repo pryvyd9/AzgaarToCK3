@@ -19,7 +19,7 @@ public static class PackedMapManager
     private static readonly int[] averageSize = [1, 2, 4, 8, 16];
     //private const int maxColumnN = 256;
     private const int maxColumnN = 64;
-    private const int packedWidth = maxColumnN * 5;
+    private const int packedWidth = (int)(maxColumnN * 3) - 1;
     private const int indirectionProportion = 32;
 
     private static Vector2[,] Gradient(byte[] values, int width, int height)
@@ -77,42 +77,6 @@ public static class PackedMapManager
         }
         return result;
     }
-    private static byte[,] GetArea(byte[] values, int x, int y, int xl, int yl, int width, int height)
-    {
-        byte[,] result = new byte[xl, yl];
-
-        // Packed heightmap duplicates end of one tile and start of the next tile.
-        // Only do it when it's not the first tile.
-        bool isFirstRow = y > 0;
-
-        for (int vi = y + yl - 1, j = 0; j < yl; vi--, j++)
-        {
-            bool isFirstColumn = x > 0;
-
-            for (int hi = x, i = 0; i < xl; hi++, i++)
-            {
-                try
-                {
-                    var viv = isFirstRow ? vi - 11 : vi;
-                    var hiv = isFirstColumn ? hi - 11 : hi;
-                    // currentI
-                    var ci = (height - viv - 1) * width + hiv;
-                    result[i, j] = values[ci];
-                }
-                catch (Exception e)
-                {
-                    Debugger.Break();
-                    throw;
-                }
-                isFirstColumn = false;
-            }
-            isFirstRow = false;
-        }
-        return result;
-    }
-
-
-
     private static float GetNonZeroP90Value(Vector2[,] values)
     {
         float[] fvs = new float[values.Length * 2];
@@ -135,80 +99,6 @@ public static class PackedMapManager
         var p = Helper.Percentile(nonZero, 0.9);
         return (float)p;
     }
-
-    //private static float GetMaxValue(Vector2[,] values)
-    //{
-    //    float max = 0;
-
-    //    for (int vi = 0; vi < values.GetLength(1); vi++)
-    //    {
-    //        for (int hi = 0; hi < values.GetLength(0); hi++)
-    //        {
-    //            if (values[hi, vi].X > max) max = values[hi, vi].X;
-    //            if (values[hi, vi].Y > max) max = values[hi, vi].Y;
-    //        }
-    //    }
-
-    //    return max;
-    //}
-    //private static float GetMaxValue(Vector2[,] values)
-    //{
-    //    float max = 0;
-
-    //    for (int vi = 0; vi < values.GetLength(1); vi++)
-    //    {
-    //        for (int hi = 0; hi < values.GetLength(0); hi++)
-    //        {
-    //            if (Math.Abs(values[hi, vi].X) > max) max = Math.Abs(values[hi, vi].X);
-    //            if (Math.Abs(values[hi, vi].Y) > max) max = Math.Abs(values[hi, vi].Y);
-    //        }
-    //    }
-
-    //    return max;
-    //}
-    //private static float GetAverageValue(Vector2[,] values)
-    //{
-    //    float sum = 0;
-    //    //float area = values.GetLength(1) * values.GetLength(0);
-
-    //    for (int vi = 0; vi < values.GetLength(1); vi++)
-    //    {
-    //        for (int hi = 0; hi < values.GetLength(0); hi++)
-    //        {
-    //            sum += Math.Abs(values[hi, vi].X) + Math.Abs(values[hi, vi].Y);
-    //        }
-    //    }
-
-    //    return sum;
-    //}
-
-    private static byte[,] GetPackedValues(byte[,] values, int horizontalSampleCount)
-    {
-        var samples = new byte[horizontalSampleCount, horizontalSampleCount];
-        var step = values.GetLength(0) / horizontalSampleCount;
-        for (int vi = 0, j = 0; j < horizontalSampleCount; vi += step, j++)
-        {
-            for (int hi = 0, i = 0; i < horizontalSampleCount; hi += step, i++)
-            {
-                samples[i, j] = values[hi, vi];
-            }
-        }
-        return samples;
-    }
-
-    private static byte GetAverage(byte[,] values)
-    {
-        double avg = 0;
-        var totalCount = values.LongLength;
-
-        foreach (var v in values)
-        {
-            avg += (double)v / totalCount;
-        }
-
-        return (byte) avg;
-    }
-
     // 31 isn't working yet
     private static byte[,] GetPackedArea(byte[] values, int tileI, int tileJ, int di, int height, int width)
     {
@@ -283,19 +173,27 @@ public static class PackedMapManager
     }
 
 
+    public class Tile
+    {
+        public byte[,] values;
+        public int i;
+        public int j;
+    }
+    public class Detail
+    {
+        //public byte[][][,] Rows;
+        public Tile[][] Rows;
+        public Vector2[] Coordinates;
+    }
     public class PackedHeightmap
     {
         public Detail[] Details;
         public int PixelHeight;
         public int MapWidth;
         public int MapHeight;
-        public int LineCount;
+        public int RowCount;
     }
-    public class Detail
-    {
-        public byte[][][,] Lines;
-        public Vector2[] Coordinates;
-    }
+  
     public static async Task<PackedHeightmap> CreatePackedHeightMap()
     {
         try
@@ -340,12 +238,20 @@ public static class PackedMapManager
                  weightedDerivatives.Where(n => false).ToArray(),
                  weightedDerivatives.Where(n => false).ToArray(),
                  weightedDerivatives.Where(n => false).ToArray(),
-                 weightedDerivatives.Where(n => true).ToArray(),
                  weightedDerivatives.Where(n => false).ToArray(),
+                 weightedDerivatives.Where(n => true).ToArray(),
              };
 
-            //var detailSamples = detail.Select((d, i) => d.Select(n => GetPackedValues(n.heightArea, detailSize[i])).ToArray()).ToArray();
-            var detailSamples = detail.Select((d, i) => d.Select(n => GetPackedArea(pixels, Map.MapHeight -  (int)n.coordinates.Y, (int)n.coordinates.X, i, Map.MapHeight, Map.MapWidth)).ToArray()).ToArray();
+            var detailSamples = detail.Select((d, i) =>
+                d.Select(n =>
+                    new Tile
+                    {
+                        values = GetPackedArea(pixels, Map.MapHeight - (int)n.coordinates.Y, (int)n.coordinates.X, i, Map.MapHeight, Map.MapWidth),
+                        i = (Map.MapHeight - (int)n.coordinates.Y) / indirectionProportion,
+                        j = (int)n.coordinates.X / indirectionProportion,
+                    }).ToArray()
+                )
+                .ToArray();
 
             var dPerLine = detailSize.Select(n => packedWidth / n is var dpl && dpl > maxColumnN ? maxColumnN : dpl).ToArray();
 
@@ -355,7 +261,7 @@ public static class PackedMapManager
 
             int? previousI = null;
 
-            int lineCount = 0;
+            int rowCount = 0;
 
             for (var i = 0; i < details.Length; i++)
             {
@@ -370,16 +276,16 @@ public static class PackedMapManager
                 // Largest detail has fewer checks
                 if (previousI == null)
                 {
-                    d.Lines = detailSamples[i].Chunk(dPerLine[i]).ToArray();
+                    d.Rows = detailSamples[i].Chunk(dPerLine[i]).ToArray();
                 }
                 else
                 {
-                    d.Lines = detailSamples[i].Chunk(dPerLine[i]).ToArray();
+                    d.Rows = detailSamples[i].Chunk(dPerLine[i]).ToArray();
 
                 }
 
-                packedHeightPixels += d.Lines.Length * detailSize[i];
-                lineCount += d.Lines.Length;
+                packedHeightPixels += d.Rows.Length * detailSize[i];
+                rowCount += d.Rows.Length;
 
                 if (detailSamples[i].Length != 0)
                 {
@@ -393,7 +299,7 @@ public static class PackedMapManager
                 PixelHeight = packedHeightPixels,
                 MapWidth = heightMap.Width,
                 MapHeight = heightMap.Height,
-                LineCount = lineCount,
+                RowCount = rowCount,
             };
         }
         catch (Exception e)
@@ -416,7 +322,7 @@ public static class PackedMapManager
         Rgba32[] indirection_heightmap_pixelArray = new Rgba32[heightmap.MapWidth / indirectionProportion * heightmap.MapHeight / indirectionProportion];
 
         int verticalOffset = 0;
-        int lineI = 0;
+        int rowI = 0;
 
         bool isWhite = false;
 
@@ -432,27 +338,27 @@ public static class PackedMapManager
             //byte ColI = 0;
             byte colI = 0;
 
-            for (int li = 0; li < d.Lines.Length; li++)
+            for (int li = 0; li < d.Rows.Length; li++)
             {
                 colI = 0;
-                var line = d.Lines[li];
+                var row = d.Rows[li];
                 if (li == 0)
                 {
                     levelOffsets[di] = verticalOffset;
                 }
                 verticalOffset += detailSize[di];
-                lineI++;
+                rowI++;
 
                 // tileI
-                for (int ti = 0; ti < line.Length; ti++, ci++, colI++)
+                for (int ti = 0; ti < row.Length; ti++, ci++, colI++)
                 {
-                    var sample = line[ti];
+                    var tile = row[ti];
 
                     for (int tx = 0; tx < detailSize[di]; tx++)
                     {
                         for (int ty = 0; ty < detailSize[di]; ty++)
                         {
-                            var c = sample[tx, ty];
+                            var c = tile.values[tx, ty];
                             var phColor = new MagickColor(c, c, c);
                             //phColor = isWhite ? new MagickColor(255, 255, 255) : new MagickColor(100, 100, 100);
                             phDrawables
@@ -464,15 +370,16 @@ public static class PackedMapManager
                     }
 
                     byte ihColumnIndex = (byte)(colI);
-                    byte ihLineIndex = (byte)(heightmap.LineCount - lineI);
+                    byte ihRowIndex = (byte)(heightmap.RowCount - rowI);
                     byte ihDetailSize = someNumbers[di];
                     byte ihDetailI = di;
-                    var ihColor = new MagickColor(ihColumnIndex, ihLineIndex, ihDetailSize, ihDetailI);
+                    var ihColor = new MagickColor(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
 
                     isWhite = !isWhite;
 
-                    var ihXY = d.Coordinates[ci] / indirectionProportion;
-                    indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * (int)ihXY.Y + (int)ihXY.X] = new Rgba32(ihColumnIndex, ihLineIndex, ihDetailSize, ihDetailI);
+                    //var ihXY = d.Coordinates[ci] / indirectionProportion;
+                    //indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * (int)ihXY.Y + (int)ihXY.X] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
+                    indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * tile.i + tile.j] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
                 }
             }
         }
@@ -525,12 +432,14 @@ empty_tile_offset={{ 255 127 }}
         await File.WriteAllTextAsync(hhPath, heightmap_heightmap);
     }
 }
+
 //public static class PackedMapManager
 //{
-//    private static readonly int[] detailSize = [31, 15, 9, 5, 3];
+//    private static readonly int[] detailSize = [31, 17, 9, 5, 3];
+//    private static readonly int[] averageSize = [1, 2, 4, 8, 16];
 //    //private const int maxColumnN = 256;
 //    private const int maxColumnN = 64;
-//    private const int packedWidth = maxColumnN * 5;
+//    private const int packedWidth = (int)(maxColumnN * 3) - 5;
 //    private const int indirectionProportion = 32;
 
 //    private static Vector2[,] Gradient(byte[] values, int width, int height)
@@ -553,7 +462,7 @@ empty_tile_offset={{ 255 127 }}
 //                    var v = values[ci] - values[up];
 //                    result[hi, vi] = new Vector2(h, v);
 //                }
-//                catch(Exception ex)
+//                catch (Exception ex)
 //                {
 //                    Debugger.Break();
 //                    throw;
@@ -707,17 +616,105 @@ empty_tile_offset={{ 255 127 }}
 //        return samples;
 //    }
 
+//    private static byte GetAverage(byte[,] values)
+//    {
+//        double avg = 0;
+//        var totalCount = values.LongLength;
+
+//        foreach (var v in values)
+//        {
+//            avg += (double)v / totalCount;
+//        }
+
+//        return (byte) avg;
+//    }
+
+//    // 31 isn't working yet
+//    private static byte[,] GetPackedArea(byte[] values, int tileI, int tileJ, int di, int height, int width)
+//    {
+//        try
+//        {
+//            var tileWidth = detailSize[di];
+//            var samples = new byte[tileWidth, tileWidth];
+
+//            var avgWidth = averageSize[di];
+//            var avgSize = avgWidth * avgWidth;
+
+//            //for (int ci = tileI - indirectionProportion, i = 0; i < tileWidth; i++, ci += avgWidth)
+//            for (int ci = tileI, i = 0; i < tileWidth; i++, ci += avgWidth)
+//                for (int cj = tileJ, j = 0; j < tileWidth; j++, cj += avgWidth)
+//                {
+//                    double avg = 0;
+//                    var avgHalfWidth = avgWidth / 2;
+//                    var denominator = avgSize;
+
+//                    int aiFrom = ci - avgHalfWidth;
+//                    int aiTo = ci + avgHalfWidth;
+//                    if (tileI == 0)
+//                    {
+//                        aiFrom = ci;
+//                        denominator /= 2;
+//                    }
+//                    else if (tileI == height - indirectionProportion)
+//                    {
+//                        aiTo = ci;
+//                        denominator /= 2;
+//                    }
+
+//                    int ajFrom = cj - avgHalfWidth;
+//                    int ajTo = cj + avgHalfWidth;
+//                    if (tileJ == 0)
+//                    {
+//                        ajFrom = cj;
+//                        denominator /= 2;
+//                    }
+//                    else if (tileJ == width - indirectionProportion)
+//                    {
+//                        ajTo = ci;
+//                        denominator /= 2;
+//                    }
+
+//                    for (int ai = aiFrom; ai < aiTo; ai++)
+//                    {
+//                        for (int aj = ajFrom; aj < ajTo; aj++)
+//                        {
+//                            try
+//                            {
+//                                avg += (double)values[width * ai + aj] / denominator;
+//                            }
+//                            catch (Exception e)
+//                            {
+//                                Debugger.Break();
+//                                throw;
+//                            }
+//                        }
+//                    }
+
+//                    // Transpose
+//                    samples[j, i] = (byte)avg;
+//                }
+
+//            return samples;
+//        }
+//        catch (Exception ex)
+//        {
+//            Debugger.Break();
+//            throw;
+//        }
+//    }
+
+
 //    public class PackedHeightmap
 //    {
 //        public Detail[] Details;
 //        public int PixelHeight;
 //        public int MapWidth;
 //        public int MapHeight;
-//        public int LineCount;
+//        public int RowCount;
 //    }
 //    public class Detail
 //    {
-//        public byte[][][,] Lines;
+//        public byte[][][,] Rows;
 //        public Vector2[] Coordinates;
 //    }
 //    public static async Task<PackedHeightmap> CreatePackedHeightMap()
@@ -744,12 +741,13 @@ empty_tile_offset={{ 255 127 }}
 //                for (int hi = 0; hi < secondDerivative.GetLength(0); hi += samplesPerTile)
 //                {
 //                    gradientAreas.Add(GetArea(secondDerivative, hi, vi, samplesPerTile, samplesPerTile));
-//                    heightAreas.Add(GetArea(pixels, hi, vi, samplesPerTile, samplesPerTile, heightMap.Width, heightMap.Height));
+//                    //heightAreas.Add(GetArea(pixels, hi, vi, samplesPerTile, samplesPerTile, heightMap.Width, heightMap.Height));
 //                    areaCoordinates.Add(new Vector2(hi, vi));
 //                }
 //            }
 
-//            var weightedDerivatives = gradientAreas.Select((n, i) => (i, heightArea: heightAreas[i], nonZeroP90: GetNonZeroP90Value(n), coordinates: areaCoordinates[i])).ToArray();
+//            //var weightedDerivatives = gradientAreas.Select((n, i) => (i, heightArea: heightAreas[i], nonZeroP90: GetNonZeroP90Value(n), coordinates: areaCoordinates[i])).ToArray();
+//            var weightedDerivatives = gradientAreas.Select((n, i) => (i, nonZeroP90: GetNonZeroP90Value(n), coordinates: areaCoordinates[i])).ToArray();
 //            //var detail = new[]
 //            //{
 //            //    weightedDerivatives.Where(n => n.nonZeroP90 >= 4).ToArray(),
@@ -763,11 +761,20 @@ empty_tile_offset={{ 255 127 }}
 //                 weightedDerivatives.Where(n => false).ToArray(),
 //                 weightedDerivatives.Where(n => false).ToArray(),
 //                 weightedDerivatives.Where(n => false).ToArray(),
-//                 weightedDerivatives.Where(n => true).ToArray(),
 //                 weightedDerivatives.Where(n => false).ToArray(),
+//                 weightedDerivatives.Where(n => true).ToArray(),
 //             };
 
-//            var detailSamples = detail.Select((d, i) => d.Select(n => GetPackedValues(n.heightArea, detailSize[i])).ToArray()).ToArray();
+//            //var detailSamples = detail.Select((d, i) => d.Select(n => GetPackedValues(n.heightArea, detailSize[i])).ToArray()).ToArray();
+//            //var detailSamples = detail.Select((d, i) => d.Select(n => GetPackedArea(pixels, Map.MapHeight -  (int)n.coordinates.Y, (int)n.coordinates.X, i, Map.MapHeight, Map.MapWidth)).ToArray()).ToArray();
+//            var detailSamples = detail.Select((d, i) => 
+//                d.Select(n => 
+//                    //GetPackedArea(pixels, Map.MapHeight -  (int)n.coordinates.Y, (int)n.coordinates.X, i, Map.MapHeight, Map.MapWidth))
+//                    GetPackedArea(pixels, (int)n.coordinates.Y, (int)n.coordinates.X, i, Map.MapHeight, Map.MapWidth))
+//                    .Reverse()
+//                    .ToArray()
+//                )
+//                .ToArray();
 
 //            var dPerLine = detailSize.Select(n => packedWidth / n is var dpl && dpl > maxColumnN ? maxColumnN : dpl).ToArray();
 
@@ -792,16 +799,16 @@ empty_tile_offset={{ 255 127 }}
 //                // Largest detail has fewer checks
 //                if (previousI == null)
 //                {
-//                    d.Lines = detailSamples[i].Chunk(dPerLine[i]).ToArray();
+//                    d.Rows = detailSamples[i].Chunk(dPerLine[i]).ToArray();
 //                }
 //                else
 //                {
-//                    d.Lines = detailSamples[i].Chunk(dPerLine[i]).ToArray();
+//                    d.Rows = detailSamples[i].Chunk(dPerLine[i]).ToArray();
 
 //                }
 
-//                packedHeightPixels += d.Lines.Length * detailSize[i];
-//                lineCount += d.Lines.Length;
+//                packedHeightPixels += d.Rows.Length * detailSize[i];
+//                lineCount += d.Rows.Length;
 
 //                if (detailSamples[i].Length != 0)
 //                {
@@ -815,7 +822,7 @@ empty_tile_offset={{ 255 127 }}
 //                PixelHeight = packedHeightPixels,
 //                MapWidth = heightMap.Width,
 //                MapHeight = heightMap.Height,
-//                LineCount = lineCount,
+//                RowCount = lineCount,
 //            };
 //        }
 //        catch (Exception e)
@@ -838,7 +845,7 @@ empty_tile_offset={{ 255 127 }}
 //        Rgba32[] indirection_heightmap_pixelArray = new Rgba32[heightmap.MapWidth / indirectionProportion * heightmap.MapHeight / indirectionProportion];
 
 //        int verticalOffset = 0;
-//        int lineI = 0;
+//        int rowI = 0;
 
 //        bool isWhite = false;
 
@@ -854,21 +861,21 @@ empty_tile_offset={{ 255 127 }}
 //            //byte ColI = 0;
 //            byte colI = 0;
 
-//            for (int li = 0; li < d.Lines.Length; li++)
+//            for (int li = 0; li < d.Rows.Length; li++)
 //            {
 //                colI = 0;
-//                var line = d.Lines[li];
+//                var row = d.Rows[li];
 //                if (li == 0)
 //                {
 //                    levelOffsets[di] = verticalOffset;
 //                }
 //                verticalOffset += detailSize[di];
-//                lineI++;
+//                rowI++;
 
 //                // tileI
-//                for (int ti = 0; ti < line.Length; ti++, ci++, colI++)
+//                for (int ti = 0; ti < row.Length; ti++, ci++, colI++)
 //                {
-//                    var sample = line[ti];
+//                    var sample = row[ti];
 
 //                    for (int tx = 0; tx < detailSize[di]; tx++)
 //                    {
@@ -885,16 +892,16 @@ empty_tile_offset={{ 255 127 }}
 //                        }
 //                    }
 
-//                    byte ihColumnIndex = (byte)(colI);
-//                    byte ihLineIndex = (byte)(heightmap.LineCount - lineI);
+//                    byte ihColumnIndex = (byte)(row.Length - colI);
+//                    byte ihRowIndex = (byte)(heightmap.RowCount - rowI);
 //                    byte ihDetailSize = someNumbers[di];
 //                    byte ihDetailI = di;
-//                    var ihColor = new MagickColor(ihColumnIndex, ihLineIndex, ihDetailSize, ihDetailI);
+//                    var ihColor = new MagickColor(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
 
 //                    isWhite = !isWhite;
 
 //                    var ihXY = d.Coordinates[ci] / indirectionProportion;
-//                    indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * (int)ihXY.Y + (int)ihXY.X] = new Rgba32(ihColumnIndex, ihLineIndex, ihDetailSize, ihDetailI);
+//                    indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * (int)ihXY.Y + (int)ihXY.X] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
 //                }
 //            }
 //        }
@@ -947,6 +954,7 @@ empty_tile_offset={{ 255 127 }}
 //        await File.WriteAllTextAsync(hhPath, heightmap_heightmap);
 //    }
 //}
+
 
 
 //public static class PackedMapManager
