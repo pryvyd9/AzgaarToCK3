@@ -18,7 +18,7 @@ public partial class JsonMapJsonContext : JsonSerializerContext {}
 
 public static class MapManager
 {
-    private const int WaterLevelHeight = 20;
+    private const int WaterLevelHeight = 30;
 
 
  

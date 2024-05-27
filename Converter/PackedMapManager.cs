@@ -16,7 +16,8 @@ namespace Converter;
 public static class PackedMapManager
 {
     private static readonly int[] detailSize = [31, 17, 9, 5, 3];
-    private static readonly int[] averageSize = [1, 2, 4, 8, 16];
+    // Width of average sampling for height. For detail size 9 averages of 4x4 squares are taken for every pixel in a tile.
+    private static readonly byte[] averageSize = [1, 2, 4, 8, 16];
     private const int maxColumnN = 256;
     //private const int maxColumnN = 64;
     private const int packedWidth = (int)(maxColumnN * 9);
@@ -310,8 +311,6 @@ public static class PackedMapManager
     }
     public static async Task WritePackedHeightMap(PackedHeightmap heightmap)
     {
-        byte[] someNumbers = [1, 2, 4, 8, 16];
-
         using var packed_heightmap = new MagickImage("xc:black", new MagickReadSettings()
         {
             Width = packedWidth,
@@ -319,7 +318,9 @@ public static class PackedMapManager
         });
         var phDrawables = new Drawables();
 
-        Rgba32[] indirection_heightmap_pixelArray = new Rgba32[heightmap.MapWidth / indirectionProportion * heightmap.MapHeight / indirectionProportion];
+        var horizontalTiles = heightmap.MapWidth / indirectionProportion;
+        var verticalTiles = heightmap.MapHeight / indirectionProportion;
+        Rgba32[] indirection_heightmap_pixels = new Rgba32[horizontalTiles * verticalTiles];
 
         int verticalOffset = 0;
         int rowI = 0;
@@ -333,14 +334,11 @@ public static class PackedMapManager
             var d = heightmap.Details[di];
             if (d is null) continue;
 
-            // coordinatesI
-            int ci = 0;
-            //byte ColI = 0;
-            byte colI = 0;
+            var detailColCount = packedWidth < maxColumnN * detailSize[di] ? packedWidth / detailSize[di] : detailSize[di];
 
             for (int li = 0; li < d.Rows.Length; li++)
             {
-                colI = 0;
+                byte colI = 0;
                 var row = d.Rows[li];
                 if (li == 0)
                 {
@@ -350,7 +348,7 @@ public static class PackedMapManager
                 rowI++;
 
                 // tileI
-                for (int ti = 0; ti < row.Length; ti++, ci++, colI++)
+                for (int ti = 0; ti < row.Length; ti++, colI++)
                 {
                     var tile = row[ti];
 
@@ -369,11 +367,33 @@ public static class PackedMapManager
                         }
                     }
 
-                    byte ihColumnIndex = (byte)(colI);
+                    byte ihColumnIndex = colI;
+                    //byte ihColumnIndex = (byte)(row.Length - (row.Length - colI));
+                    //byte ihColumnIndex = (byte)(horizontalTiles - (row.Length - colI));
+                    //byte ihColumnIndex = (byte)(colI - (horizontalTiles - row.Length) * rowI * 2);
+                    //byte ihColumnIndex = (byte)(colI - (horizontalTiles - detailColCount) * rowI * 2);
+                    //byte ihColumnIndex = (byte)(colI - (horizontalTiles - detailColCount) * rowI * 2 + heightmap.RowCount);
+                    //int ihi = colI - (horizontalTiles - detailColCount) * rowI * 2 + heightmap.RowCount;
+                    //int ihi = colI - (horizontalTiles - detailColCount) * rowI * 2;
+                    //if (ihi >= detailColCount)
+                    //{
+                    //    // make sure on byte overflow the value isn't greater than max index for that detail.
+                    //    ihi -= horizontalTiles - detailColCount;
+                    //}
+                    //if (ihi < 0)
+                    //{
+                    //    // make sure on byte overflow the value isn't greater than max index for that detail.
+                    //    ihi += horizontalTiles - detailColCount;
+                    //}
+                    //byte ihColumnIndex = (byte)ihi;
+                    if (ihColumnIndex == 255)
+                    {
+
+                    }
+
                     byte ihRowIndex = (byte)(heightmap.RowCount - rowI);
-                    byte ihDetailSize = someNumbers[di];
+                    byte ihDetailSize = averageSize[di];
                     byte ihDetailI = di;
-                    var ihColor = new MagickColor(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
 
                     isWhite = !isWhite;
 
@@ -381,7 +401,7 @@ public static class PackedMapManager
                     {
                         //var ihXY = d.Coordinates[ci] / indirectionProportion;
                         //indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * (int)ihXY.Y + (int)ihXY.X] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
-                        indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * tile.i + tile.j] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
+                        indirection_heightmap_pixels[horizontalTiles * tile.i + tile.j] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
                     }
                     catch (Exception ex)
                     {
@@ -397,7 +417,7 @@ public static class PackedMapManager
         Directory.CreateDirectory(Path.GetDirectoryName(phPath));
         await packed_heightmap.WriteAsync(phPath);
 
-        using var indirection_heightmap2 = Image.LoadPixelData<Rgba32>(indirection_heightmap_pixelArray, heightmap.MapWidth / indirectionProportion, heightmap.MapHeight / indirectionProportion);
+        using var indirection_heightmap2 = Image.LoadPixelData<Rgba32>(indirection_heightmap_pixels, horizontalTiles, verticalTiles);
         var ihPath = Helper.GetPath(Settings.OutputDirectory, "map_data", "indirection_heightmap.png");
         Directory.CreateDirectory(Path.GetDirectoryName(ihPath));
         indirection_heightmap2.Save(ihPath);
