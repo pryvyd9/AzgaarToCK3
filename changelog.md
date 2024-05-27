@@ -1,3 +1,6 @@
+# 1.4.1
+- fixed tile borders
+
 # 1.4.0
 - added writing packed_heightmap.
 
