@@ -86,7 +86,7 @@ supported_version=""1.12.4""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 23;
+        int totalStageCount = 24;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -98,10 +98,13 @@ supported_version=""1.12.4""";
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
 
-        //var packedHeightmap = await PackedMapManager.CreatePackedHeightMap(map);
-        //await PackedMapManager.WritePackedHeightMap(packedHeightmap);
+        await MapManager.WriteGraphics();
+        Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
+        await MapManager.WriteDefines();
+        Console.WriteLine($"{i++}/{totalStageCount}. Defines file created.");
 
-        await PackedMapManager.WritePackedHeightSimple(map);
+        var packedHeightmap = await PackedMapManager.CreatePackedHeightMap();
+        await PackedMapManager.WritePackedHeightMap(packedHeightmap);
         Console.WriteLine($"{i++}/{totalStageCount}. Packed heightmap created.");
 
         await MapManager.DrawRivers(map);
@@ -154,16 +157,13 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Terrain created.");
         await MapManager.WriteMasks(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Masks created.");
-
-        await MapManager.WriteGraphics();
-        Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
     }
 #endif
 #if RELEASE || PUBLISH
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 23;
+        int totalStageCount = 24;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -174,8 +174,16 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
-        await PackedMapManager.WritePackedHeightSimple(map);
+
+        await MapManager.WriteGraphics();
+        Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
+        await MapManager.WriteDefines();
+        Console.WriteLine($"{i++}/{totalStageCount}. Defines file created.");
+
+        var packedHeightmap = await PackedMapManager.CreatePackedHeightMap();
+        await PackedMapManager.WritePackedHeightMap(packedHeightmap);
         Console.WriteLine($"{i++}/{totalStageCount}. Packed heightmap created.");
+
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
         await MapManager.WriteDefinition(map);
@@ -226,9 +234,6 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Terrain created.");
         await MapManager.WriteMasks(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Masks created.");
-
-        await MapManager.WriteGraphics();
-        Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
     }
 #endif
 }
