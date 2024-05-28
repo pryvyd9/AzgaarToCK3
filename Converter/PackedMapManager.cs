@@ -18,9 +18,8 @@ public static class PackedMapManager
     private static readonly int[] detailSize = [31, 17, 9, 5, 3];
     // Width of average sampling for height. For detail size 9 averages of 4x4 squares are taken for every pixel in a tile.
     private static readonly byte[] averageSize = [1, 2, 4, 8, 16];
-    private const int maxColumnN = 256;
-    //private const int maxColumnN = 64;
-    private const int packedWidth = (int)(maxColumnN * 9);
+    private const int maxColumnN = Map.MapWidth / indirectionProportion;
+    private const int packedWidth = (int)(maxColumnN * 3) - 5;
     private const int indirectionProportion = 32;
 
     private static Vector2[,] Gradient(byte[] values, int width, int height)
@@ -238,9 +237,9 @@ public static class PackedMapManager
             {
                  weightedDerivatives.Where(n => false).ToArray(),
                  weightedDerivatives.Where(n => false).ToArray(),
+                 weightedDerivatives.Where(n => false).ToArray(),
+                 weightedDerivatives.Where(n => false).ToArray(),
                  weightedDerivatives.Where(n => true).ToArray(),
-                 weightedDerivatives.Where(n => false).ToArray(),
-                 weightedDerivatives.Where(n => false).ToArray(),
              };
 
             var detailSamples = detail.Select((d, i) =>
@@ -251,8 +250,7 @@ public static class PackedMapManager
                         i = (int)n.coordinates.Y / indirectionProportion,
                         j = (int)n.coordinates.X / indirectionProportion,
                     }).ToArray()
-                )
-                .ToArray();
+                ).ToArray();
 
             var dPerLine = detailSize.Select(n => packedWidth / n is var dpl && dpl > maxColumnN ? maxColumnN : dpl).ToArray();
 
@@ -334,9 +332,9 @@ public static class PackedMapManager
             var d = heightmap.Details[di];
             if (d is null) continue;
 
-            var detailColCount = packedWidth < maxColumnN * detailSize[di] ? packedWidth / detailSize[di] : detailSize[di];
+            var detailColCount = packedWidth < maxColumnN * detailSize[di] ? packedWidth / detailSize[di] : maxColumnN;
 
-            for (int li = 0; li < d.Rows.Length; li++)
+            for (int li = 0; li < d.Rows.Length; li++, rowI++)
             {
                 byte colI = 0;
                 var row = d.Rows[li];
@@ -345,7 +343,7 @@ public static class PackedMapManager
                     levelOffsets[di] = verticalOffset;
                 }
                 verticalOffset += detailSize[di];
-                rowI++;
+                //rowI++;
 
                 // tileI
                 for (int ti = 0; ti < row.Length; ti++, colI++)
@@ -368,30 +366,7 @@ public static class PackedMapManager
                     }
 
                     byte ihColumnIndex = colI;
-                    //byte ihColumnIndex = (byte)(row.Length - (row.Length - colI));
-                    //byte ihColumnIndex = (byte)(horizontalTiles - (row.Length - colI));
-                    //byte ihColumnIndex = (byte)(colI - (horizontalTiles - row.Length) * rowI * 2);
-                    //byte ihColumnIndex = (byte)(colI - (horizontalTiles - detailColCount) * rowI * 2);
-                    //byte ihColumnIndex = (byte)(colI - (horizontalTiles - detailColCount) * rowI * 2 + heightmap.RowCount);
-                    //int ihi = colI - (horizontalTiles - detailColCount) * rowI * 2 + heightmap.RowCount;
-                    //int ihi = colI - (horizontalTiles - detailColCount) * rowI * 2;
-                    //if (ihi >= detailColCount)
-                    //{
-                    //    // make sure on byte overflow the value isn't greater than max index for that detail.
-                    //    ihi -= horizontalTiles - detailColCount;
-                    //}
-                    //if (ihi < 0)
-                    //{
-                    //    // make sure on byte overflow the value isn't greater than max index for that detail.
-                    //    ihi += horizontalTiles - detailColCount;
-                    //}
-                    //byte ihColumnIndex = (byte)ihi;
-                    if (ihColumnIndex == 255)
-                    {
-
-                    }
-
-                    byte ihRowIndex = (byte)(heightmap.RowCount - rowI);
+                    byte ihRowIndex = (byte)rowI;
                     byte ihDetailSize = averageSize[di];
                     byte ihDetailI = di;
 
@@ -399,9 +374,7 @@ public static class PackedMapManager
 
                     try
                     {
-                        //var ihXY = d.Coordinates[ci] / indirectionProportion;
-                        //indirection_heightmap_pixelArray[(heightmap.MapWidth / indirectionProportion) * (int)ihXY.Y + (int)ihXY.X] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
-                        indirection_heightmap_pixels[horizontalTiles * tile.i + tile.j] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
+                        indirection_heightmap_pixels[horizontalTiles * (verticalTiles - tile.i - 1) + tile.j] = new Rgba32(ihColumnIndex, ihRowIndex, ihDetailSize, ihDetailI);
                     }
                     catch (Exception ex)
                     {
