@@ -10,18 +10,18 @@ namespace Converter;
 
 // These are needed for AOT compilation.
 [JsonSerializable(typeof(GeoMap))]
-public partial class GeoMapJsonContext : JsonSerializerContext {}
+public partial class GeoMapJsonContext : JsonSerializerContext { }
 
 [JsonSerializable(typeof(PackProvince))]
 [JsonSerializable(typeof(JsonMap))]
-public partial class JsonMapJsonContext : JsonSerializerContext {}
+public partial class JsonMapJsonContext : JsonSerializerContext { }
 
 public static class MapManager
 {
     private const int WaterLevelHeight = 30;
 
 
- 
+
     public static async Task<GeoMap> LoadGeojson()
     {
         try
@@ -105,7 +105,8 @@ public static class MapManager
                     feature.properties.culture,
                     feature.properties.religion,
                     jsonmap.pack.cells[feature.properties.id].area,
-                    jsonmap.pack.cells[feature.properties.id].biome));
+                    jsonmap.pack.cells[feature.properties.id].biome)
+                { Province = provinces[provinceId] });
             provinces[provinceId].Cells.AddRange(cells);
         }
 
@@ -333,7 +334,7 @@ public static class MapManager
         var rnd = new Random(1);
         var nameBase = jsonMap.nameBases[rnd.Next(jsonMap.nameBases.Length)];
         var nameBaseNames = nameBase.b.Split(',')
-            .Select(n => 
+            .Select(n =>
             {
                 var id = n.Replace("'", "").Replace(' ', '_').ToLowerInvariant();
                 return new NameBaseName(id, n);
@@ -386,7 +387,7 @@ public static class MapManager
             throw;
         }
     }
- 
+
     public static async Task DrawProvinces(Map map)
     {
         try
@@ -407,7 +408,7 @@ public static class MapManager
                         .DisableStrokeAntialias()
                         .StrokeColor(province.Color)
                         .FillColor(province.Color)
-                        .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, Map.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+                        .Polygon(cell.geoDataCoordinates.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, Map.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
                 }
             }
 
@@ -432,7 +433,7 @@ public static class MapManager
                 Height = Map.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:black", settings);
-            
+
             var drawables = new Drawables();
 
             var landPackCells = map.JsonMap.pack.cells.Where(n => n.biome != 0);
@@ -487,6 +488,7 @@ public static class MapManager
 
     public static async Task DrawRivers(Map map)
     {
+        throw new NotImplementedException();
         try
         {
             var settings = new MagickReadSettings()
@@ -506,7 +508,7 @@ public static class MapManager
                         .DisableStrokeAntialias()
                         .StrokeColor(MagickColors.White)
                         .FillColor(MagickColors.White)
-                        .Polygon(cell.cells.Select(n => GeoToPixel(n[0], n[1], map)));
+                        .Polygon(cell.geoDataCoordinates.Select(n => GeoToPixel(n[0], n[1], map)));
                 }
             }
 
@@ -689,11 +691,11 @@ $@"game_object_locator={{
             var p = new PointD();
             if (n.Burg is null)
             {
-                var maxLon = n.Cells.SelectMany(n => n.cells).MaxBy(n => n[0])[0];
-                var minLon = n.Cells.SelectMany(n => n.cells).MinBy(n => n[0])[0];
+                var maxLon = n.Cells.SelectMany(n => n.geoDataCoordinates).MaxBy(n => n[0])[0];
+                var minLon = n.Cells.SelectMany(n => n.geoDataCoordinates).MinBy(n => n[0])[0];
 
-                var maxLat = n.Cells.SelectMany(n => n.cells).MaxBy(n => n[1])[1];
-                var minLat = n.Cells.SelectMany(n => n.cells).MinBy(n => n[1])[1];
+                var maxLat = n.Cells.SelectMany(n => n.geoDataCoordinates).MaxBy(n => n[1])[1];
+                var minLat = n.Cells.SelectMany(n => n.geoDataCoordinates).MinBy(n => n[1])[1];
 
                 p = GeoToPixelCrutch((maxLon + minLon) / 2, (maxLat + minLat) / 2, map);
             }
@@ -840,7 +842,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             using var cellsMap = new MagickImage(Helper.GetPath(SettingsManager.ExecutablePath, "template_mask.png"));
 
             var drawables = new Drawables();
-            foreach (var cell in cells.Select(n => n.cells))
+            foreach (var cell in cells.Select(n => n.geoDataCoordinates))
             {
                 drawables
                     .DisableStrokeAntialias()
@@ -967,7 +969,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             .SelectMany(n => n.duchies)
             .SelectMany(n => n.counties)
             .SelectMany(n => n.baronies)
-            .ToDictionary(n => n.id, n => n.province.Cells.Select(m => m.culture).Max());
+            .ToDictionary(n => n.id, n => n.GetProvince().Cells.Select(m => m.culture).Max());
 
         var totalCultures = map.JsonMap.pack.cultures.Length;
         if (totalCultures > originalCultureNames.Length)
@@ -1009,7 +1011,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             .SelectMany(n => n.duchies)
             .SelectMany(n => n.counties)
             .SelectMany(n => n.baronies)
-            .ToDictionary(n => n.id, n => n.province.Cells.Select(m => m.religion).Max());
+            .ToDictionary(n => n.id, n => n.GetProvince().Cells.Select(m => m.religion).Max());
 
         var totalReligions = map.JsonMap.pack.religions.Length;
         if (totalReligions > originalReligionNames.Length)
@@ -1087,7 +1089,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     .SelectMany(n => n.baronies)
                     .Select(n =>
                     {
-                        var str = $@"{map.IdToIndex[n.province.Id]} = {{
+                        var str = $@"{map.IdToIndex[n.GetProvince().Id]} = {{
     culture = {n.Culture}
     religion = {n.Religion}
     holding = auto
@@ -1165,5 +1167,159 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "religion", "holy_sites", "00_holy_sites.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, file);
+    }
+
+
+
+    internal static async Task LemurAlgorithm(Map map)
+    {
+        map.Burgs = RepackBurgsAsDictionary(map);
+        map.Cells = RepackCellsAsDictionary(map);
+        map.Burgs = AddBurgCellReference(map.Burgs, map.Cells);
+        map.Baronies = GenerateBaronies(map.Burgs);
+
+  
+
+        //TODO: make barony generation that does not repect province borders, but does repesct culture.
+
+        //Now we need to assign the countryside cells to the baronies
+        // We'll do this by assigning the cells to the barony that is closest to the cell, while still being inside the same province
+
+        // Since we want to repect province borders we'll start by creating a list of all the cells in each province
+        //We do this by province, so lets make a foor lop that will go through each province
+        foreach (var province in map.Provinces.Skip(1)) // Skip the first province since it is always empty (See Azgaar data model)
+        {
+            if (province.IsWater)
+            {
+                continue;
+            }
+            // We'll start by getting all the baronies in the province
+
+            var baroniesInProvince = map.Baronies.Where(b => b.GetProvince() == province).ToList();
+            if(baroniesInProvince.Count == 0)
+            {
+                Console.WriteLine($"No baronies in {province.Name}");
+                continue;
+            }
+
+            //Sort them on population size decending baroniesInProvince[0].Burg.population
+            baroniesInProvince.Sort((a, b) => b.Burg.Population.CompareTo(a.Burg.Population));
+
+            // Now get all cells in the province that are not already assigned to a burg (country side cells)
+            var CountrysideCells = province.Cells.Where(c => !c.hasBurg).ToDictionary(c => c.id, c => c);
+
+            // Have each barony grow outwards until all countryside cells are assigned among the burgs based on distance
+            while (CountrysideCells.Count > 0)
+            {
+                foreach (Barony barony in baroniesInProvince)
+                {
+                    //Look at it's assigned cells
+                    // And generate a list of neighbouring cells from the list of countryside cells
+                    var neighbors = barony.Cells.SelectMany(c => c.neighbors).Where(c => CountrysideCells.ContainsKey(c)).Select(c => CountrysideCells[c]).ToList();
+                    if (neighbors.Count == 0)
+                    {
+                        continue;
+                    }
+                    
+                    //Then sort them by distance to the burg
+                    neighbors.Sort((a, b) => a.DistanceSquared(barony.Burg.Cell).CompareTo(b.DistanceSquared(barony.Burg.Cell)));
+                    //Then assign the closest cell to the burg
+                    barony.Cells.Add(neighbors[0]);
+                    //And remove it from the list of countryside cells
+                    CountrysideCells.Remove(neighbors[0].id);
+                }
+            }
+
+        }
+
+        //print the baronies
+        foreach (var barony in map.Baronies)
+        {
+            Console.WriteLine($"{barony.Name}[{barony.id}] has {barony.Cells.Count} cells");
+        }
+
+
+        // Exit the program
+        Environment.Exit(0);
+
+
+
+    }
+
+    private static Dictionary<int, ConverterBurg> AddBurgCellReference(Dictionary<int, ConverterBurg> burgs, Dictionary<int, Cell> cells)
+    {
+        //For each burg (skip 0'eth) find the cell it is referenceing by cell id and assign it to the burg
+        foreach (var burg in burgs.Skip(1))
+        {
+            burg.Value.Cell = cells[burg.Value.azgaarBurg.cell];
+        }
+
+        return burgs;
+    }
+
+    /// <summary>
+    /// Generate a list of baronies with the bare minimum of information
+    /// </summary>
+    /// <param name="burgs">Burgs to base the baronies on</param>
+    /// <returns>A list of baronies</returns>
+    private static List<Barony> GenerateBaronies(Dictionary<int, ConverterBurg> burgs)
+    {
+        // Next we instanciate a list of baronies. Since we know the final size of the list we can set the capacity to the number of burgs
+        List<Barony> baronies = new(burgs.Count - 1);
+        foreach (var burg in burgs.Skip(1)) //0'eth entry is always empty (See Azgaar data model)
+        {
+            baronies.Add(new Barony(burg.Value));
+        }
+
+        return baronies;
+    }
+
+    private static Dictionary<int, ConverterBurg> RepackBurgsAsDictionary(Map map)
+    {
+        // Repack the burgs as a dictionary with the burg.id as the key for easy lookup
+        return map.JsonMap.pack.burgs.ToDictionary(
+            burg => burg.i, 
+            burg => new ConverterBurg(burg));
+    }
+
+    private static Dictionary<int, Cell> RepackCellsAsDictionary(Map map)
+    {
+        // We use a dictionary because then it is easy to look up a cell by its id, which is what we'll most likley need to do most of the time.
+        var Cells = map.Provinces
+            .SelectMany(n => n.Cells) // Flatten the list
+            .Distinct(new CellComparer()) // Remove duplicates
+            .ToDictionary(c => c.id); // Convert to dictionary with cell id as the key
+
+        // Mark all the cells that have a burg
+        Console.WriteLine("Marking cells with burgs");
+        var i = 0;
+        foreach (var burg in map.JsonMap.pack.burgs)
+        {
+            Console.WriteLine($"Burg {i++}/{map.JsonMap.pack.burgs.Length}");
+            Cells[burg.cell].Burg = burg;
+        }
+        return Cells;
+    }
+
+    class CellComparer : IEqualityComparer<Cell>
+    {
+        public bool Equals(Cell x, Cell y)
+        {
+            if (Object.ReferenceEquals(x, y)) return true;
+
+            if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
+                return false;
+
+            // Compare whether the IDs are equal
+            return x.id == y.id;
+        }
+
+        public int GetHashCode(Cell cell)
+        {
+            if (Object.ReferenceEquals(cell, null)) return 0;
+
+            // Use ID hash code for the hash code
+            return cell.id.GetHashCode();
+        }
     }
 }

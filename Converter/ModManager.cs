@@ -134,6 +134,8 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
 
         //await MapManager.DrawCells(map);
+        await MapManager.LemurAlgorithm(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Lemur algorithm applied.");
 
         //await MapManager.DrawProvinces(map);
         //Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
@@ -142,14 +144,6 @@ supported_version=""1.12.4""";
 
         var packedHeightmap = await PackedMapManager.CreatePackedHeightMap(map);
         await PackedMapManager.WritePackedHeightMap(packedHeightmap);
-
-        var cells = map.Provinces.Select(n => n.Cells);
-        var baronyCells = map.Empires
-            .SelectMany(n => n.kingdoms)
-            .SelectMany(n => n.duchies)
-            .SelectMany(n => n.counties)
-            .SelectMany(n => n.baronies)
-            .Select(n => n.province);
 
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
