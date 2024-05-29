@@ -51,9 +51,9 @@ Supported game version: `1.12.5`
 ### Optional steps
 Do them if there are issues with holding/unit placement or terrain looks weird. Or it crashes.
 
-6. Go to properties of CK3 in Steam and add `-mapeditor` parameter
-7. Launch the game making sure the newly created mod is added to the playset and enabled
-8. Map Editing:
+7. Go to properties of CK3 in Steam and add `-mapeditor` parameter
+8. Launch the game making sure the newly created mod is added to the playset and enabled
+9. Map Editing:
     1. Repack heightmap
 		![screenshot](docs/Screenshot_2024-05-08_214628.png)
 	2. Go to Map Objects Editor. Click on any territory in the list and select all with Ctrl+A hotkey
@@ -69,7 +69,7 @@ Do them if there are issues with holding/unit placement or terrain looks weird. 
 	7. Make any other changes in map editor.
 	8. Save all and exit (Alt+F4 if it restarts the game instead of exit)
 	    ![screenshot](docs/Screenshot_2024-05-08_220216.png)
-9. Remove -mapeditor launch option and run the game
+10. Remove -mapeditor launch option and run the game
 
 ## More Usage
 - You can delete the `settings.json` to reconfigure everything or edit `settings.json` to suit your needs.
