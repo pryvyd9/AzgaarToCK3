@@ -1,5 +1,8 @@
+# 1.4.2
+- all detail tiles available.
+
 # 1.4.1
-- fixed tile borders
+- fixed tile borders.
 
 # 1.4.0
 - added writing packed_heightmap.
