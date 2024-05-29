@@ -48,7 +48,7 @@ Supported game version: `1.12.5`
 5. Follow the instructions
 6. Go to properties of CK3 in Steam and add `-mapeditor` parameter
 7. Launch the game making sure the newly created mod is added to the playset and enabled
-8. Map Editing:
+8. Map Editing (Optional. Do it if there are some issues with holding placement or terrain looks weird):
     1. Repack heightmap
 		![screenshot](docs/Screenshot_2024-05-08_214628.png)
 	2. Go to Map Objects Editor. Click on any territory in the list and select all with Ctrl+A hotkey
