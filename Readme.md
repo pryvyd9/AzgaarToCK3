@@ -46,7 +46,7 @@ Supported game version: `1.12.5`
 3. Place these files in the extracted folder
 4. Run `ConsoleUI` file
 5. Follow the instructions
-6. Run the game
+6. Launch the game making sure the newly created mod is added to the playset and enabled
 
 ### Optional steps
 Do them if there are issues with holding/unit placement or terrain looks weird. Or it crashes.
