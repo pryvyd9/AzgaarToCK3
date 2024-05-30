@@ -244,8 +244,7 @@ public class Barony : ICultureReligionHolder, ITitle
         Religion = foundationBurg.Culture.ToString();
 
         Cells = new List<Cell> { foundationBurg.Cell };
-        
-        
+         
     }
 
 }

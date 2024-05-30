@@ -65,9 +65,24 @@ public static class MapManager
         }
 
     }
-
+    /// <summary>
+    /// Generate a unique color for i along the range of 0 to maxI.
+    /// </summary>
+    /// <param name="i"> Must be less than maxI</param>
+    /// <param name="maxI"></param>
+    /// <returns></returns>
+    /// <exception cref="FormatException"></exception>
     private static MagickColor GetColor(int i, int maxI)
     {
+        if (maxI >= 16777216){
+            throw new FormatException("MaxI is too big. MaxI must be less than 16777216, to ensure that the color is unique for each i");
+        }
+        if (i < 0 || i >= maxI)
+        {
+            throw new FormatException("i must be between 0 and maxI");
+        }
+
+
         // max 24bit color
         const int maxColor = 256 * 256 * 256;
         var color = maxColor / maxI * i;
@@ -1177,17 +1192,70 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         map.Cells = RepackCellsAsDictionary(map);
         map.Burgs = AddBurgCellReference(map.Burgs, map.Cells);
         map.Baronies = GenerateBaronies(map.Burgs);
+        AssignCellsToBaronies(map);
+        
 
-  
+// Assigning colurs:
+// Each barony must get a unique colour
+//And each sea province must get a unique colour
+//And then draw every barony and every province to the same file
 
+        AssignColoursToBaroniesAndSeaProvinces(map);
+
+
+        // Draw the provinces map
+        await DrawProvinces(map);
+
+
+        // Exit the program
+        Environment.Exit(0);
+
+
+
+    }
+
+    private static void AssignColoursToBaroniesAndSeaProvinces(Map map)
+    {
+        //So the base data is all provinces, but then for the land provinces we split it into baronies
+        //So we need to assign a colour to each province and each barony, ensuring that there is no overlap between the two
+        //We also need to assign a unique colour to each sea province and barony, but we can use GetColor() for that
+
+        //First we'll assign colours to the provinces
+        //We'll start by getting all the provinces
+
+        int Ck3_assignedProvinceColorCount = 0;
+        //the max number of brovinces and baronies will be the number of provinces that is sea + the number of baronies
+        int UniqueColourRange = map.Provinces.Where(p => p.IsWater).Count() + map.Baronies.Count + 10; //+10 to be safe
+
+        var provinces = map.Provinces.Skip(1).ToList(); //Skip the first province since it is always empty (See Azgaar data model)
+        foreach (var province in provinces)
+        {
+            if (!province.IsWater) continue;
+            Ck3_assignedProvinceColorCount++;
+            province.Color = GetColor(Ck3_assignedProvinceColorCount, UniqueColourRange);
+            Console.WriteLine($"Assigned colour {province.Color} to {province.Name}");
+        }
+        foreach (var barony in map.Baronies)
+        {
+            Ck3_assignedProvinceColorCount++;
+            barony.Color = GetColor(Ck3_assignedProvinceColorCount, UniqueColourRange);
+            Console.WriteLine($"Assigned colour {barony.Color} to {barony.Name}");
+        }
+        //pringt the number of colours assigned
+        Console.WriteLine($"Assigned {Ck3_assignedProvinceColorCount} colours to provinces and baronies");
+
+    }
+
+    /// <summary>
+    /// Assign cells to baronies based on distance to burg
+    /// </summary>
+    /// <param name="map"></param>
+    private static void AssignCellsToBaronies(Map map)
+    {
         //TODO: make barony generation that does not repect province borders, but does repesct culture.
 
-        //Now we need to assign the countryside cells to the baronies
-        // We'll do this by assigning the cells to the barony that is closest to the cell, while still being inside the same province
-
-        // Since we want to repect province borders we'll start by creating a list of all the cells in each province
-        //We do this by province, so lets make a foor lop that will go through each province
-        foreach (var province in map.Provinces.Skip(1)) // Skip the first province since it is always empty (See Azgaar data model)
+        // Skip the first province since it is always empty (See Azgaar data model)
+        foreach (var province in map.Provinces.Skip(1)) 
         {
             if (province.IsWater)
             {
@@ -1196,7 +1264,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             // We'll start by getting all the baronies in the province
 
             var baroniesInProvince = map.Baronies.Where(b => b.GetProvince() == province).ToList();
-            if(baroniesInProvince.Count == 0)
+            if (baroniesInProvince.Count == 0)
             {
                 Console.WriteLine($"No baronies in {province.Name}");
                 continue;
@@ -1220,7 +1288,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     {
                         continue;
                     }
-                    
+
                     //Then sort them by distance to the burg
                     neighbors.Sort((a, b) => a.DistanceSquared(barony.Burg.Cell).CompareTo(b.DistanceSquared(barony.Burg.Cell)));
                     //Then assign the closest cell to the burg
@@ -1231,19 +1299,6 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             }
 
         }
-
-        //print the baronies
-        foreach (var barony in map.Baronies)
-        {
-            Console.WriteLine($"{barony.Name}[{barony.id}] has {barony.Cells.Count} cells");
-        }
-
-
-        // Exit the program
-        Environment.Exit(0);
-
-
-
     }
 
     private static Dictionary<int, ConverterBurg> AddBurgCellReference(Dictionary<int, ConverterBurg> burgs, Dictionary<int, Cell> cells)
