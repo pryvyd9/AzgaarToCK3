@@ -88,14 +88,13 @@ supported_version=""1.12.4""";
         int i = 1;
         int totalStageCount = 24;
 
-        await MapManager.LemurAlgorithm(map);
-
         var map = await LoadMap();
+        await MapManager.LemurAlgorithm(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
 
         //await MapManager.DrawCells(map);
 
-        await MapManager.DrawProvinces(map);
+        await MapManager.DrawProvincesImage(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");

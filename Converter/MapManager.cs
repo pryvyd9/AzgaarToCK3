@@ -74,7 +74,8 @@ public static class MapManager
     /// <exception cref="FormatException"></exception>
     private static MagickColor GetColor(int i, int maxI)
     {
-        if (maxI >= 16777216){
+        if (maxI >= 16777216)
+        {
             throw new FormatException("MaxI is too big. MaxI must be less than 16777216, to ensure that the color is unique for each i");
         }
         if (i < 0 || i >= maxI)
@@ -403,8 +404,9 @@ public static class MapManager
         }
     }
 
-    public static async Task DrawProvinces(Map map)
+    public static async Task DrawProvincesImage(Map map)
     {
+        Console.WriteLine("Drawing provinces image...");
         try
         {
             var settings = new MagickReadSettings()
@@ -414,23 +416,42 @@ public static class MapManager
             };
             using var cellsMap = new MagickImage("xc:black", settings);
 
-            var drawables = new Drawables();
+            List<Drawables> drawablesList = new();
             foreach (var province in map.Provinces.Skip(1))
             {
-                foreach (var cell in province.Cells)
-                {
-                    drawables
-                        .DisableStrokeAntialias()
-                        .StrokeColor(province.Color)
-                        .FillColor(province.Color)
-                        .Polygon(cell.geoDataCoordinates.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, Map.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
-                }
+                if (!province.IsWater) continue;
+                drawablesList.Add(GenerateCellPolygons(province.Cells, province.Color, map));
             }
+            foreach (var barony in map.Baronies)
+            {
+                drawablesList.Add(GenerateCellPolygons(barony.Cells, barony.Color, map));
+            }
+
+            // Flatten the list of Drawables into a single collection of IDrawable
+            IEnumerable<IDrawable> drawables = drawablesList.SelectMany(d => d);
 
             cellsMap.Draw(drawables);
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "provinces.png");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
+
+            Console.WriteLine($"Saving provinces image to '{path}'");
             await cellsMap.WriteAsync(path);
+            Console.WriteLine($"Provinces image has been drawn and saved to '{path}'");
+
+            //#if Debugd
+            // Open the image
+            Console.WriteLine("Debug is on, opening the image...");
+            var psi = new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                ArgumentList = { path },
+                UseShellExecute = true
+            };
+
+            Process.Start(psi);
+            //#endif
+
+
         }
         catch (Exception ex)
         {
@@ -438,6 +459,21 @@ public static class MapManager
             throw;
         }
     }
+
+    private static Drawables GenerateCellPolygons(IEnumerable<Cell> cells, MagickColor color, Map map)
+    {
+        var drawables = new Drawables();
+        foreach (var cell in cells)
+        {
+            drawables
+                .DisableStrokeAntialias()
+                .StrokeColor(color)
+                .FillColor(color)
+                .Polygon(cell.geoDataCoordinates.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, Map.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+        }
+        return drawables;
+    }
+
     public static async Task DrawHeightMap(Map map)
     {
         try
@@ -1208,18 +1244,18 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         map.Burgs = AddBurgCellReference(map.Burgs, map.Cells);
         map.Baronies = GenerateBaronies(map.Burgs);
         AssignCellsToBaronies(map);
-        
 
-// Assigning colurs:
-// Each barony must get a unique colour
-//And each sea province must get a unique colour
-//And then draw every barony and every province to the same file
+
+        // Assigning colurs:
+        // Each barony must get a unique colour
+        //And each sea province must get a unique colour
+        //And then draw every barony and every province to the same file
 
         AssignColoursToBaroniesAndSeaProvinces(map);
 
 
         // Draw the provinces map
-        await DrawProvinces(map);
+        await DrawProvincesImage(map);
 
 
         // Exit the program
@@ -1270,7 +1306,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         //TODO: make barony generation that does not repect province borders, but does repesct culture.
 
         // Skip the first province since it is always empty (See Azgaar data model)
-        foreach (var province in map.Provinces.Skip(1)) 
+        foreach (var province in map.Provinces.Skip(1))
         {
             if (province.IsWater)
             {
@@ -1348,7 +1384,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     {
         // Repack the burgs as a dictionary with the burg.id as the key for easy lookup
         return map.JsonMap.pack.burgs.ToDictionary(
-            burg => burg.i, 
+            burg => burg.i,
             burg => new ConverterBurg(burg));
     }
 
