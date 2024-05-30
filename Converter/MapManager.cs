@@ -493,6 +493,9 @@ public static class MapManager
             //using var file = await Image.LoadAsync(path);
             //file.Mutate(n => n.GaussianBlur(15));
             //file.Save(path);
+            using var file = await Image.LoadAsync(path);
+            file.Mutate(n => n.GaussianBlur(6));
+            file.Save(path);
 
         }
         catch (Exception ex)
@@ -973,6 +976,18 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "graphic", "00_graphics.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         File.Copy(Helper.GetPath(SettingsManager.ExecutablePath, "00_graphics.txt"), path, true);
+    }
+    public static async Task WriteDefines()
+    {
+        var file = $@"NJominiMap = {{
+	WORLD_EXTENTS_X = {Map.MapWidth - 1}
+	WORLD_EXTENTS_Y = 51
+	WORLD_EXTENTS_Z = {Map.MapHeight - 1}
+	WATERLEVEL = 3.8
+}}";
+        var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "00_defines.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        await File.WriteAllTextAsync(path, file);
     }
 
 

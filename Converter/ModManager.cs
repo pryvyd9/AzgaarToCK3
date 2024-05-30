@@ -85,126 +85,10 @@ supported_version=""1.12.4""";
 #if DEBUG
     public static async Task Run()
     {
-        //{
-        //    using var heightmap = new MagickImage(Helper.GetPath(SettingsManager.ExecutablePath, "indirection_heightmap_template.png"));
-        //    //using var heightmap = new MagickImage("f:\\Projects\\Paradox Interactive\\Crusader Kings III\\mod\\Test\\map_data\\indirection_heightmap.png");
-
-        //    using var testImage = new MagickImage("xc:transparent", new MagickReadSettings()
-        //    {
-        //        Width = 2,
-        //        Height = 2,
-
-        //        ColorType = ColorType.TrueColorAlpha,
-        //        StrokeAntiAlias = false,
-        //    });
-
-        //    testImage.Format = MagickFormat.Png;
-        //    testImage.SetCompression(CompressionMethod.Zip);
-
-        //    var testdrawables = new Drawables();
-
-        //    var c0 = new MagickColor(0, 0, 0, 0);
-        //    var c1 = new MagickColor(63, 0, 0, 1);
-        //    var c2 = new MagickColor(127, 0, 0, 0);
-        //    var c3 = new MagickColor(255, 0, 0, 0);
-        //    testdrawables
-        //        .StrokeColor(c0)
-        //        .FillColor(c0)
-        //        .Point(0, 0)
-        //        .StrokeColor(c1)
-        //        .FillColor(c1)
-        //        .Point(0, 1)
-        //        .StrokeColor(c2)
-        //        .FillColor(c2)
-        //        .Point(1, 1)
-        //        .StrokeColor(c3)
-        //        .FillColor(c3)
-        //        .Point(1, 0);
-
-        //    testImage.Draw(testdrawables);
-        //    var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "test_map.png");
-        //    Directory.CreateDirectory(Path.GetDirectoryName(path));
-        //    await testImage.WriteAsync(path, MagickFormat.Png32);
-        //}
-
         int i = 1;
-        int totalStageCount = 22;
+        int totalStageCount = 24;
 
-        var map = await LoadMap();
-        Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
-
-        //await MapManager.DrawCells(map);
         await MapManager.LemurAlgorithm(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Lemur algorithm applied.");
-
-        //await MapManager.DrawProvinces(map);
-        //Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
-        await MapManager.DrawHeightMap(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
-
-        var packedHeightmap = await PackedMapManager.CreatePackedHeightMap(map);
-        await PackedMapManager.WritePackedHeightMap(packedHeightmap);
-
-        await MapManager.DrawRivers(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
-        await MapManager.WriteDefinition(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Definition created.");
-
-        await MapManager.WriteLocators(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Locators created.");
-
-        var titles = TitleManager.CreateTitles(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Titles created.");
-        map.Empires = titles;
-        await TitleManager.WriteLandedTitles(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Landed titles created.");
-        await TitleManager.WriteTitleLocalization(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
-
-        var faiths = await MapManager.ApplyCultureReligion(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Culture, Religions created.");
-
-        if (Settings.Instance.OnlyCounts)
-        {
-            map.Characters = await CharacterManager.CreateCharactersCountOnly(map);
-        }
-        else
-        {
-            map.Characters = await CharacterManager.CreateCharacters(map);
-        }
-        Console.WriteLine($"{i++}/{totalStageCount}. Characters created.");
-        await CharacterManager.WriteHistoryCharacters(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. History characters created.");
-        await CharacterManager.WriteHistoryTitles(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. History titles created.");
-        await CharacterManager.WriteDynasties(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Dynasties created.");
-        await CharacterManager.WriteDynastyLocalization(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Dynasty localization created.");
-
-        await MapManager.WriteHistoryProvinces(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Province history created.");
-        await MapManager.CopyOriginalReligions(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Original religions copied.");
-        await MapManager.WriteHolySites(map, faiths);
-        Console.WriteLine($"{i++}/{totalStageCount}. Holy sites created.");
-
-        await MapManager.WriteDefault(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Default file created.");
-        await MapManager.WriteTerrain(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Terrain created.");
-        await MapManager.WriteMasks(map);
-        Console.WriteLine($"{i++}/{totalStageCount}. Masks created.");
-
-        await MapManager.WriteGraphics();
-        Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
-    }
-#endif
-#if RELEASE || PUBLISH
-    public static async Task Run()
-    {
-        int i = 1;
-        int totalStageCount = 22;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -215,6 +99,16 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         await MapManager.DrawHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
+
+        await MapManager.WriteGraphics();
+        Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
+        await MapManager.WriteDefines();
+        Console.WriteLine($"{i++}/{totalStageCount}. Defines file created.");
+
+        var packedHeightmap = await PackedMapManager.CreatePackedHeightMap();
+        await PackedMapManager.WritePackedHeightMap(packedHeightmap);
+        Console.WriteLine($"{i++}/{totalStageCount}. Packed heightmap created.");
+
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
         await MapManager.WriteDefinition(map);
@@ -265,9 +159,83 @@ supported_version=""1.12.4""";
         Console.WriteLine($"{i++}/{totalStageCount}. Terrain created.");
         await MapManager.WriteMasks(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Masks created.");
+    }
+#endif
+#if RELEASE || PUBLISH
+    public static async Task Run()
+    {
+        int i = 1;
+        int totalStageCount = 24;
+
+        var map = await LoadMap();
+        Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
+
+        //await MapManager.DrawCells(map);
+
+        await MapManager.DrawProvinces(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
+        await MapManager.DrawHeightMap(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
 
         await MapManager.WriteGraphics();
         Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
+        await MapManager.WriteDefines();
+        Console.WriteLine($"{i++}/{totalStageCount}. Defines file created.");
+
+        var packedHeightmap = await PackedMapManager.CreatePackedHeightMap();
+        await PackedMapManager.WritePackedHeightMap(packedHeightmap);
+        Console.WriteLine($"{i++}/{totalStageCount}. Packed heightmap created.");
+
+        await MapManager.DrawRivers(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
+        await MapManager.WriteDefinition(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Definition created.");
+
+        await MapManager.WriteLocators(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Locators created.");
+
+        var titles = TitleManager.CreateTitles(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Titles created.");
+        map.Empires = titles;
+        await TitleManager.WriteLandedTitles(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Landed titles created.");
+        await TitleManager.WriteTitleLocalization(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
+
+        var faiths = await MapManager.ApplyCultureReligion(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Culture, Religions created.");
+
+        if (Settings.Instance.OnlyCounts)
+        {
+            map.Characters = await CharacterManager.CreateCharactersCountOnly(map);
+        }
+        else
+        {
+            map.Characters = await CharacterManager.CreateCharacters(map);
+        }
+        Console.WriteLine($"{i++}/{totalStageCount}. Characters created.");
+        await CharacterManager.WriteHistoryCharacters(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. History characters created.");
+        await CharacterManager.WriteHistoryTitles(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. History titles created.");
+        await CharacterManager.WriteDynasties(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Dynasties created.");
+        await CharacterManager.WriteDynastyLocalization(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Dynasty localization created.");
+
+        await MapManager.WriteHistoryProvinces(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Province history created.");
+        await MapManager.CopyOriginalReligions(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Original religions copied.");
+        await MapManager.WriteHolySites(map, faiths);
+        Console.WriteLine($"{i++}/{totalStageCount}. Holy sites created.");
+
+        await MapManager.WriteDefault(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Default file created.");
+        await MapManager.WriteTerrain(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Terrain created.");
+        await MapManager.WriteMasks(map);
+        Console.WriteLine($"{i++}/{totalStageCount}. Masks created.");
     }
 #endif
 }
