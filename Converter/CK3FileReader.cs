@@ -13,7 +13,7 @@ namespace Converter;
 /// Recursive structure:
 /// [string key, object[] values]
 /// value = [string key, object[] value]
-/// Known issues: Skips hsv attribute
+/// Known issues: hsv attribute is parsed but is ignored later
 /// </summary>
 public static class CK3FileReader
 {
@@ -31,6 +31,7 @@ public static class CK3FileReader
     {
         public TokenType type;
         public string? value;
+        public string? modifier;
 
         public override string ToString()
         {
@@ -46,14 +47,14 @@ public static class CK3FileReader
     }
 
     public const string ValuesKey = "values";
-    public static HashSet<string> TokensToIgnore = new() { "hsv" };
+    private static readonly HashSet<Regex> Modifiers = [new Regex(@"[.\s]*(hsv)\s*(.+)?", RegexOptions.Compiled)];
 
     private static IncompleteToken[] GetListOfTokens(string content)
     {
         var tokenRegex = new Regex(@"[\s\n]*([^\s\n}]+|})", RegexOptions.Compiled);
         var commentRegex = new Regex(@"[\s\n]*#[^\n]+", RegexOptions.Compiled);
 
-        List<IncompleteToken> incompleteTokens = new();
+        List<IncompleteToken> incompleteTokens = [];
 
         TokenType previousToken = TokenType.unknown;
         int cursor = 0;
@@ -66,10 +67,21 @@ public static class CK3FileReader
             cursor += tokenUntrim.Length;
             var tokenTrim = token.Groups[1].Value;
 
-            if (TokensToIgnore.Contains(tokenTrim))
+            string? modifier = null;
+            if (Modifiers.Select(n => n.Match(tokenTrim)).Where(n => n is not null).ToArray() is [{ Groups: [_, { Value: var match }, ..] groups }])
             {
-                // Ignore token
-                continue;
+                modifier = match;
+
+                if (groups.Count == 3 && !string.IsNullOrWhiteSpace(groups[2].Value))
+                {
+                    tokenUntrim = groups[2].Value;
+                    tokenTrim = tokenUntrim.Trim();
+                }
+                else
+                {
+                    // Modifier read. Don't parse it as a token.
+                    continue;
+                }
             }
 
             try
@@ -121,6 +133,11 @@ public static class CK3FileReader
                         {
                             if (previousToken is TokenType.key)
                                 previousToken = TokenType.assignment;
+                            else if (previousToken is TokenType.value)
+                            {
+                                ChangePreviousTokenType(TokenType.key);
+                                previousToken = TokenType.assignment;
+                            }
                             else
                                 throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
                             break;
@@ -139,10 +156,15 @@ public static class CK3FileReader
                                 AddIncompleteToken(TokenType.key, tokenTrim);
                             else if (previousToken is TokenType.assignment)
                                 AddIncompleteToken(TokenType.value, tokenTrim);
+                            else if (previousToken is TokenType.value)
+                            {
+                                ChangePreviousTokenType(TokenType.key);
+                                AddIncompleteToken(TokenType.value, tokenTrim);
+                            }
                             else if (previousToken is TokenType.key)
                             {
                                 ChangePreviousTokenType(TokenType.value);
-                                AddIncompleteToken(TokenType.value, tokenTrim);
+                                AddIncompleteToken(TokenType.key, tokenTrim);
                             }
                             else
                                 throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
@@ -164,6 +186,12 @@ public static class CK3FileReader
                         }
                     default:
                         throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
+                }
+
+                if (modifier is not null)
+                {
+                    incompleteTokens.Last().modifier = modifier;
+                    modifier = null;
                 }
             }
             catch (Exception e)
@@ -239,9 +267,16 @@ public static class CK3FileReader
                     }
                 case TokenType.objectEnd:
                     {
-                        var oldToken = completeTokens.Pop();
-                        lastToken = oldToken;
-                        break;
+                        try
+                        {
+                            var oldToken = completeTokens.Pop();
+                            lastToken = oldToken;
+                            break;
+                        }
+                        catch (Exception ex)
+                        {
+                            throw;
+                        }
                     }
                 default:
                     throw new ArgumentException($"unexpected token type {token.type}");

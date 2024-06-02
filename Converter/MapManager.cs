@@ -758,7 +758,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     {
         try
         {
-            using var cellsMap = new MagickImage(Helper.GetPath(SettingsManager.ExecutablePath, "new_template_mask.png"));
+            using var cellsMap = new MagickImage(Helper.GetPath(SettingsManager.ExecutablePath, "template_mask.png"));
 
             var drawables = new Drawables();
             foreach (var cell in cells.Select(n => n.cells))
@@ -808,8 +808,6 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                 };
             }).ToArray();
 
-        var s = Stopwatch.StartNew();
-
         var tasks = new[]
         {
             //// drylands
@@ -847,9 +845,6 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         };
 
         await Task.WhenAll(tasks);
-
-        s.Stop();
-        int i = 0;
     }
 
     public static async Task WriteGraphics()
@@ -871,10 +866,21 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         await File.WriteAllTextAsync(path, file);
     }
 
+    private static string[] GetOriginalCultures()
+    {
+        var path = Helper.GetPath(Settings.Instance.Ck3Directory, "common", "culture", "cultures");
+        var cultures = Directory.EnumerateFiles(path).Where(n => n.EndsWith(".txt")).SelectMany(n =>
+        {
+            var file = File.ReadAllText(n);
+            var parsedFile = CK3FileReader.Read(file);
+            return parsedFile.Keys.ToArray();
+        }).ToArray();
 
+        return cultures;
+    }
     private static async Task<(Dictionary<int, int> baronyCultures, string[] toOriginalCultureName)> GetCultures(Map map)
     {
-        var originalCultureNames = await File.ReadAllLinesAsync(Helper.GetPath(SettingsManager.ExecutablePath, "originalCultures.txt"));
+        var originalCultureNames = GetOriginalCultures();
         var baronyCultures = map.Empires
             .SelectMany(n => n.kingdoms)
             .SelectMany(n => n.duchies)

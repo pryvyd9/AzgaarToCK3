@@ -1,5 +1,8 @@
+# 1.4.4
+- raised culture limit to 239 (original culture count).
+
 # 1.4.3
-- skip states with all provinces removed due to some filtering. Do not create titles for them
+- skip states with all provinces removed due to some filtering. Do not create titles for them.
 
 # 1.4.2
 - all detail tiles available.

@@ -24,9 +24,6 @@
     <None Update="indirection_heightmap_template.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="originalCultures.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="template_mask.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
