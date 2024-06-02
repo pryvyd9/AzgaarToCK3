@@ -4,6 +4,7 @@
 - Subscribe to [Total Conversion Sandbox](https://steamcommunity.com/sharedfiles/filedetails/?id=2524797018) mod on the workshop
 
 Supported game version: `1.12.5`
+Discord: https://discord.gg/CqHcpRRH
 
 ## Generation requirements
 - use `Provinces ratio` = 100.
