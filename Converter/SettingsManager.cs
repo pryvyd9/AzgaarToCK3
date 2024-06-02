@@ -52,13 +52,18 @@ public static class SettingsManager
 
     private static string GetSteamLibraryFoldersPath()
     {
+        if (!Environment.Is64BitOperatingSystem)
+        {
+            throw new Exception("Only x64 systems are supported.");
+        }
+
         if (OperatingSystem.IsWindows())
         {
-            var steamRegistryKey = Environment.Is64BitOperatingSystem
-                ? "HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Valve\\Steam"
-                : "HKEY_LOCAL_MACHINE\\SOFTWARE\\Valve\\Steam";
-
-            var steamPath = (string)Registry.GetValue(steamRegistryKey, "InstallPath", null)!;
+            var steamPath = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)
+                .OpenSubKey(@"SOFTWARE\Wow6432Node\Valve\Steam")
+                ?.GetValue("InstallPath") as string
+                ?? throw new Exception("Could not find steam InstallPath");
+           
             return Helper.GetPath(steamPath, "steamapps", "libraryfolders.vdf");
         }
         else if (OperatingSystem.IsMacOS())

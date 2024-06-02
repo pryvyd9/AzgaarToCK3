@@ -1,3 +1,6 @@
+# 1.4.3
+- skip states with all provinces removed due to some filtering. Do not create titles for them
+
 # 1.4.2
 - all detail tiles available.
 

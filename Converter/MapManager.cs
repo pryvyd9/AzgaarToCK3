@@ -18,10 +18,6 @@ public partial class JsonMapJsonContext : JsonSerializerContext {}
 
 public static class MapManager
 {
-    private const int WaterLevelHeight = 30;
-
-
- 
     public static async Task<GeoMap> LoadGeojson()
     {
         try
@@ -313,19 +309,6 @@ public static class MapManager
         return finalProvinces;
     }
 
-    private static PointD GeoToPixel(float lon, float lat, Map map)
-    {
-        return new PointD((lon - map.XOffset) * map.XRatio, Map.MapHeight - (lat - map.YOffset) * map.YRatio);
-    }
-    private static PointD GeoToPixelCrutch(float lon, float lat, Map map)
-    {
-        return new PointD((lon - map.XOffset) * map.XRatio, (lat - map.YOffset) * map.YRatio);
-    }
-    private static PointD PixelToFullPixel(float x, float y, Map map)
-    {
-        return new PointD(x * map.pixelXRatio, Map.MapHeight - y * map.pixelYRatio);
-    }
-
     public static async Task<Map> ConvertMap(GeoMap geoMap, GeoMapRivers geoMapRivers, JsonMap jsonMap)
     {
         var provinces = CreateProvinces(geoMap, jsonMap);
@@ -373,7 +356,7 @@ public static class MapManager
                         .StrokeWidth(2)
                         .StrokeColor(MagickColors.Black)
                         .FillOpacity(new Percentage(0))
-                        .Polygon(cell.Select(n => GeoToPixel(n[0], n[1], map)));
+                        .Polygon(cell.Select(n => Helper.GeoToPixel(n[0], n[1], map)));
                 }
             }
 
@@ -422,71 +405,6 @@ public static class MapManager
             throw;
         }
     }
-    public static async Task DrawHeightMap(Map map)
-    {
-        try
-        {
-            var settings = new MagickReadSettings()
-            {
-                Width = Map.MapWidth,
-                Height = Map.MapHeight,
-            };
-            using var cellsMap = new MagickImage("xc:black", settings);
-            
-            var drawables = new Drawables();
-
-            var landPackCells = map.JsonMap.pack.cells.Where(n => n.biome != 0);
-            var landGeoCells = map.GeoMap.features.Select(n => new
-            {
-                Height = n.properties.height,
-                Id = n.properties.id,
-                C = n.geometry.coordinates
-            }).ToDictionary(n => n.Id, n => n);
-            var cells = landPackCells.Select(n =>
-            {
-                var c = landGeoCells[n.i];
-                return new
-                {
-                    Cells = c.C,
-                    c.Height,
-                };
-            }).ToArray();
-            var maxHeight = cells.MaxBy(n => n.Height)!.Height;
-
-            foreach (var cellPack in cells)
-            {
-                foreach (var cell in cellPack.Cells)
-                {
-                    var trimmedHeight = cellPack.Height * (255 - WaterLevelHeight) / maxHeight + WaterLevelHeight;
-                    var culledHeight = (byte)trimmedHeight;
-
-                    var color = new MagickColor(culledHeight, culledHeight, culledHeight);
-                    drawables
-                        .DisableStrokeAntialias()
-                        .StrokeColor(color)
-                        .FillColor(color)
-                        .Polygon(cell.Select(n => GeoToPixel(n[0], n[1], map)));
-                }
-            }
-
-            cellsMap.Draw(drawables);
-            var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
-            await cellsMap.WriteAsync(path);
-
-            //using var file = await Image.LoadAsync(path);
-            //file.Mutate(n => n.GaussianBlur(15));
-            //file.Save(path);
-            using var file = await Image.LoadAsync(path);
-            file.Mutate(n => n.GaussianBlur(6));
-            file.Save(path);
-
-        }
-        catch (Exception ex)
-        {
-
-        }
-    }
 
     public static async Task DrawRivers(Map map)
     {
@@ -509,7 +427,7 @@ public static class MapManager
                         .DisableStrokeAntialias()
                         .StrokeColor(MagickColors.White)
                         .FillColor(MagickColors.White)
-                        .Polygon(cell.cells.Select(n => GeoToPixel(n[0], n[1], map)));
+                        .Polygon(cell.cells.Select(n => Helper.GeoToPixel(n[0], n[1], map)));
                 }
             }
 
@@ -519,7 +437,7 @@ public static class MapManager
                     .DisableStrokeAntialias()
                     .StrokeColor(new MagickColor("#00E1FF"))
                     .StrokeWidth(0.5)
-                    .Polyline(river.geometry.coordinates.Select(n => GeoToPixel(n[0], n[1], map)));
+                    .Polyline(river.geometry.coordinates.Select(n => Helper.GeoToPixel(n[0], n[1], map)));
             }
 
             cellsMap.Draw(drawables);
@@ -573,7 +491,7 @@ public static class MapManager
 
         var lines = map.Provinces.Where(n => n.Burg is not null).Select(n =>
         {
-            var p = PixelToFullPixel(n.Burg.x, n.Burg.y, map);
+            var p = Helper.PixelToFullPixel(n.Burg.x, n.Burg.y, map);
             var str =
 $@"        {{
             id = {map.IdToIndex[n.Id]}
@@ -611,7 +529,7 @@ $@"game_object_locator={{
         var offset = new PointD(10, -5);
         var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
-            var p = PixelToFullPixel(n.Burg.x, n.Burg.y, map);
+            var p = Helper.PixelToFullPixel(n.Burg.x, n.Burg.y, map);
 
             var str =
 $@"        {{
@@ -650,7 +568,7 @@ $@"game_object_locator={{
         var offset = new PointD(0, 10);
         var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
-            var p = PixelToFullPixel(n.Burg.x, n.Burg.y, map);
+            var p = Helper.PixelToFullPixel(n.Burg.x, n.Burg.y, map);
 
             var str =
 $@"        {{
@@ -698,11 +616,11 @@ $@"game_object_locator={{
                 var maxLat = n.Cells.SelectMany(n => n.cells).MaxBy(n => n[1])[1];
                 var minLat = n.Cells.SelectMany(n => n.cells).MinBy(n => n[1])[1];
 
-                p = GeoToPixelCrutch((maxLon + minLon) / 2, (maxLat + minLat) / 2, map);
+                p = Helper.GeoToPixelCrutch((maxLon + minLon) / 2, (maxLat + minLat) / 2, map);
             }
             else
             {
-                p = PixelToFullPixel(n.Burg.x, n.Burg.y, map);
+                p = Helper.PixelToFullPixel(n.Burg.x, n.Burg.y, map);
             }
 
             var str =
@@ -840,7 +758,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     {
         try
         {
-            using var cellsMap = new MagickImage(Helper.GetPath(SettingsManager.ExecutablePath, "template_mask.png"));
+            using var cellsMap = new MagickImage(Helper.GetPath(SettingsManager.ExecutablePath, "new_template_mask.png"));
 
             var drawables = new Drawables();
             foreach (var cell in cells.Select(n => n.cells))
@@ -849,7 +767,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     .DisableStrokeAntialias()
                     .StrokeColor(MagickColors.White)
                     .FillColor(MagickColors.White)
-                    .Polygon(cell.Select(n => GeoToPixel(n[0], n[1], map)));
+                    .Polygon(cell.Select(n => Helper.GeoToPixel(n[0], n[1], map)));
             }
 
             cellsMap.Draw(drawables);
@@ -890,10 +808,12 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                 };
             }).ToArray();
 
+        var s = Stopwatch.StartNew();
+
         var tasks = new[]
         {
-            // drylands
-            WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "drylands"), map, "drylands_01_mask"),
+            //// drylands
+            //WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "drylands"), map, "drylands_01_mask"),
             // taiga
             WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is var b && (b == "taiga" || b == "drylands" && Helper.IsCellLowMountains(n.height) || b == "drylands" && Helper.IsCellMountains(n.height))), map, "forest_pine_01_mask"),
             // plains
@@ -914,44 +834,22 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellMountains(n.height) || Helper.IsCellHighMountains(n.height)), map, "mountain_02_snow_mask"),
             // HighMountains
             WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellHighMountains(n.height)), map, "mountain_02_c_snow_mask"),
+            // jungle
+            WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "jungle"), map, "forest_jungle_01_mask"),
+            // forest
+            WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "forest"), map, "forest_leaf_01_mask"),
+            // wetlands
+            WriteMask(provinceBiomes.Where(n => n.Biome == "wetlands").SelectMany(n => n.Province.Cells).Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask"),
+            // steppe
+            WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "steppe"), map, "wetlands_02_mask"),
+            // floodplains
+            WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask"),
         };
 
         await Task.WhenAll(tasks);
 
-        // jungle
-        {
-            var cells = nonWaterProvinceCells
-                .Where(n => Helper.MapBiome(n.biome) == "jungle");
-
-            await WriteMask(cells, map, "forest_jungle_01_mask");
-        }
-        // forest
-        {
-            var cells = nonWaterProvinceCells
-                .Where(n => Helper.MapBiome(n.biome) == "forest");
-
-            await WriteMask(cells, map, "forest_leaf_01_mask");
-        }
-
-        // wetlands
-        {
-            var cells = provinceBiomes.Where(n => n.Biome == "wetlands").SelectMany(n => n.Province.Cells).Where(n => Helper.MapBiome(n.biome) == "floodplains");
-
-            await WriteMask(cells, map, "wetlands_02_mask");
-        }
-        // steppe
-        {
-            var cells = nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "steppe");
-
-            await WriteMask(cells, map, "steppe_01_mask");
-        }
-        // floodplains
-        {
-            var cells = nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "floodplains");
-
-            await WriteMask(cells, map, "floodplains_01_mask");
-        }
-
+        s.Stop();
+        int i = 0;
     }
 
     public static async Task WriteGraphics()

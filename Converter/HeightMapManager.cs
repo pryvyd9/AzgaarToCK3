@@ -1,17 +1,24 @@
 ﻿using ImageMagick;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using System.Diagnostics;
 using System.Numerics;
 
 namespace Converter;
+
+
+
+
 /// <summary>
 /// WritePackedHeightMap generates heightmaps starting from new line for every detail level.
 /// Borders between different detail level is visible. 
 /// Need to implement a better algorithm than avgN for border samples (or all).
 /// </summary>
-public static class PackedMapManager
+public static class HeightMapManager
 {
+    private const int WaterLevelHeight = 30;
+
     private static readonly int[] detailSize = [33, 17, 9, 5, 3];
     // Width of average sampling for height. For detail size 9 averages of 4x4 squares are taken for every pixel in a tile.
     private static readonly byte[] averageSize = [1, 2, 4, 8, 16];
@@ -166,19 +173,19 @@ public static class PackedMapManager
         }
     }
 
-    public class Tile
+    private class Tile
     {
         public byte[,] values;
         public int i;
         public int j;
     }
-    public class Detail
+    private class Detail
     {
         //public byte[][][,] Rows;
         public Tile[][] Rows;
         public Vector2[] Coordinates;
     }
-    public class PackedHeightmap
+    private class PackedHeightmap
     {
         public Detail[] Details;
         public int PixelHeight;
@@ -186,8 +193,8 @@ public static class PackedMapManager
         public int MapHeight;
         public int RowCount;
     }
-  
-    public static async Task<PackedHeightmap> CreatePackedHeightMap()
+
+    private static async Task<PackedHeightmap> CreatePackedHeightMap()
     {
         try
         {
@@ -299,7 +306,7 @@ public static class PackedMapManager
             throw;
         }
     }
-    public static async Task WritePackedHeightMap(PackedHeightmap heightmap)
+    private static async Task WritePackedHeightMap(PackedHeightmap heightmap)
     {
         using var packed_heightmap = new MagickImage("xc:black", new MagickReadSettings()
         {
@@ -390,4 +397,77 @@ empty_tile_offset={{ 255 127 }}
         Directory.CreateDirectory(Path.GetDirectoryName(hhPath));
         await File.WriteAllTextAsync(hhPath, heightmap_heightmap);
     }
+    private static async Task DrawHeightMap(Map map)
+    {
+        try
+        {
+            var settings = new MagickReadSettings()
+            {
+                Width = Map.MapWidth,
+                Height = Map.MapHeight,
+            };
+            using var cellsMap = new MagickImage("xc:black", settings);
+
+            var drawables = new Drawables();
+
+            var landPackCells = map.JsonMap.pack.cells.Where(n => n.biome != 0);
+            var landGeoCells = map.GeoMap.features.Select(n => new
+            {
+                Height = n.properties.height,
+                Id = n.properties.id,
+                C = n.geometry.coordinates
+            }).ToDictionary(n => n.Id, n => n);
+            var cells = landPackCells.Select(n =>
+            {
+                var c = landGeoCells[n.i];
+                return new
+                {
+                    Cells = c.C,
+                    c.Height,
+                };
+            }).ToArray();
+            var maxHeight = cells.MaxBy(n => n.Height)!.Height;
+
+            foreach (var cellPack in cells)
+            {
+                foreach (var cell in cellPack.Cells)
+                {
+                    var trimmedHeight = cellPack.Height * (255 - WaterLevelHeight) / maxHeight + WaterLevelHeight;
+                    var culledHeight = (byte)trimmedHeight;
+
+                    var color = new MagickColor(culledHeight, culledHeight, culledHeight);
+                    drawables
+                        .DisableStrokeAntialias()
+                        .StrokeColor(color)
+                        .FillColor(color)
+                        .Polygon(cell.Select(n => Helper.GeoToPixel(n[0], n[1], map)));
+                }
+            }
+
+            cellsMap.Draw(drawables);
+            var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            await cellsMap.WriteAsync(path);
+
+            //using var file = await Image.LoadAsync(path);
+            //file.Mutate(n => n.GaussianBlur(15));
+            //file.Save(path);
+            using var file = await Image.LoadAsync(path);
+            file.Mutate(n => n.GaussianBlur(6));
+            file.Save(path);
+
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+
+    public static async Task WriteHeightMap(Map map)
+    {
+        await DrawHeightMap(map);
+        var heightmap = await CreatePackedHeightMap();
+        await WritePackedHeightMap(heightmap);
+    }
+
 }

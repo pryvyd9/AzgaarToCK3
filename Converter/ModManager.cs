@@ -86,7 +86,7 @@ supported_version=""1.12.4""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 24;
+        int totalStageCount = 23;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -95,17 +95,13 @@ supported_version=""1.12.4""";
 
         await MapManager.DrawProvinces(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
-        await MapManager.DrawHeightMap(map);
+        await HeightMapManager.WriteHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
 
         await MapManager.WriteGraphics();
         Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
         await MapManager.WriteDefines();
         Console.WriteLine($"{i++}/{totalStageCount}. Defines file created.");
-
-        var packedHeightmap = await PackedMapManager.CreatePackedHeightMap();
-        await PackedMapManager.WritePackedHeightMap(packedHeightmap);
-        Console.WriteLine($"{i++}/{totalStageCount}. Packed heightmap created.");
 
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
@@ -163,7 +159,7 @@ supported_version=""1.12.4""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 24;
+        int totalStageCount = 23;
 
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -172,17 +168,13 @@ supported_version=""1.12.4""";
 
         await MapManager.DrawProvinces(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
-        await MapManager.DrawHeightMap(map);
+        await HeightMapManager.WriteHeightMap(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
 
         await MapManager.WriteGraphics();
         Console.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
         await MapManager.WriteDefines();
         Console.WriteLine($"{i++}/{totalStageCount}. Defines file created.");
-
-        var packedHeightmap = await PackedMapManager.CreatePackedHeightMap();
-        await PackedMapManager.WritePackedHeightMap(packedHeightmap);
-        Console.WriteLine($"{i++}/{totalStageCount}. Packed heightmap created.");
 
         await MapManager.DrawRivers(map);
         Console.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");

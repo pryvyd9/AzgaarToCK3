@@ -27,6 +27,11 @@ public static class TitleManager
                 var unprocessedProvinces = provinces.Except(processedProvinces).ToHashSet();
                 var counties = new List<County>();
 
+                if (provinces is [])
+                {
+                    // Skip states without provinces.
+                    continue;
+                }
                 var currentProvince = provinces[0];
 
                 do

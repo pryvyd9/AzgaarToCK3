@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using ImageMagick;
 
 namespace Converter;
 
@@ -8,7 +7,14 @@ public static class Helper
     public static string GetPath(params string[] paths)
     {
         if (paths is null) return "";
-        return Path.Combine(paths.SelectMany(n => n.Replace(@"\\", "/").Replace(@"\", "/").Split("/")).ToArray());
+        try
+        {
+            return Path.Combine(paths.SelectMany(n => n.Replace(@"\\", "/").Replace(@"\", "/").Split("/")).ToArray());
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to combine paths: {string.Join(",", paths)}", ex);
+        }
     }
 
     public static bool IsCellHighMountains(int height)
@@ -165,5 +171,18 @@ public static class Helper
     {
         var heights = province.Cells.Select(n => n.height).ToArray();
         return Percentile(heights, 0.7) - Percentile(heights, 0.3);
+    }
+
+    public static PointD GeoToPixel(float lon, float lat, Map map)
+    {
+        return new PointD((lon - map.XOffset) * map.XRatio, Map.MapHeight - (lat - map.YOffset) * map.YRatio);
+    }
+    public static PointD GeoToPixelCrutch(float lon, float lat, Map map)
+    {
+        return new PointD((lon - map.XOffset) * map.XRatio, (lat - map.YOffset) * map.YRatio);
+    }
+    public static PointD PixelToFullPixel(float x, float y, Map map)
+    {
+        return new PointD(x * map.pixelXRatio, Map.MapHeight - y * map.pixelYRatio);
     }
 }
