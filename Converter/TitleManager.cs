@@ -8,90 +8,8 @@ public static class TitleManager
 {
     private static List<Duchy> CreateDuchies(Map map)
     {
-        try
-        {
-            var duchies = new List<Duchy>();
-            var processedProvinces = new HashSet<Province>();
-            var bi = 1;
-            var ci = 1;
-            var di = 1;
-
-            foreach (var state in map.JsonMap.pack.states.Where(n => n.provinces.Any()))
-            {
-                // Some of the provinces were deleted since they were empty or too small.
-                // Skip those deleted provinces.
-                var provinces = state.provinces.Select(n => map.Provinces.FirstOrDefault(m => m.Id == n)).Where(n => n is not null && !n.IsWater).ToArray();
-
-                // Each county should have 4 or fewer counties.
-                var countyCount = state.provinces.Length / 4;
-                var unprocessedProvinces = provinces.Except(processedProvinces).ToHashSet();
-                var counties = new List<County>();
-
-                var currentProvince = provinces[0];
-
-                do
-                {
-                    for (int i = 0; i < 4 && !processedProvinces.Contains(currentProvince); i++)
-                    {
-                        if (i == 0)
-                        {
-                            counties.Add(new County()
-                            {
-                                id = ci++,
-                                Color = currentProvince.Color,
-                                CapitalName = currentProvince.Name,
-                                Name = "County of " + currentProvince.Name,
-                            });
-                        }
-
-                        unprocessedProvinces.Remove(currentProvince);
-                        processedProvinces.Add(currentProvince);
-
-                        counties.Last().baronies.Add(new Barony(bi++, currentProvince, currentProvince.Name, currentProvince.Color));
-
-                        Province? neighbor = null;
-                        while (true)
-                        {
-                            neighbor = GetNeighbor(currentProvince, unprocessedProvinces!);
-
-                            if (neighbor is null or { Cells.Count: > 0 })
-                            {
-                                break;
-                            }
-                            else if (neighbor.Cells.Count == 0)
-                            {
-                                // if the province is empty then don't add it.
-                                unprocessedProvinces.Remove(neighbor);
-                                processedProvinces.Add(neighbor);
-                            }
-                        }
-
-                        if (neighbor is null)
-                        {
-                            break;
-                        }
-
-                        currentProvince = neighbor;
-                    }
-
-                    // If empty then the loop will break anyways.
-                    currentProvince = unprocessedProvinces.FirstOrDefault();
-                } while (unprocessedProvinces.Count > 0);
-
-                duchies.Add(new Duchy(di++, counties.ToArray(), "Duchy of " + state.name, counties.First().Color, counties.First().CapitalName));
-            }
-            return duchies;
-        }
-        catch (Exception ex)
-        {
-            Debugger.Break();
-            throw;
-        }
-
-        Province? GetNeighbor(Province currentProvince, HashSet<Province> unprocessedProvinces)
-        {
-            return currentProvince.Neighbors.FirstOrDefault(n => unprocessedProvinces.Contains(n));
-        }
+        //Thrown not yet implemented exception
+        throw new NotImplementedException();
     }
     public static Empire[] CreateTitles(Map map)
     {
@@ -104,7 +22,7 @@ public static class TitleManager
             {
                 var primaryDuchyCultureId = duchy.counties
                     .SelectMany(n => n.baronies)
-                    .SelectMany(n => n.province.Cells)
+                    .SelectMany(n => n.GetProvince().Cells)
                     .Select(n => n.culture)
                     .GroupBy(n => n)
                     .ToDictionary(n => n.Key, n => n.Count())
@@ -142,7 +60,7 @@ public static class TitleManager
                 var primaryDuchyReligionId = kingdom.duchies
                     .SelectMany(n => n.counties)
                     .SelectMany(n => n.baronies)
-                    .SelectMany(n => n.province.Cells)
+                    .SelectMany(n => n.GetProvince().Cells)
                     .Select(n => n.religion)
                     .GroupBy(n => n)
                     .ToDictionary(n => n.Key, n => n.Count())
@@ -190,10 +108,10 @@ public static class TitleManager
         {
             return baronies.Select((n, i) =>
             {
-                return $@"                {n.Id} = {{
-                    color = {{ {n.color.R} {n.color.G} {n.color.B} }}
+                return $@"                {n.CK3_Id} = {{
+                    color = {{ {n.Color.R} {n.Color.G} {n.Color.B} }}
                     color2 = {{ 255 255 255 }}
-                    province = {map.IdToIndex[n.province.Id]}
+                   province = {map.IdToIndex[n.GetProvince().Id]}
                 }}";
             }).ToArray();
         }
@@ -203,7 +121,7 @@ public static class TitleManager
             return counties.Select((n, i) =>
             {
                 ci = n.id;
-                return $@"            {n.Id} = {{
+                return $@"            {n.CK3_Id} = {{
                 color = {{ {n.Color.R} {n.Color.G} {n.Color.B} }}
                 color2 = {{ 255 255 255 }}
                 definite_form = yes
@@ -214,7 +132,7 @@ public static class TitleManager
 
         string[] GetDuchies(Duchy[] duchies)
         {
-            return duchies.Select((d, i) => $@"        {d.Id} = {{
+            return duchies.Select((d, i) => $@"        {d.CK3_Id} = {{
             color = {{ {d.color.R} {d.color.G} {d.color.B} }}
             color2 = {{ 255 255 255 }}
             capital = c_{ci}
@@ -225,7 +143,7 @@ public static class TitleManager
 
         string[] GetKingdoms(Kingdom[] kingdoms)
         {
-            return kingdoms.Select((k, i) => $@"    {k.Id} = {{
+            return kingdoms.Select((k, i) => $@"    {k.CK3_Id} = {{
         color = {{ {k.color.R} {k.color.G} {k.color.B} }}
         color2 = {{ 255 255 255 }}
         capital = c_{ci}
@@ -237,7 +155,7 @@ public static class TitleManager
 
         string[] GetEmpires()
         {
-            return map.Empires.Select((e, i) => $@"{e.Id} = {{
+            return map.Empires.Select((e, i) => $@"{e.CK3_Id} = {{
     color = {{ {e.color.R} {e.color.G} {e.color.B} }}
     color2 = {{ 255 255 255 }}
     capital = c_{ci}
@@ -267,19 +185,19 @@ e_roman_empire = {{ landless = yes }}";
 
         foreach (var e in map.Empires)
         {
-            lines.Add($"{e.Id}: \"{e.name}\"");
+            lines.Add($"{e.CK3_Id}: \"{e.name}\"");
             foreach (var k in e.kingdoms)
             {
-                lines.Add($"{k.Id}: \"{k.name}\"");
+                lines.Add($"{k.CK3_Id}: \"{k.name}\"");
                 foreach (var d in k.duchies)
                 {
-                    lines.Add($"{d.Id}: \"{d.name}\"");
+                    lines.Add($"{d.CK3_Id}: \"{d.name}\"");
                     foreach (var c in d.counties)
                     {
-                        lines.Add($"{c.Id}: \"{c.Name}\"");
+                        lines.Add($"{c.CK3_Id}: \"{c.Name}\"");
                         foreach (var b in c.baronies)
                         {
-                            lines.Add($"{b.Id}: \"{b.name}\"");
+                            lines.Add($"{b.CK3_Id}: \"{b.Name}\"");
                         }
                     }
                 }

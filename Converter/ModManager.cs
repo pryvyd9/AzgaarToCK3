@@ -88,6 +88,8 @@ supported_version=""1.12.4""";
         int i = 1;
         int totalStageCount = 24;
 
+        await MapManager.LemurAlgorithm(map);
+
         var map = await LoadMap();
         Console.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
 

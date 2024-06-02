@@ -236,19 +236,19 @@ public static class CharacterManager
 
         foreach (var e in map.Empires)
         {
-            if (e.holder is not null) lines.Add($"{e.Id} = {{ 1066.1.1 = {{ holder = {e.holder.id} }} }}");
+            if (e.holder is not null) lines.Add($"{e.CK3_Id} = {{ 1066.1.1 = {{ holder = {e.holder.id} }} }}");
             foreach (var k in e.kingdoms)
             {
-                var kliege = k.liege is not null ? $"liege = \"{k.liege.Id}\"" : null;
-                if (k.holder is not null) lines.Add($"{k.Id} = {{ 1066.1.1 = {{ holder = {k.holder.id} {kliege} }} }}");
+                var kliege = k.liege is not null ? $"liege = \"{k.liege.CK3_Id}\"" : null;
+                if (k.holder is not null) lines.Add($"{k.CK3_Id} = {{ 1066.1.1 = {{ holder = {k.holder.id} {kliege} }} }}");
                 foreach (var d in k.duchies)
                 {
-                    var dliege = d.liege is not null ? $"liege = \"{d.liege.Id}\"" : null;
-                    if (d.holder is not null) lines.Add($"{d.Id} = {{ 1066.1.1 = {{ holder = {d.holder.id} {dliege} }} }}");
+                    var dliege = d.liege is not null ? $"liege = \"{d.liege.CK3_Id}\"" : null;
+                    if (d.holder is not null) lines.Add($"{d.CK3_Id} = {{ 1066.1.1 = {{ holder = {d.holder.id} {dliege} }} }}");
                     foreach (var c in d.counties)
                     {
-                        var cliege = c.liege is not null ? $"liege = \"{c.liege.Id}\"" : null;
-                        if (c.holder is not null) lines.Add($"{c.Id} = {{ 1066.1.1 = {{ holder = {c.holder?.id} {cliege} }} }}");
+                        var cliege = c.liege is not null ? $"liege = \"{c.liege.CK3_Id}\"" : null;
+                        if (c.holder is not null) lines.Add($"{c.CK3_Id} = {{ 1066.1.1 = {{ holder = {c.holder?.id} {cliege} }} }}");
                     }
                 }
             }
