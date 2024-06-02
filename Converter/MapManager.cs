@@ -869,12 +869,17 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     private static string[] GetOriginalCultures()
     {
         var path = Helper.GetPath(Settings.Instance.Ck3Directory, "common", "culture", "cultures");
-        var cultures = Directory.EnumerateFiles(path).Where(n => n.EndsWith(".txt")).SelectMany(n =>
-        {
-            var file = File.ReadAllText(n);
-            var parsedFile = CK3FileReader.Read(file);
-            return parsedFile.Keys.ToArray();
-        }).ToArray();
+        var cultures = Directory.EnumerateFiles(path)
+            .Where(n => n.EndsWith(".txt"))
+            .SelectMany(n =>
+            {
+                var file = File.ReadAllText(n);
+                var parsedFile = CK3FileReader.Read(file);
+                return parsedFile.Keys.ToArray();
+            })
+            .Where(n => !string.Equals(n, "values", StringComparison.InvariantCultureIgnoreCase))
+            .Distinct()
+            .ToArray();
 
         return cultures;
     }

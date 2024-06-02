@@ -1,3 +1,6 @@
+# 1.4.5
+- fixed cultures (199 original cultures).
+
 # 1.4.4
 - raised culture limit to 239 (original culture count).
 
