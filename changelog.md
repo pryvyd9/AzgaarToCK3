@@ -1,3 +1,6 @@
+# 1.4.6
+- removed parallelism from mask writing.
+
 # 1.4.5
 - fixed cultures (199 original cultures).
 
