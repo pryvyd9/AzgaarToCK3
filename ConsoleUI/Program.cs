@@ -47,6 +47,7 @@ internal class Program
 
         Console.WriteLine("Start conversion?");
         if (YesNo())
+        //if (true)
         {
             // Copy sandbox mod files.
             if (!ModManager.DoesModExist())
@@ -90,6 +91,12 @@ internal class Program
 
     private static bool YesNo()
     {
+        if (Settings.Instance.Debug)
+        {
+            //Auto yes in debug mode
+            Console.WriteLine("AutoYes");
+            return true;
+        }
         int maxTries = 10;
         string response = "";
         for (int i = 0; i < maxTries; i++)

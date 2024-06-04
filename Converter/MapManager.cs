@@ -97,91 +97,31 @@ public static class MapManager
         return c;
     }
 
-    private static Dictionary<int, Province> GetProvinceCells(GeoMap geomap, JsonMap jsonmap)
+
+    private static List<IProvince> CreateWaterProvinces(List<Cell> cells)
     {
-        var provinces = new Dictionary<int, Province>();
-        foreach (var feature in geomap.features)
-        {
-            var provinceId = feature.properties.province;
 
-            if (!provinces.ContainsKey(provinceId))
-            {
-                provinces[provinceId] = new Province()
-                {
-                    StateId = jsonmap.pack.provinces[provinceId].state
-                };
-            }
+        //Agorithm overview:
+        // 1. Make sure that list we are working with only contain water cells.
+        // 2. Then select a random cell and grow to the desired water province size (int representing size in cells)
+        //  -. Find all neighbors of the current cell that are water cells and add them to the potential water province.
+        //  - Continue untill there are no more cells to grow to or the desired size is reached.
+        // 3. If the desired size was not reached then we have a diminutive water province. If it is above half the desired size then we will keep it.
+        // - If it is below half the desired size then we will merge it with the nearest water province. (or if that fails keep it)
+        // 4. Repeat untill all water cells are in a water province.
 
-            var cells = feature.geometry.coordinates.Select(n =>
-                new Cell(
-                    feature.properties.id,
-                    feature.properties.height,
-                    n,
-                    feature.properties.neighbors,
-                    feature.properties.culture,
-                    feature.properties.religion,
-                    jsonmap.pack.cells[feature.properties.id].area,
-                    jsonmap.pack.cells[feature.properties.id].biome)
-                { Province = provinces[provinceId] });
-            provinces[provinceId].Cells.AddRange(cells);
-        }
 
-        return provinces;
-    }
-    // Remove 1 cell islands from all provinces.
-    private static Province[] TransferHangingCells(Province[] nonWaterProvinces)
-    {
+
+
+        
+
+
+
+        var waterCells = cells.Where(n => n.Biome == 0).ToList();
+
         try
         {
-            var newProvinces = nonWaterProvinces.ToList();
 
-            // province to where to transfer to. What to transfer.
-            var cellsToTransfer = new Dictionary<Province, Cell>();
-
-            // Find cells that don't touch the province but still belong to it.
-            // Reassign it to the neighbor province.
-            foreach (var province in nonWaterProvinces)
-            {
-                var cells = province.Cells;
-                var cellsToRemove = new List<Cell>();
-                foreach (var cell in cells)
-                {
-                    if (!cells.Any(m => cell.neighbors.Contains(m.id)))
-                    {
-                        var nonWaterNeighborProvince = nonWaterProvinces.FirstOrDefault(p =>
-                        {
-                            return p.Cells.Any(c => cell.neighbors.Contains(c.id));
-                        });
-
-                        if (nonWaterNeighborProvince is null)
-                        {
-                            // We don't want 1 cell islands. They are too small to contain locators.
-                            // Remove 1 cell islands from provinces completely.
-                            cellsToRemove.Add(cell);
-                            continue;
-                        }
-
-                        cellsToTransfer[nonWaterNeighborProvince] = cell;
-                        cellsToRemove.Add(cell);
-                    }
-                }
-
-                cellsToRemove.ForEach(n => cells.Remove(n));
-
-                // Remove empty provinces
-                if (cells.Count == 0)
-                {
-                    newProvinces.Remove(province);
-                }
-            }
-
-            // Transfer cells
-            foreach (var (p, c) in cellsToTransfer)
-            {
-                p.Cells.Add(c);
-            }
-
-            return newProvinces.ToArray();
         }
         catch (Exception ex)
         {
@@ -189,145 +129,95 @@ public static class MapManager
             throw;
         }
     }
-    private static List<Province> CreateWaterProvinces(Province waterProvince)
+
+    /// <summary>
+    /// Province is a shared term between Azgaar data and Ck3. This class represents a province as Ck3 understands it.
+    /// AKA the smallest parts the map is divided into, so baronies, sea provinces, major rivers sections, etc.
+    /// </summary>
+    /// <param name="waterProvince"></param>
+    /// <returns></returns>
+    private static Province[] CreateProvinces(Map map)
     {
-        try
-        {
-            var cells = waterProvince.Cells;
 
-            var largestWaterProvince = cells.MaxBy(n => n.area).area;
-            var areaPerProvince = largestWaterProvince / 2;
+        throw new NotImplementedException();
+        // A provice needs a name, id, color, burg(s), and neighbors, and if it is water or not.
 
-            var unprocessedCells = waterProvince.Cells.ToDictionary(n => n.id, n => n);
-            var provinces = new List<Province>();
 
-            do
-            {
-                var currentCell = unprocessedCells.Values.FirstOrDefault();
-                if (currentCell is null)
-                {
-                    break;
-                }
 
-                var currentArea = 0;
-                // First accumulate smaller provinces. It will create a more convex shape.
-                var accumulatedNeighbors = new List<Cell>();
 
-                provinces.Add(new Province());
+        // var provinces = new Province[provinceCells.Count + waterProvinces.Count];
 
-                for (int i = 0; currentArea < areaPerProvince; i++)
-                {
-                    unprocessedCells.Remove(currentCell.id);
-                    provinces.Last().Cells.Add(currentCell);
-                    currentArea += currentCell.area;
+        // // pId == 0 is the wasteland province.
+        // provinces[0] = new Province
+        // {
+        //     Color = MagickColors.Black,
+        //     Name = "x",
+        //     Id = 0,
+        // };
 
-                    foreach (var n in currentCell.neighbors.Where(unprocessedCells.ContainsKey))
-                    {
-                        // If cell is not found then it's not water cell. So ignore it.
-                        if (cells.FirstOrDefault(m => m.id == n) is { } cell)
-                        {
-                            accumulatedNeighbors.Add(cell);
-                        }
-                    }
+        // try
+        // {
+        //     var neighborCellIds = new Dictionary<int, int[]>();
+        //     for (int i = 1; i < provinceCells.Count; i++)
+        //     {
+        //         var color = GetColor(i, provinces.Length);
+        //         var province = provinces[i] = provinceCells[i];
 
-                    if (accumulatedNeighbors.FirstOrDefault() is { } neighbor)
-                    {
-                        currentCell = neighbor;
-                        accumulatedNeighbors.Remove(neighbor);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-            } while (unprocessedCells.Count > 0);
+        //         province.Color = color;
+        //         province.Name = jsonmap.pack.provinces[i].name;
+        //         province.Id = jsonmap.pack.provinces[i].i;
+        //         province.Burg = jsonmap.pack.burgs[jsonmap.pack.provinces[i].burg];
 
-            return provinces;
-        }
-        catch (Exception ex)
-        {
-            Debugger.Break();
-            throw;
-        }
-    }
-    private static Province[] CreateProvinces(GeoMap geomap, JsonMap jsonmap)
-    {
-        var provinceCells = GetProvinceCells(geomap, jsonmap);
-        var waterProvinces = CreateWaterProvinces(provinceCells[0]);
-        var provinces = new Province[provinceCells.Count + waterProvinces.Count];
+        //         var cellIds = province.Cells.Select(n => n.Id).ToHashSet();
+        //         neighborCellIds[i] = province.Cells.SelectMany(n => n.Neighbors.Where(m => !cellIds.Contains(m))).ToArray();
+        //     }
 
-        // pId == 0 is not an ocean.
-        // It's some system thing that needs to exist in order for all indices to start from 1.
-        provinces[0] = new Province
-        {
-            Color = MagickColors.Black,
-            Name = "x",
-            Id = 0,
-        };
+        //     // Create sea provinces
+        //     for (int i = 0; i < waterProvinces.Count; i++)
+        //     {
+        //         var province = provinces[provinceCells.Count + i] = waterProvinces[i];
+        //         province.Color = GetColor(provinceCells.Count + i, provinces.Length);
+        //         province.Name = "sea";
+        //         province.Id = provinceCells.Count + i;
+        //         province.IsWater = true;
+        //     }
 
-        try
-        {
-            var neighborCellIds = new Dictionary<int, int[]>();
-            for (int i = 1; i < provinceCells.Count; i++)
-            {
-                var color = GetColor(i, provinces.Length);
-                var province = provinces[i] = provinceCells[i];
+        //     // Populate neighbors
+        //     for (int i = 0; i < provinceCells.Count; i++)
+        //     {
+        //         var neighbors = new HashSet<Province>();
 
-                province.Color = color;
-                province.Name = jsonmap.pack.provinces[i].name;
-                province.Id = jsonmap.pack.provinces[i].i;
-                province.Burg = jsonmap.pack.burgs[jsonmap.pack.provinces[i].burg];
+        //         if (neighborCellIds.TryGetValue(i, out var cellIds))
+        //         {
+        //             var processedNeighbors = new HashSet<int>();
+        //             foreach (var cid in cellIds)
+        //             {
+        //                 if (processedNeighbors.Contains(cid)) continue;
 
-                var cellIds = province.Cells.Select(n => n.id).ToHashSet();
-                neighborCellIds[i] = province.Cells.SelectMany(n => n.neighbors.Where(m => !cellIds.Contains(m))).ToArray();
-            }
+        //                 foreach (var p in provinces.Where(n => n.Id != 0 && !n.IsWater && n.StateId == provinces[i].StateId && n.Cells.Any(m => m.id == cid)))
+        //                 {
+        //                     neighbors.Add(p);
+        //                 }
 
-            // Create sea provinces
-            for (int i = 0; i < waterProvinces.Count; i++)
-            {
-                var province = provinces[provinceCells.Count + i] = waterProvinces[i];
-                province.Color = GetColor(provinceCells.Count + i, provinces.Length);
-                province.Name = "sea";
-                province.Id = provinceCells.Count + i;
-                province.IsWater = true;
-            }
+        //                 processedNeighbors.Add(cid);
+        //             }
+        //             provinces[i].Neighbors = neighbors.ToArray();
+        //         }
+        //     }
+        // }
+        // catch (Exception ex)
+        // {
+        //     Debugger.Break();
+        //     throw;
+        // }
 
-            // Populate neighbors
-            for (int i = 0; i < provinceCells.Count; i++)
-            {
-                var neighbors = new HashSet<Province>();
+        // var finalProvinces = provinces
+        //     .Take(1)
+        //     .Concat(TransferHangingCells(provinces[1..provinceCells.Count]))
+        //     .Concat(provinces[provinceCells.Count..])
+        //     .ToArray();
 
-                if (neighborCellIds.TryGetValue(i, out var cellIds))
-                {
-                    var processedNeighbors = new HashSet<int>();
-                    foreach (var cid in cellIds)
-                    {
-                        if (processedNeighbors.Contains(cid)) continue;
-
-                        foreach (var p in provinces.Where(n => n.Id != 0 && !n.IsWater && n.StateId == provinces[i].StateId && n.Cells.Any(m => m.id == cid)))
-                        {
-                            neighbors.Add(p);
-                        }
-
-                        processedNeighbors.Add(cid);
-                    }
-                    provinces[i].Neighbors = neighbors.ToArray();
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Debugger.Break();
-            throw;
-        }
-
-        var finalProvinces = provinces
-            .Take(1)
-            .Concat(TransferHangingCells(provinces[1..provinceCells.Count]))
-            .Concat(provinces[provinceCells.Count..])
-            .ToArray();
-
-        return finalProvinces;
+        // return finalProvinces;
     }
 
     private static PointD GeoToPixel(float lon, float lat, Map map)
@@ -345,7 +235,6 @@ public static class MapManager
 
     public static async Task<Map> ConvertMap(GeoMap geoMap, GeoMapRivers geoMapRivers, JsonMap jsonMap)
     {
-        var provinces = CreateProvinces(geoMap, jsonMap);
 
         var rnd = new Random(1);
         var nameBase = jsonMap.nameBases[rnd.Next(jsonMap.nameBases.Length)];
@@ -361,8 +250,6 @@ public static class MapManager
             GeoMap = geoMap,
             Rivers = geoMapRivers,
             JsonMap = jsonMap,
-            Provinces = provinces,
-            IdToIndex = provinces.Select((n, i) => (n, i)).ToDictionary(n => n.n.Id, n => n.i),
             NameBase = new NameBasePrepared(nameBase.name, nameBaseNames),
         };
 
@@ -417,11 +304,11 @@ public static class MapManager
             using var cellsMap = new MagickImage("xc:black", settings);
 
             List<Drawables> drawablesList = new();
-            foreach (var province in map.Provinces.Skip(1))
-            {
-                if (!province.IsWater) continue;
-                drawablesList.Add(GenerateCellPolygons(province.Cells, province.Color, map));
-            }
+            // foreach (var province in map.Provinces.Skip(1))
+            // {
+            //     if (!province.IsWater) continue;
+            //     drawablesList.Add(GenerateCellPolygons(province.Cells, province.Color, map));
+            // }
             foreach (var barony in map.Baronies)
             {
                 drawablesList.Add(GenerateCellPolygons(barony.Cells, barony.Color, map));
@@ -460,6 +347,52 @@ public static class MapManager
         }
     }
 
+    public static async Task DrawSingleProvince(Province province, MagickColor color, Map map)
+    {
+        try
+        {
+
+            var settings = new MagickReadSettings()
+            {
+                Width = Map.MapWidth,
+                Height = Map.MapHeight,
+            };
+
+            using var provinceMap = new MagickImage("xc:black", settings);
+            var drawables = new Drawables();
+
+            foreach (var cell in province.Cells)
+            {
+                drawables
+                    .DisableStrokeAntialias()
+                    .StrokeColor(province.Color)
+                    .FillColor(color)
+                    .Polygon(cell.GeoDataCoordinates.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, Map.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+            }
+
+            provinceMap.Draw(drawables);
+            var path = Helper.GetPath(Settings.OutputDirectory, "map_data", $"{province.Name}.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            await provinceMap.WriteAsync(path);
+
+            //open the image
+            var psi = new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                ArgumentList = { path },
+                UseShellExecute = true
+            };
+            Process.Start(psi);
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+            throw;
+        }
+
+
+    }
+
     private static Drawables GenerateCellPolygons(IEnumerable<Cell> cells, MagickColor color, Map map)
     {
         var drawables = new Drawables();
@@ -469,7 +402,7 @@ public static class MapManager
                 .DisableStrokeAntialias()
                 .StrokeColor(color)
                 .FillColor(color)
-                .Polygon(cell.geoDataCoordinates.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, Map.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+                .Polygon(cell.GeoDataCoordinates.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, Map.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
         }
         return drawables;
     }
@@ -562,7 +495,7 @@ public static class MapManager
                         .DisableStrokeAntialias()
                         .StrokeColor(MagickColors.White)
                         .FillColor(MagickColors.White)
-                        .Polygon(cell.geoDataCoordinates.Select(n => GeoToPixel(n[0], n[1], map)));
+                        .Polygon(cell.GeoDataCoordinates.Select(n => GeoToPixel(n[0], n[1], map)));
                 }
             }
 
@@ -745,11 +678,11 @@ $@"game_object_locator={{
             var p = new PointD();
             if (n.Burg is null)
             {
-                var maxLon = n.Cells.SelectMany(n => n.geoDataCoordinates).MaxBy(n => n[0])[0];
-                var minLon = n.Cells.SelectMany(n => n.geoDataCoordinates).MinBy(n => n[0])[0];
+                var maxLon = n.Cells.SelectMany(n => n.GeoDataCoordinates).MaxBy(n => n[0])[0];
+                var minLon = n.Cells.SelectMany(n => n.GeoDataCoordinates).MinBy(n => n[0])[0];
 
-                var maxLat = n.Cells.SelectMany(n => n.geoDataCoordinates).MaxBy(n => n[1])[1];
-                var minLat = n.Cells.SelectMany(n => n.geoDataCoordinates).MinBy(n => n[1])[1];
+                var maxLat = n.Cells.SelectMany(n => n.GeoDataCoordinates).MaxBy(n => n[1])[1];
+                var minLat = n.Cells.SelectMany(n => n.GeoDataCoordinates).MinBy(n => n[1])[1];
 
                 p = GeoToPixelCrutch((maxLon + minLon) / 2, (maxLat + minLat) / 2, map);
             }
@@ -1240,9 +1173,13 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     internal static async Task LemurAlgorithm(Map map)
     {
         map.Burgs = RepackBurgsAsDictionary(map);
+
+        map.Cells = RepackCellsFromDataAsDictionary(map);
+
         map.Cells = RepackCellsAsDictionary(map);
         map.Burgs = AddBurgCellReference(map.Burgs, map.Cells);
         map.Baronies = GenerateBaronies(map.Burgs);
+        FormatCheckBurgs(map);
         AssignCellsToBaronies(map);
 
 
@@ -1258,11 +1195,79 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         await DrawProvincesImage(map);
 
 
-        // Exit the program
+        // Exit the program since we are debugging
         Environment.Exit(0);
 
 
 
+    }
+
+    private static Dictionary<int, Cell> RepackCellsFromDataAsDictionary(Map map)
+    {
+        Dictionary<int, Cell> cells = new Dictionary<int, Cell>();
+
+        var cellData = map.GeoMap.features; //Each feature is the representation for a single cell
+        //Each cell has a list of properties and a list for geometry
+        // The list of properties contains the id, heigh, neighbours e.c.t
+
+        foreach (var cell in cellData)
+        {
+            cells.Add(cell.properties.id, new Cell()
+            {
+                Id = cell.properties.id,
+                Height = cell.properties.height,
+                //Biome = cell.properties.biome, comes form the other json
+                //Burg = cell.properties.burg,
+                Culture = cell.properties.culture,
+                Religion = cell.properties.religion,
+                //Province = map.Provinces.First(p => p.Id == cell.properties.province),
+                State = cell.properties.state,
+                // Neighbour is an array of 
+                Neighbors = cell.properties.neighbors,
+            });
+
+        }
+
+        Console.WriteLine($"Repacked {cells.Count} cells from data");
+        return new Dictionary<int, Cell>();
+
+
+        // foreach (var cell in map.JsonMap.pack.cells)
+        // {
+        //     cells.Add(cell.i, new Cell(cell));
+        // }
+        // return cells;
+    }
+
+    private static void FormatCheckBurgs(Map map)
+    {
+        // Check that every burg lies inside of a province
+        // Problem: A burg can be in the 0'th province. This can happoen because not all cells inside a state are assigned a province - as in cases where the state is very small.
+        // This means we either have to let the user know that this is a limitation of the program, or we have to generate the missing data.
+        // For now I will go with the first option and get back to it later
+        try
+        {
+
+            foreach (var barony in map.Baronies)
+            {
+                if (barony.Burg.State == 0)
+                {
+                    throw new FormatException($"Burg {barony.Name} is in the wasteland");
+                }
+                if (barony.GetProvince().Id == 0)
+                {
+                    throw new FormatException($"Burg {barony.Name} is not inside a province. Every burg must be inside a province, even when inside a state");
+                }
+            }
+        }
+        catch (FormatException e)
+        {
+            Console.WriteLine(e.Message);
+            Console.WriteLine("Program found an unresolvable issue in the Azgaar data model. The program will now exit.");
+            Console.WriteLine("Press any key to exit");
+            Console.ReadKey();
+            Environment.Exit(0);
+        }
     }
 
     private static void AssignColoursToBaroniesAndSeaProvinces(Map map)
@@ -1283,7 +1288,9 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         {
             if (!province.IsWater) continue;
             Ck3_assignedProvinceColorCount++;
-            province.Color = GetColor(Ck3_assignedProvinceColorCount, UniqueColourRange);
+            if (Settings.Instance.Debug) province.Color = new MagickColor(0, 0, 50);
+            else province.Color = GetColor(Ck3_assignedProvinceColorCount, UniqueColourRange);
+
             Console.WriteLine($"Assigned colour {province.Color} to {province.Name}");
         }
         foreach (var barony in map.Baronies)
@@ -1301,19 +1308,18 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     /// Assign cells to baronies based on distance to burg
     /// </summary>
     /// <param name="map"></param>
-    private static void AssignCellsToBaronies(Map map)
+    private static async void AssignCellsToBaronies(Map map)
     {
-        //TODO: make barony generation that does not repect province borders, but does repesct culture.
 
-        // Skip the first province since it is always empty (See Azgaar data model)
-        foreach (var province in map.Provinces.Skip(1))
+
+        foreach (var province in map.Provinces)
         {
             if (province.IsWater)
             {
                 continue;
             }
-            // We'll start by getting all the baronies in the province
 
+            // We'll start by getting all the baronies in the province
             var baroniesInProvince = map.Baronies.Where(b => b.GetProvince() == province).ToList();
             if (baroniesInProvince.Count == 0)
             {
@@ -1330,6 +1336,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             // Have each barony grow outwards until all countryside cells are assigned among the burgs based on distance
             while (CountrysideCells.Count > 0)
             {
+                bool noMoreRoom = true;
                 foreach (Barony barony in baroniesInProvince)
                 {
                     //Look at it's assigned cells
@@ -1339,13 +1346,18 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     {
                         continue;
                     }
-
+                    noMoreRoom = false;
                     //Then sort them by distance to the burg
                     neighbors.Sort((a, b) => a.DistanceSquared(barony.Burg.Cell).CompareTo(b.DistanceSquared(barony.Burg.Cell)));
                     //Then assign the closest cell to the burg
                     barony.Cells.Add(neighbors[0]);
                     //And remove it from the list of countryside cells
                     CountrysideCells.Remove(neighbors[0].id);
+                }
+                if (noMoreRoom)
+                {
+                    Console.WriteLine("No more room in any barony");
+                    break;
                 }
             }
 
@@ -1395,13 +1407,37 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             .SelectMany(n => n.Cells) // Flatten the list
             .Distinct(new CellComparer()) // Remove duplicates
             .ToDictionary(c => c.id); // Convert to dictionary with cell id as the key
+        
+        //for logging puproses, get the total number of cells among all provinces
+        int totalCells = map.Provinces.SelectMany(n => n.Cells).Count();
+
+        //get a lisrt of iotems that have been removed
+
+
+        
+        Console.WriteLine($"Repacked {Cells.Count} cells as a dictionary. Removed {totalCells - Cells.Count} duplicates");
 
         // Mark all the cells that have a burg
         Console.WriteLine("Marking cells with burgs");
-        var i = 0;
-        foreach (var burg in map.JsonMap.pack.burgs)
+        foreach (var burg in map.JsonMap.pack.burgs.Skip(1)) //Skip the 0'eth entry since it is always empty (See Azgaar data model)
         {
-            Console.WriteLine($"Burg {i++}/{map.JsonMap.pack.burgs.Length}");
+            if (burg.cell == 590)
+            {
+                Console.WriteLine("Found 590");
+                try
+                {
+                    //print every cell in the cell list
+                    foreach (var cell in Cells)
+                    {
+                        Console.WriteLine(cell.Key);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+
+            }
             Cells[burg.cell].Burg = burg;
         }
         return Cells;
@@ -1411,11 +1447,6 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     {
         public bool Equals(Cell x, Cell y)
         {
-            if (Object.ReferenceEquals(x, y)) return true;
-
-            if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
-                return false;
-
             // Compare whether the IDs are equal
             return x.id == y.id;
         }

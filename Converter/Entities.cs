@@ -41,6 +41,9 @@ public class PackProvinceJsonConverter : JsonConverter<PackProvince[]>
         throw new NotImplementedException();
     }
 }
+
+
+
 /// <summary>
 /// Represents a burg as defined in the Azgaar Data
 /// </summary>
@@ -130,24 +133,34 @@ public record Properties(int id, string type, int province, int state, int heigh
 public record Feature(Geometry geometry, Properties properties);
 public record GeoMap(Feature[] features);
 
-
-public record Cell(int id, int height, float[][] geoDataCoordinates, int[] neighbors, int culture, int religion, int area, int biome)
+/// <summary>
+/// The converters idea of a cell. Can hold various data from both the geojson and json files.
+/// </summary>
+public class Cell
 {
-    public Province Province { get; set; }
+    public int Id { get; init; }
+    public int Height { get; set; }
+    public float[][] GeoDataCoordinates { get; set; }
+    public int[] Neighbors { get; set; }
+    public int Culture { get; set; }
+    public int Religion { get; set; }
+    public int Area { get; set; }
+    public int Biome { get; set; }
+
+    public IProvince Province { get; set; }
 
     /// <summary>
     /// If the cell has a burg, this will be true.
     /// </summary>
-    public bool hasBurg => Burg != null;
+    public bool HasBurg => Burg != null;
 
     //If the cell has a burg, this will be set.
     public Burg Burg { get; set; }
-
-    
+    public int State { get;  set; }
 
     public override string ToString()
     {
-        return $"id:{id},neighbors:[{string.Join(",", neighbors)}]";
+        return $"id:{Id},neighbors:[{string.Join(",", Neighbors)}]";
     }
 
     /// <summary>
@@ -158,23 +171,38 @@ public record Cell(int id, int height, float[][] geoDataCoordinates, int[] neigh
     /// <returns></returns>
     public float DistanceSquared(Cell other)
     {
-        return (geoDataCoordinates[0][0] - other.geoDataCoordinates[0][0]) * (geoDataCoordinates[0][0] - other.geoDataCoordinates[0][0]) +
-            (geoDataCoordinates[0][1] - other.geoDataCoordinates[0][1]) * (geoDataCoordinates[0][1] - other.geoDataCoordinates[0][1]);
+        return (GeoDataCoordinates[0][0] - other.GeoDataCoordinates[0][0]) * (GeoDataCoordinates[0][0] - other.GeoDataCoordinates[0][0]) +
+            (GeoDataCoordinates[0][1] - other.GeoDataCoordinates[0][1]) * (GeoDataCoordinates[0][1] - other.GeoDataCoordinates[0][1]);
     }
 
 }
-public class Province
+/// <summary>
+/// Interface for objects that can be drawn to a map
+/// </summary>
+public interface IProvince
 {
-    public List<Cell> Cells { get; set; } = [];
+    public List<Cell> Cells { get; set; }
 
     //public List<Burg> Burgs { get; set; } = new();
-    public Burg Burg { get; set; }
     public MagickColor Color { get; set; }
     public string Name { get; set; }
-    public int Id { get; set; }
-    public int StateId { get; set; }
-    public Province[] Neighbors { get; set; } = [];
-    public bool IsWater { get; set; }
+    public int Id { get; set; } //TODO: Make an ID manager for ck3 id? Must be unique after all
+    public IProvince[] Neighbors { get; set; }
+
+    /// <summary>
+    /// What cells have neighbors that are not part of the province, return a list of the provinces of those cells.
+    /// </summary>
+    /// <returns></returns>
+    public List<IProvince> GetNeighbors();
+
+    public int GetSize(){
+        return Cells.Count;
+    }
+
+    public string ToString()
+    {
+        return $"id:{Id},name:{Name}, size:{GetSize()}";
+    }
 }
 
 // dynasty can repeat.
@@ -219,17 +247,18 @@ public class Barony : ICultureReligionHolder, ITitle
     public ConverterBurg Burg { get; set; }
     public Province CurrentProvince { get; }
     /// <summary>
-    /// Azgaar Province
+    /// Gets Azgaar Province through the burg cell.
     /// </summary>
-    public Province GetProvince() {
+    public Province GetProvince()
+    {
 
         if (Burg == null)
         {
-            throw new Exception("Barony is missing burg.");
+            throw new Exception("Barony is missing burg");
         }
         if (Burg.Cell == null)
         {
-            throw new Exception("Barony has no centre.");
+            throw new Exception("Burg does not have a cell");
         }
         return Burg.Cell.Province;
 
@@ -244,7 +273,7 @@ public class Barony : ICultureReligionHolder, ITitle
         Religion = foundationBurg.Culture.ToString();
 
         Cells = new List<Cell> { foundationBurg.Cell };
-         
+
     }
 
 }
@@ -293,8 +322,8 @@ public record NameBaseName(string id, string name);
 public record NameBasePrepared(string name, NameBaseName[] names);
 public class Map
 {
-    public const int MapWidth = 8192;
-    public const int MapHeight = 4096;
+    public const int MapWidth = 8192 / 4;
+    public const int MapHeight = 4096 / 4;
 
 
     public GeoMap GeoMap { get; set; }
@@ -317,7 +346,7 @@ public class Map
     /// </summary>
     public Dictionary<int, ConverterBurg> Burgs { get; set; }
 
-    public Province[] Provinces { get; set; }
+    public List<Province[]> Provinces { get; set; }
     public Empire[] Empires { get; set; }
 
     public double pixelXRatio => (double)MapWidth / JsonMap.info.width;
