@@ -147,6 +147,8 @@ public class Cell
     public int Area { get; set; }
     public int Biome { get; set; }
 
+    public FeatureType Type { get; set; }
+
     public IProvince Province { get; set; }
 
     /// <summary>
@@ -156,7 +158,7 @@ public class Cell
 
     //If the cell has a burg, this will be set.
     public Burg Burg { get; set; }
-    public int State { get;  set; }
+    public int State { get; set; }
 
     public override string ToString()
     {
@@ -173,6 +175,27 @@ public class Cell
     {
         return (GeoDataCoordinates[0][0] - other.GeoDataCoordinates[0][0]) * (GeoDataCoordinates[0][0] - other.GeoDataCoordinates[0][0]) +
             (GeoDataCoordinates[0][1] - other.GeoDataCoordinates[0][1]) * (GeoDataCoordinates[0][1] - other.GeoDataCoordinates[0][1]);
+    }
+
+
+    /// <summary>
+    /// Enum representing the type of geographical feature. 
+    /// Includes both primary types (e.g., Ocean, Island, Lake) and subtypes (e.g., Continent, Isle, LakeIsland, Freshwater, Salt, Dry, Sinkhole, Lava).
+    /// Source: https://github.com/Azgaar/Fantasy-Map-Generator/wiki/Data-model#pack-object-1
+    /// </summary>
+    public enum FeatureType
+    {
+        ocean,
+        island,
+        lake,
+        continent,
+        isle,
+        lake_island,
+        freshwater,
+        salt,
+        dry,
+        sinkhole,
+        lava
     }
 
 }
@@ -195,7 +218,8 @@ public interface IProvince
     /// <returns></returns>
     public List<IProvince> GetNeighbors();
 
-    public int GetSize(){
+    public int GetSize()
+    {
         return Cells.Count;
     }
 

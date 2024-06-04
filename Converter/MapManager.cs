@@ -5,6 +5,7 @@ using SixLabors.ImageSharp.Processing;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using static Converter.Cell;
 
 namespace Converter;
 
@@ -111,9 +112,10 @@ public static class MapManager
         // 4. Repeat untill all water cells are in a water province.
 
 
+        // Previous method was getting water cells by omission (Not a cell in a state), that is A way to do it byt meybe not the best way.
+        // The geojason does contain s trying type, that can be ocean. I think maybe this is the most robust way to do it.
+        // There is also the height property, but that can do wierd things and lakes will not show up as water provinces.
 
-
-        
 
 
 
@@ -1212,6 +1214,13 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
         foreach (var cell in cellData)
         {
+            if (!Enum.TryParse(cell.properties.type, true, out FeatureType type))
+            {
+                // Throw an exception if the type is not recognized
+                throw new Exception($"Unrecognized feature type: {cell.properties.type}");
+            }
+
+
             cells.Add(cell.properties.id, new Cell()
             {
                 Id = cell.properties.id,
@@ -1224,7 +1233,12 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                 State = cell.properties.state,
                 // Neighbour is an array of 
                 Neighbors = cell.properties.neighbors,
+
+                //TODO: Json data has much of the same data - but also some details that are unique, like information about roads
+
             });
+
+
 
         }
 
@@ -1232,11 +1246,6 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         return new Dictionary<int, Cell>();
 
 
-        // foreach (var cell in map.JsonMap.pack.cells)
-        // {
-        //     cells.Add(cell.i, new Cell(cell));
-        // }
-        // return cells;
     }
 
     private static void FormatCheckBurgs(Map map)
@@ -1407,14 +1416,14 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             .SelectMany(n => n.Cells) // Flatten the list
             .Distinct(new CellComparer()) // Remove duplicates
             .ToDictionary(c => c.id); // Convert to dictionary with cell id as the key
-        
+
         //for logging puproses, get the total number of cells among all provinces
         int totalCells = map.Provinces.SelectMany(n => n.Cells).Count();
 
         //get a lisrt of iotems that have been removed
 
 
-        
+
         Console.WriteLine($"Repacked {Cells.Count} cells as a dictionary. Removed {totalCells - Cells.Count} duplicates");
 
         // Mark all the cells that have a burg
