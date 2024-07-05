@@ -9,6 +9,7 @@
         public required Settings Settings { get; set; }
 
         public Dictionary<int, Cell>? Cells { get; set; }
+        public Dictionary<int, Burg>? Burgs { get; set; }
 
 
         public const int MapWidth = 8192;
@@ -18,6 +19,7 @@
         public float YOffset => JsonMap.mapCoordinates.latS;
         public float XRatio => MapWidth / JsonMap.mapCoordinates.lonT;
         public float YRatio => MapHeight / JsonMap.mapCoordinates.latT;
+
 
         public override string ToString()
         {

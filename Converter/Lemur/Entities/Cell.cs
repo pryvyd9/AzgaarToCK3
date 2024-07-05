@@ -26,7 +26,7 @@ namespace Converter.Lemur.Entities
         //public bool HasBurg => Burg != null;
 
         //If the cell has a burg, this will be set.
-        //public Burg Burg { get; set; }
+        public Burg? Burg { get; set; }
         public int State { get; set; }
 
         public override string ToString()

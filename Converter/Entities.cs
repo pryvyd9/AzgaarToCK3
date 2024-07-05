@@ -40,7 +40,49 @@ public class PackProvinceJsonConverter : JsonConverter<PackProvince[]>
         throw new NotImplementedException();
     }
 }
-public record Burg(/*townId*/int i, /*cellId*/int cell, /*townName*/string name, int feature, float x, float y);
+/// <summary>
+/// Represents a burg as defined in the Azgaar Data
+/// </summary>
+/// <param name="i">Burg ID, always equal to the array index</param>
+/// <param name="name">Burg name</param>
+/// <param name="cell">Burg cell ID. One cell can have only one burg</param>
+/// <param name="x">X axis coordinate, rounded to two decimals</param>
+/// <param name="y">Y axis coordinate, rounded to two decimals</param>
+/// <param name="culture">Burg culture ID</param>
+/// <param name="state">Burg state ID</param>
+/// <param name="feature">Burg feature ID (ID of a landmass)</param>
+/// <param name="population">Burg population in population points</param>
+/// <param name="type">Burg type</param>
+/// <param name="capital">1 if burg is a capital, 0 if not</param>
+/// <param name="port">If burg is not a port, then 0, otherwise feature ID of the water body the burg stands on</param>
+/// <param name="citadel">1 if burg has a castle, 0 if not.</param>
+/// <param name="plaza">1 if burg has a marketplace, 0 if not.</param>
+/// <param name="shanty">1 if burg has a shanty town, 0 if not.</param>
+/// <param name="temple">1 if burg has a temple, 0 if not.</param>
+/// <param name="walls">1 if burg has walls, 0 if not.</param>
+/// <param name="removed">True if burg is removed</param>
+public record Burg(
+    //Note, variable names are used to match the Azgaar data from the JSON file. SO DO NOT CHANGE THEM.
+    int i,
+    string name,
+    int cell,
+    float x,
+    float y,
+    int culture,
+    int state,
+    int feature,
+    float population,
+    string type,
+    int capital,
+    int port,
+    int citadel,
+    int plaza,
+    int shanty,
+    int temple,
+    int walls,
+    bool removed
+);
+
 public record State(int i, string name, int[] provinces);
 public record Culture(int i, string name);
 public record Religion(int i, string name);
@@ -56,7 +98,7 @@ public class Pack
     public Religion[] religions { get; set; }
     public PackCell[] cells { get; set; }
 }
-public record Info(int width, int height);
+public record Info(int width, int height, string version, string description, DateTime exportedAt, string mapName, string seed, long mapId);
 public record NameBase(string name, string b);
 public record JsonMap(Pack pack, MapCoordinates mapCoordinates, Info info, NameBase[] nameBases);
 
