@@ -23,6 +23,7 @@ namespace Converter.Lemur.Entities
         public bool Temple { get; set; } = burg.temple == 1;
         public bool Walls { get; set; } = burg.walls == 1;
         public bool Removed { get; set; } = burg.removed;
+        public Barony Barony { get; set; }
 
         //To string
         public override string ToString()
