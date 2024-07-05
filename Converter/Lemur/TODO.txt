@@ -1,0 +1,31 @@
+Current:
+
+- Transform cells into a list to be the basis for all other operations
+
+TODO:
+
+- Implement data transformation functions
+- Define data structures for storing parsed data
+- Implement data transformation functions
+- Add error handling and logging
+- Test the converter with sample input files
+- Refactor and optimize the code
+- Document the usage and functionality of the converter
+
+
+
+# start at cell level (every cell is an object). This will be tha basis for all other operations.
+
+## For baronies, divide the cells into groups based on their aszgaar province
+- Make sure here to handle burgs not belonging to a province
+- Use state if nessessary and invent a new province for them
+- Skip cells that are in the wasteland province (0).
+
+# Next, make sure we can draw each of the baronies to the map using the "provinces interface" (Provinces here being the XK3 term for baronies, major rivers, wasteland and water zones).
+
+proof of concept: Send list of "provinces" to the rawing function and output accurate map.
+
+
+DONE
+- Implement file parsing logic (Get data from the input files)
+
