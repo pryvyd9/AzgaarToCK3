@@ -88,8 +88,15 @@ internal class Program
         }
     }
 
-    private static bool YesNo()
+    private static bool YesNo(bool defaultIsYes = true)
     {
+        if (Settings.Instance.Debug)
+        {
+            //print the response to the console
+            Console.WriteLine($"{(defaultIsYes ? "- Yes" : "- No")} (Debug mode)");
+
+            return defaultIsYes;
+        }
         int maxTries = 10;
         string response = "";
         for (int i = 0; i < maxTries; i++)

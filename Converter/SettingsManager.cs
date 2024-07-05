@@ -26,6 +26,7 @@ public class Settings
     [JsonIgnore]
     public static string OutputDirectory => Helper.GetPath(Instance.ModsDirectory, Instance.ModName);
 
+    public bool Debug { get; set; } = true;
 
     public override string ToString()
     {
