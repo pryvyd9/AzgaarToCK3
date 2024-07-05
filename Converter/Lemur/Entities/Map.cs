@@ -2,6 +2,12 @@
 {
     public record Map
     {
+        public const int MapWidth = 8192;
+        public const int MapHeight = 4096;
+        public float XOffset => JsonMap.mapCoordinates.lonW;
+        public float YOffset => JsonMap.mapCoordinates.latS;
+        public float XRatio => MapWidth / JsonMap.mapCoordinates.lonT;
+        public float YRatio => MapHeight / JsonMap.mapCoordinates.latT;
         public required GeoMap GeoMap { get; set; }
 
         //TODO: Rivers public GeoMapRivers Rivers { get; set; }
@@ -11,15 +17,8 @@
         public Dictionary<int, Cell>? Cells { get; set; }
         public Dictionary<int, Burg>? Burgs { get; set; }
 
-
-        public const int MapWidth = 8192;
-        public const int MapHeight = 4096;
-
-        public float XOffset => JsonMap.mapCoordinates.lonW;
-        public float YOffset => JsonMap.mapCoordinates.latS;
-        public float XRatio => MapWidth / JsonMap.mapCoordinates.lonT;
-        public float YRatio => MapHeight / JsonMap.mapCoordinates.latT;
-
+        public List<Barony>? Baronies { get; set; }
+        public List<Duchy>? Duchies { get; internal set; }
 
         public override string ToString()
         {

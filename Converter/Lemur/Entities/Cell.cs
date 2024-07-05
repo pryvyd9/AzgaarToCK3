@@ -11,23 +11,20 @@ namespace Converter.Lemur.Entities
         public int Height { get; set; }
         public float[][] GeoDataCoordinates { get; set; }
         public int[] Neighbors { get; set; }
-        public int Culture { get; set; }
-        public int Religion { get; set; }
-        public int Area { get; set; }
+        public required int Culture { get; set; }
+        public required int Religion { get; set; }
         public int Biome { get; set; }
 
         public FeatureType Type { get; set; }
 
-        //public IProvince Province { get; set; }
+        public IProvince Province { get; set; }
 
-        /// <summary>
-        /// If the cell has a burg, this will be true.
-        /// </summary>
-        //public bool HasBurg => Burg != null;
 
-        //If the cell has a burg, this will be set.
+        //If the cell has a burg, this will be set.s
         public Burg? Burg { get; set; }
-        public int State { get; set; }
+        public required int State { get; set; }
+
+        public required int AzProvince { get; set; }
 
         public override string ToString()
         {

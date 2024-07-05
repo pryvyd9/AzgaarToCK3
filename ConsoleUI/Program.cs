@@ -56,7 +56,7 @@ internal class Program
 
             try
             {
-                await ModManager.Run();
+                await Converter.Lemur.ConversionManager.Run();
             }
             catch (Exception ex)
             {
@@ -80,7 +80,8 @@ internal class Program
         try
         {
             await Run();
-        }catch(Exception ex)
+        }
+        catch (Exception ex)
         {
             Console.WriteLine("An error has occured.");
             Console.WriteLine(ex.Message);
@@ -97,12 +98,15 @@ internal class Program
 
             return defaultIsYes;
         }
+
         int maxTries = 10;
         string response = "";
         for (int i = 0; i < maxTries; i++)
+
         {
             Console.WriteLine("1. Yes.");
             Console.WriteLine("2. No.");
+
             response = Console.ReadLine()!;
             if (response == "1")
             {
@@ -125,7 +129,7 @@ internal class Program
         SettingsManager.Save();
         Environment.Exit(0);
     }
-    
+
     private static void CheckIfShouldOverride()
     {
         while (ModManager.DoesModExist())
@@ -164,7 +168,7 @@ internal class Program
 
     private static void FindInputs()
     {
-        if (ModManager.FindLatestInputs() is ({ } jsonName, { } geojsonName) && 
+        if (ModManager.FindLatestInputs() is ({ } jsonName, { } geojsonName) &&
             (jsonName != Settings.Instance.InputJsonPath || geojsonName != Settings.Instance.InputGeojsonPath))
         {
             Console.WriteLine("Found new inputs in the directory:");
