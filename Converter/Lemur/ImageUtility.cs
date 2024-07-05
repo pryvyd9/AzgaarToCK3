@@ -17,7 +17,7 @@ namespace Converter.Lemur
             Process.Start(psi);
         }
 
-        public static async Task DrawCells(Entities.Map map)
+        public static async Task DrawCells(List<Entities.Cell> cells, Entities.Map map)
         {
             try
             {
@@ -29,17 +29,15 @@ namespace Converter.Lemur
                 using var cellsMap = new MagickImage("xc:white", settings);
 
                 var drawables = new Drawables();
-                foreach (var feature in map.GeoMap.features)
+                foreach (var cell in cells)
                 {
-                    foreach (var cell in feature.geometry.coordinates)
-                    {
-                        drawables
-                            .DisableStrokeAntialias()
-                            .StrokeWidth(2)
-                            .StrokeColor(MagickColors.Black)
-                            .FillOpacity(new Percentage(0))
-                            .Polygon(cell.Select(n => Helper.GeoToPixel(n[0], n[1], map)));
-                    }
+                    drawables
+                        .DisableStrokeAntialias()
+                        .StrokeWidth(2)
+                        .StrokeColor(MagickColors.Black)
+                        .FillOpacity(new Percentage(0))
+                        .Polygon(cell.GeoDataCoordinates.Select(n => Helper.GeoToPixel(n[0], n[1], map)));
+
                 }
 
                 cellsMap.Draw(drawables);
