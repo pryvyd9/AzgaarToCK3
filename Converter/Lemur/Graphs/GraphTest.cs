@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using Converter;
 using Converter.Lemur.Graphs;
 
@@ -52,7 +53,55 @@ public class GraphTest
         }
 
 
-        //now lest try and balance the graph
+
+
+        //Section header for this part of the code
+        Converter.Lemur.Helper.PrintSectionHeader("Graph Evaluator Test");
+        Console.WriteLine("Randomly generating partitions...");
+
+        // Create a list of partitions
+        List<Graph> partitions = new();
+
+        // Randomly split the graph into three partitions
+        Random random = new();
+        List<Node> nodes = graph.GetNodes();
+        var numberOfPartitions = Graph.DetermineNumberOfPartitions(graph);
+        int partitionSize = nodes.Count / numberOfPartitions;
+        for (int i = 0; i < numberOfPartitions; i++)
+        {
+            Graph partition = new();
+            for (int j = 0; j < partitionSize; j++)
+            {
+                int randomIndex = random.Next(nodes.Count);
+                Node node = nodes[randomIndex];
+                partition.AddNode(node);
+                partition.AddEdge(node, graph.adjacencyList[node]); // Will ignore edges that are not possible
+                nodes.RemoveAt(randomIndex);
+            }
+            partitions.Add(partition);
+        }
+        Console.WriteLine("Rough partitions created");
+        Console.WriteLine($"Remaining nodes: {string.Join(", ", nodes.Select(x => x.Name))}");
+        // Add the remaining nodes to the last partition if any
+        foreach (var node in nodes)
+        {
+            partitions.Last().AddNode(node);
+            partitions.Last().AddEdge(node, graph.adjacencyList[node]); // Will ignore edges that are not possible
+        }
+
+        Console.WriteLine("Partitions created successfully!");
+
+        // Print the partitions
+        foreach (var partition in partitions)
+        {
+            Console.WriteLine(partition);
+        }
+
+
+
+
+
+
 
 
 
