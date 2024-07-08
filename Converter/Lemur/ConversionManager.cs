@@ -25,6 +25,7 @@ namespace Converter.Lemur
 
             GenerateDuchies(map);
             GenerateBaronies(map);
+            GenerateCounties(map);
             AssignCellsToBaronies(map);
             
 
@@ -34,6 +35,16 @@ namespace Converter.Lemur
 
 
             Console.WriteLine("Finished conversion!");
+        }
+
+        private static void GenerateCounties(Map map)
+        {
+            //counties is where we will start to deviate from the Azgaar data model quite seriously as we will not have counties in the same way as in CK3
+            //what we will instead do is group neighbouring baronies within the same duchy into counties.
+
+            // We will do this like this:
+            // find the larges barony in the duchy by population
+            // Add the neighbouring barony of the lowest population to the county
         }
 
         private static void AssignUniqueColorsToBaronies(Map map)
@@ -98,6 +109,12 @@ namespace Converter.Lemur
                         Console.WriteLine("No more room in any barony");
                         break;
                     }
+                }
+
+                //if not all countryside cells are assigned, print a warning
+                if (countrysideCells.Count > 0)
+                {
+                    Console.WriteLine($"Warning: {countrysideCells.Count} countryside cells are not assigned to any barony. Islands?");
                 }
 
                 if (Settings.Instance.Debug)

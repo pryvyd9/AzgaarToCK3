@@ -10,11 +10,48 @@ public class GraphTest
     public static void Run()
     {
 
-        Converter.Lemur.Helper.PrintSectionHeader("Graph Test");
+        Converter.Lemur.Helper.PrintSectionHeader("Uruk Graph Test");
 
-        Graph graph = new();
+        Graph urukGraph = UrukGraph();
+        DetailedPrint(urukGraph);
 
-        // Create dummy nodes
+        //Section header for this part of the code
+        Converter.Lemur.Helper.PrintSectionHeader("Biggest, then lonliest, then smallest node");
+        Graph.PartitionGraph(urukGraph);
+
+
+        // Section: Bostoten Graph Test
+        Converter.Lemur.Helper.PrintSectionHeader("Bostoten Graph Test");
+
+        Graph bostotenGraph = BostotenGraph();
+        DetailedPrint(bostotenGraph);
+
+        //Section header for this part of the code
+        Converter.Lemur.Helper.PrintSectionHeader("Biggest, then lonliest, then smallest node");
+        Graph.PartitionGraph(bostotenGraph);
+
+
+
+    }
+
+    private static void DetailedPrint(Graph graph)
+    {
+        //for each node in the graph, with its name and population and the names of its neighbors
+        foreach (var node in graph.adjacencyList)
+        {
+            Console.WriteLine($"Node: {node.Key.Name}, Population: {node.Key.Population}");
+            Console.WriteLine("Neighbors:");
+            foreach (var neighbor in node.Value)
+            {
+                Console.WriteLine($"- {neighbor.Name}");
+            }
+        }
+    }
+
+    private static Graph UrukGraph()
+    {
+        Graph graph = new(null!);
+        // Create figma example graph
         Node Q = new() { Name = "Q", Population = 1014 };
         Node DR = new() { Name = "DR", Population = 2383 };
         Node G = new() { Name = "G", Population = 392 };
@@ -37,73 +74,46 @@ public class GraphTest
         graph.AddEdge(DR, G);
         graph.AddEdge(G, C);
 
-        Console.WriteLine("Graph created successfully!");
+        Console.WriteLine("Uruk graph created successfully!");
 
         // Print the graph
         Console.WriteLine(graph);
-        //for each node in the graph, with its name and population and the names of its neighbors
-        foreach (var node in graph.adjacencyList)
-        {
-            Console.WriteLine($"Node: {node.Key.Name}, Population: {node.Key.Population}");
-            Console.WriteLine("Neighbors:");
-            foreach (var neighbor in node.Value)
-            {
-                Console.WriteLine($"- {neighbor.Name}");
-            }
-        }
 
+        return graph;
+    }
 
+    private static Graph BostotenGraph()
+    {
+        Graph graph = new(null!);
 
+        // Create nodes for Bostoten graph
+        Node He = new() { Name = "He", Population = 1116 };
+        Node Hv = new() { Name = "Hv", Population = 10150 };
+        Node Br = new() { Name = "Br", Population = 18661 };
+        Node Dj = new() { Name = "Dj", Population = 5853 };
+        Node Le = new() { Name = "Le", Population = 1585 };
+        Node Re = new() { Name = "Re", Population = 1625 };
 
-        //Section header for this part of the code
-        Converter.Lemur.Helper.PrintSectionHeader("Graph Evaluator Test");
-        Console.WriteLine("Randomly generating partitions...");
+        // Add nodes to the graph
+        graph.AddNode(He);
+        graph.AddNode(Hv);
+        graph.AddNode(Br);
+        graph.AddNode(Dj);
+        graph.AddNode(Le);
+        graph.AddNode(Re);
 
-        // Create a list of partitions
-        List<Graph> partitions = new();
+        // Add edges to the graph
+        graph.AddEdge(He, [Hv, Re]);
+        graph.AddEdge(Hv, [Re,Br]);
+        graph.AddEdge(Br, Dj);
+        graph.AddEdge(Dj, Le);
+        graph.AddEdge(Le, Re);
 
-        // Randomly split the graph into three partitions
-        Random random = new();
-        List<Node> nodes = graph.GetNodes();
-        var numberOfPartitions = Graph.DetermineNumberOfPartitions(graph);
-        int partitionSize = nodes.Count / numberOfPartitions;
-        for (int i = 0; i < numberOfPartitions; i++)
-        {
-            Graph partition = new();
-            for (int j = 0; j < partitionSize; j++)
-            {
-                int randomIndex = random.Next(nodes.Count);
-                Node node = nodes[randomIndex];
-                partition.AddNode(node);
-                partition.AddEdge(node, graph.adjacencyList[node]); // Will ignore edges that are not possible
-                nodes.RemoveAt(randomIndex);
-            }
-            partitions.Add(partition);
-        }
-        Console.WriteLine("Rough partitions created");
-        Console.WriteLine($"Remaining nodes: {string.Join(", ", nodes.Select(x => x.Name))}");
-        // Add the remaining nodes to the last partition if any
-        foreach (var node in nodes)
-        {
-            partitions.Last().AddNode(node);
-            partitions.Last().AddEdge(node, graph.adjacencyList[node]); // Will ignore edges that are not possible
-        }
+        Console.WriteLine("Bostoten graph created successfully!");
 
-        Console.WriteLine("Partitions created successfully!");
+        // Print the graph
+        Console.WriteLine(graph);
 
-        // Print the partitions
-        foreach (var partition in partitions)
-        {
-            Console.WriteLine(partition);
-        }
-
-
-
-
-
-
-
-
-
+        return graph;
     }
 }

@@ -1,18 +1,14 @@
 namespace Converter.Lemur.Graphs
 {
-    public class Graph
+    public class Graph(Graph parentGraph)
     {
-        public Dictionary<Node, List<Node>> adjacencyList;
-
-        public Graph()
-        {
-            adjacencyList = new Dictionary<Node, List<Node>>();
-        }
+        public Dictionary<Node, List<Node>> adjacencyList = new Dictionary<Node, List<Node>>();
+        public Graph? parentGraph = parentGraph;
 
         public override string ToString()
         {
             // Return the number of nodes and edges in the graph
-            return $"Graph with {adjacencyList.Count} nodes and {adjacencyList.Values.Sum(x => x.Count)} edges and a population of {Population()}" +
+            return $"Graph with {adjacencyList.Count} nodes, {adjacencyList.Values.Sum(x => x.Count)} edges and a population of {Population()}" +
             "\n Nodes: " + string.Join(", ", adjacencyList.Keys.Select(x => x.Name));
         }
 
@@ -33,9 +29,14 @@ namespace Converter.Lemur.Graphs
         {
             foreach (var destination in destinations)
             {
-
                 AddEdge(source, destination, directed);
             }
+        }
+
+        public void AddNodeWithEdges(Node node, List<Node> destinations, bool directed = false)
+        {
+            AddNode(node);
+            AddEdge(node, destinations, directed);
         }
         public void AddEdge(Node source, Node destination, bool directed = false)
         {
@@ -81,48 +82,44 @@ namespace Converter.Lemur.Graphs
         }
 
 
+        //Todo: Move this to the converter
         public static int DetermineNumberOfPartitions(Graph graph)
         {
-            return DetermineNumberOfPartitions(graph.Population(), graph.adjacencyList.Count);
-        }
 
-        //Todo: Move this to the converter
-        public static int DetermineNumberOfPartitions(int totalPopulation, int totalNodes)
-        {
-            // This is based on guestimate observations form CK3
-            // Sparsley populated areas often have fewer baronies per county than densely populated areas
+            int highPopulationThreshold = Settings.Instance.HighPopulationThreshold;
+            int lowPopulationThreshold = Settings.Instance.LowPopulationThreshold;
+            int minCounties = Settings.Instance.MinCounties;
+            int maxCounties = Settings.Instance.MaxCounties;
 
-            const int HIGH_POPULATION_THRESHOLD = 13000; //TODO: Make into a setting in the converter
-            const int LOW_POPULATION_THRESHOLD = 2000;
-            const int MIN_PARTITIONS = 2;
-            const int MAX_PARTITIONS = 5;
+            int totalPopulation = graph.Population();
+            int totalNodes = graph.adjacencyList.Count;
 
-            if (totalNodes < MIN_PARTITIONS * 2)
+            if (totalNodes < minCounties * 2)
             {
                 return 1; // Not enough nodes for even the minimum partition size.
             }
 
-            if (totalPopulation > HIGH_POPULATION_THRESHOLD)
+            if (totalPopulation > highPopulationThreshold)
             {
-                return MIN_PARTITIONS;
+                return minCounties;
             }
-            else if (totalPopulation < LOW_POPULATION_THRESHOLD)
+            else if (totalPopulation < lowPopulationThreshold)
             {
-                return MAX_PARTITIONS;
+                return maxCounties;
             }
             else
             {
                 // Scale linearly between MIN_PARTITIONS and MAX_PARTITIONS
                 //first we subtract the low threshold from the total population
-                double population = totalPopulation - LOW_POPULATION_THRESHOLD;
+                double population = totalPopulation - lowPopulationThreshold;
                 //then work out the range of the population
-                double range = HIGH_POPULATION_THRESHOLD - LOW_POPULATION_THRESHOLD;
+                double range = highPopulationThreshold - lowPopulationThreshold;
                 //then we work out the ratio of the population to the range
                 double ratio = population / range;
                 // now we must work out the number of partitions
-                double numberOFPartitions = (MAX_PARTITIONS - MIN_PARTITIONS) * ratio;
+                double numberOFPartitions = (maxCounties - minCounties) * ratio;
                 //finally we add the minimum number of partitions to the ratio
-                numberOFPartitions += MIN_PARTITIONS;
+                numberOFPartitions += minCounties;
 
                 //then we round the number of partitions to the nearest whole number
                 double partitionsBasedOnPop = (int)Math.Floor(numberOFPartitions);
@@ -137,9 +134,125 @@ namespace Converter.Lemur.Graphs
                 }
                 return (int)partitionsBasedOnPop;
 
-
-
             }
         }
+
+        internal Node GetMostPopulousNode()
+        {
+            //Get the node with the highest population
+            return adjacencyList.Keys.OrderByDescending(x => x.Population).First();
+        }
+
+        public List<Node> GetAdjacentNodesInParentGraph()
+        {
+            //First, sanity check that this graph is a partition of the parent graph
+            if (adjacencyList.Keys.Any(x => !parentGraph.adjacencyList.ContainsKey(x)))
+            {
+                throw new ArgumentException("This graph is not a partition of the parent graph");
+            }
+            //Given a parent graph, return all the nodes that are adjacent to the current graph
+            //every neighbour of every node in the graph:
+            List<Node> adjacentNodes = new List<Node>();
+
+            foreach (var node in GetNodes())
+            {
+                //look up the node in the parent graph
+                if (parentGraph.adjacencyList.TryGetValue(node, out List<Node>? neighbours))
+                {
+                    //add all the neighbours to the list of adjacent nodes
+                    adjacentNodes.AddRange(neighbours);
+                }
+            }
+            //Remove any nodes that are in the partition so as only to return nodes that are adjacent to the partition
+            return adjacentNodes.Where(x => !adjacencyList.ContainsKey(x)).Distinct().ToList();
+        }
+        public static List<Graph> PartitionGraph(Graph graph)
+    {
+        // Determine the number of partitions for this graph
+        int numberOfPartitions = Graph.DetermineNumberOfPartitions(graph);
+        Console.WriteLine($"Number of partitions: {numberOfPartitions}");
+
+        if (numberOfPartitions == 1)
+        {
+            Console.WriteLine("Graph is already a single partition");
+            return [graph];
+        }
+
+        // Create a list of partitions
+        List<Graph> partitions = new(numberOfPartitions);
+
+        //while there are nodes not assigned a partition
+        while (partitions.Count < numberOfPartitions)
+        {
+            // Create a new partition
+            Graph partition = new(graph);
+            partitions.Add(partition);
+
+            // Start with the most populous node that is not yet assigned to a partition
+            Node mostPopulousNode = graph.GetNodes().OrderByDescending(x => x.Population).Where(x => x.InSubGraph == false).First();
+            partition.AddNodeWithEdges(mostPopulousNode, graph.adjacencyList[mostPopulousNode]);
+            mostPopulousNode.InSubGraph = true;
+
+            //Get all the adjacent nodes of the current partition, not in a subgraph
+            List<Node> adjacentNodes = partition.GetAdjacentNodesInParentGraph().Where(x => x.InSubGraph == false).ToList();
+
+            // Add to own graph to premove edges into current partition
+            var tempGraph = new Graph(graph);
+            foreach (var node in adjacentNodes)
+            {
+                tempGraph.AddNodeWithEdges(node, graph.adjacencyList[node]);
+            }
+            // Order by the fewest edges and then by population and get the first node
+            var isolatedSmallNeighbour = tempGraph.GetNodes().
+            OrderBy(x => graph.adjacencyList[x].Count).
+            ThenBy(x => x.Population).ToList().First();
+
+            // Add the node to the partition
+            partition.AddNodeWithEdges(isolatedSmallNeighbour, graph.adjacencyList[isolatedSmallNeighbour]);
+            isolatedSmallNeighbour.InSubGraph = true;
+
+        }
+
+        // Print the initial partitions
+        Console.WriteLine("Initial partitions created");
+
+        var leftovers = graph.GetNodes().Where(x => x.InSubGraph == false).ToList();
+        if (leftovers.Count != 0)
+        {
+            Console.WriteLine($"Handeling leftovers...({string.Join(", ", leftovers.Select(x => x.Name))})");
+
+            //Handle Leftovers - focus on balancing the partitions
+            foreach (var node in leftovers)
+            {
+                //Find bordering partitions, do this by finding adajcent nodes and checking what partitions they are in
+                List<Graph> borderingPartitions = new List<Graph>();
+                foreach (var neighbour in graph.adjacencyList[node]) // For each neighbour of the node
+                {
+                    foreach (var partition in partitions)
+                    {
+                        if (partition.adjacencyList.ContainsKey(neighbour))
+                        {
+                            borderingPartitions.Add(partition);
+                        }
+                    }
+                }
+
+                // Add this node to the partition where adding it would bring the partition closest to the ideal population
+                int idealPopulation = graph.Population() / numberOfPartitions;
+                Graph targetPartition = borderingPartitions.OrderBy(x => Math.Abs(x.Population() + node.Population - idealPopulation)).First();
+                targetPartition.AddNodeWithEdges(node, graph.adjacencyList[node]);
+            }
+
+        }
+
+        // Print the final partitions
+        Console.WriteLine("Final partitions created:");
+        foreach (var partition in partitions)
+        {
+            Console.WriteLine(partition);
+        }
+
+        return partitions;
+    }
     }
 }

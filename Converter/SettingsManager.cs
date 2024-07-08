@@ -28,6 +28,38 @@ public class Settings
 
     public bool Debug { get; set; } = true;
 
+    // This is based on guestimate observations form CK3
+    // Sparsley populated areas often have fewer baronies per county than densely populated areas
+
+    /// <summary>
+    /// High population threshold. If a duchy's total population exceeds this value,
+    /// the <see cref="MinCounties"/> is used, resulting in fewer but larger counties.
+    /// </summary>
+    /// <value>The high population threshold, default is 13000.</value>
+    public int HighPopulationThreshold { get; set; } = 13000;
+
+    /// <summary>
+    /// Low population threshold. If a duchy's total population is below this value,
+    /// the <see cref="MaxCounties"/> is used, resulting in smaller counties with fewer baronies.
+    /// </summary>
+    /// <value>The low population threshold, default is 2000.</value>
+    public int LowPopulationThreshold { get; set; } = 2000;
+
+    /// <summary>
+    /// Gets or sets the minimum number of counties. This is the minimum division of baronies within a duchy,
+    /// used when the duchy's population exceeds the high population threshold.
+    /// </summary>
+    /// <value>The minimum number of counties, default is 2.</value>
+    public int MinCounties { get; set; } = 2;
+
+    /// <summary>
+    /// Gets or sets the maximum number of counties. This is the maximum division of baronies within a duchy,
+    /// used when the duchy's population is below the low population threshold.
+    /// </summary>
+    /// <value>The maximum number of counties, default is 5.</value>
+    public int MaxCounties { get; set; } = 5;
+
+
     public override string ToString()
     {
         var lines = new List<string>();
@@ -64,7 +96,7 @@ public static class SettingsManager
                 .OpenSubKey(@"SOFTWARE\Wow6432Node\Valve\Steam")
                 ?.GetValue("InstallPath") as string
                 ?? throw new Exception("Could not find steam InstallPath");
-           
+
             return Helper.GetPath(steamPath, "steamapps", "libraryfolders.vdf");
         }
         else if (OperatingSystem.IsMacOS())
@@ -83,7 +115,7 @@ public static class SettingsManager
         var libraries = File.ReadAllText(GetSteamLibraryFoldersPath());
         var pathRegex = new Regex("\"path\"\\s*\"(.+)\"");
         var paths = pathRegex.Matches(libraries).Select(n => n.Groups[1].Value);
-        
+
         var ck3Directories = paths.Select(n => Helper.GetPath(n, "steamapps", "common", "Crusader Kings III", "game")).Where(Directory.Exists).ToArray();
         if (ck3Directories.Length > 1)
         {
@@ -138,7 +170,7 @@ public static class SettingsManager
             settings = File.ReadAllText(settingsFileName);
             Settings.Instance = JsonSerializer.Deserialize(settings, SettingsJsonContext.Default.Settings)!;
             return true;
-        } 
+        }
         catch (Exception e)
         {
             Console.WriteLine($"Failed to load settings: {e.Message} {e.StackTrace}");
