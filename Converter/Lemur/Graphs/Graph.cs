@@ -168,9 +168,14 @@ namespace Converter.Lemur.Graphs
         }
         public static List<Graph> PartitionGraph(Graph graph)
     {
+
+
         // Determine the number of partitions for this graph
-        int numberOfPartitions = Graph.DetermineNumberOfPartitions(graph);
-        Console.WriteLine($"Number of partitions: {numberOfPartitions}");
+        int numberOfPartitions = DetermineNumberOfPartitions(graph);
+        if (Settings.Instance.Debug)
+        {
+            Console.WriteLine($"Partitioning graph {graph}. Ideal # partitions: {numberOfPartitions}");
+        }
 
         if (numberOfPartitions == 1)
         {
@@ -184,6 +189,13 @@ namespace Converter.Lemur.Graphs
         //while there are nodes not assigned a partition
         while (partitions.Count < numberOfPartitions)
         {
+            //if all nodes have been distributed, log
+            if (graph.GetNodes().All(x => x.InSubGraph == true))
+            {
+                Console.WriteLine("All nodes have been distributed");
+                break;
+            }
+
             // Create a new partition
             Graph partition = new(graph);
             partitions.Add(partition);
@@ -196,7 +208,7 @@ namespace Converter.Lemur.Graphs
             //Get all the adjacent nodes of the current partition, not in a subgraph
             List<Node> adjacentNodes = partition.GetAdjacentNodesInParentGraph().Where(x => x.InSubGraph == false).ToList();
 
-            // Add to own graph to premove edges into current partition
+            // Add to own graph to remove edges into current partition
             var tempGraph = new Graph(graph);
             foreach (var node in adjacentNodes)
             {
@@ -207,6 +219,8 @@ namespace Converter.Lemur.Graphs
             OrderBy(x => graph.adjacencyList[x].Count).
             ThenBy(x => x.Population).ToList().First();
 
+
+    
             // Add the node to the partition
             partition.AddNodeWithEdges(isolatedSmallNeighbour, graph.adjacencyList[isolatedSmallNeighbour]);
             isolatedSmallNeighbour.InSubGraph = true;

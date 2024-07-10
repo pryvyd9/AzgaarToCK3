@@ -16,8 +16,13 @@ namespace Converter.Lemur.Entities
         public int Biome { get; set; }
 
         public FeatureType Type { get; set; }
+        /// <summary>
+        /// Province in Crusader Kings 3 that can be a barony, sea zone, or a major river.
+        /// </summary>
+        public IProvince? Province { get; set; }
 
-        public IProvince Province { get; set; }
+        public Duchy? Duchy { get; set; }
+
 
 
         //If the cell has a burg, this will be set.s

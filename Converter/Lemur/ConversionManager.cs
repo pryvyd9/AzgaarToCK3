@@ -2,6 +2,7 @@ namespace Converter.Lemur
 {
     using System.Diagnostics;
     using Converter.Lemur.Entities;
+    using Converter.Lemur.Graphs;
     using static Converter.Lemur.Entities.Cell;
 
     public class ConversionManager
@@ -25,27 +26,19 @@ namespace Converter.Lemur
 
             GenerateDuchies(map);
             GenerateBaronies(map);
-            GenerateCounties(map);
             AssignCellsToBaronies(map);
-            
+            //GenerateCounties(map);
+
 
             AssignUniqueColorsToBaronies(map);
             await ImageUtility.DrawProvincesImage(map);
 
-
+            GenerateCounties(map);
 
             Console.WriteLine("Finished conversion!");
         }
 
-        private static void GenerateCounties(Map map)
-        {
-            //counties is where we will start to deviate from the Azgaar data model quite seriously as we will not have counties in the same way as in CK3
-            //what we will instead do is group neighbouring baronies within the same duchy into counties.
 
-            // We will do this like this:
-            // find the larges barony in the duchy by population
-            // Add the neighbouring barony of the lowest population to the county
-        }
 
         private static void AssignUniqueColorsToBaronies(Map map)
         {
@@ -68,8 +61,7 @@ namespace Converter.Lemur
                 //Sort them on population size decending baroniesInProvince[0].Burg.population
                 baronies = baronies.OrderByDescending(b => b!.burg!.Population);
 
-
-                //now each barony must bave a see cell, that is the cell that has the burg in it.
+                //now each barony must bave a seed cell, that is the cell that has the burg in it.
                 foreach (Barony barony in baronies)
                 {
                     barony.Cells.Add(barony.burg.Cell!);
@@ -99,8 +91,10 @@ namespace Converter.Lemur
                         noMoreRoom = false;
                         //Then sort them by distance to the burg
                         neighbors.Sort((a, b) => a.DistanceSquared(barony.burg.Cell!).CompareTo(b.DistanceSquared(barony.burg.Cell!)));
-                        //Then assign the closest cell to the burg
+                        //Then assign the closest cell to the barony
                         barony.Cells.Add(neighbors[0]);
+                        // and assign the barony to the cell
+                        neighbors[0].Province = barony;
                         //And remove it from the list of countryside cells
                         countrysideCells.Remove(neighbors[0]);
                     }
@@ -136,6 +130,8 @@ namespace Converter.Lemur
 
         private static void LinkCellsToBurgs(Map map)
         {
+            Helper.PrintSectionHeader("Linking cells to burgs");
+
             //For each burg (skip 0'eth) find the cell it is referenceing by cell id and assign it to the burg
             foreach (var burg in map.Burgs!.Skip(1))
             {
@@ -146,6 +142,8 @@ namespace Converter.Lemur
                 burg.Value.Cell = map.Cells![burg.Value.Cell_id];
                 //and reverse
                 map.Cells![burg.Value.Cell_id].Burg = burg.Value;
+
+                Console.WriteLine($"Burg {burg.Value.Name} <<=>> {burg.Value.Cell_id} Cell");
             }
         }
 
@@ -238,21 +236,22 @@ namespace Converter.Lemur
             List<Barony> baronies = new(map.Burgs!.Count - 1);
             foreach (var burg in map.Burgs.Skip(1)) //0'eth entry is always empty (See Azgaar data model)
             {
-                //Skip the barony if it has ben marked as removed
                 if (burg.Value.Removed)
                 {
                     Console.WriteLine($"Skipping barony {burg.Value.Name} as it has been marked as removed");
                     continue;
                 }
-                //Warn the user if the barony is in wastelands (province 0 and state 0), since we will then skip it
                 if (burg.Value.Cell!.AzProvince == 0 && burg.Value.Cell!.State == 0)
                 {
                     Console.WriteLine($"Skipping barony {burg.Value.Name} as it is in wastelands");
                     continue;
                 }
 
+                var barony = new Barony(burg.Value);
+                barony.burg.Cell!.Duchy!.Baronies.Add(barony);
+                // if the burg is a province capital, flagg it as such
+                baronies.Add(barony);
 
-                baronies.Add(new Barony(burg.Value));
 
             }
             map.Baronies = baronies;
@@ -288,7 +287,6 @@ namespace Converter.Lemur
                     throw new Exception($"Province {province.Key} does not match the first cell in the province: {province.First().Value.AzProvince}");
                 }
 
-
                 //if Province has no cells, skip it
                 if (!province.Any())
                 {
@@ -306,16 +304,9 @@ namespace Converter.Lemur
                 }
                 if (province.Key == 0)
                 {
-                    // TODO: Implement wastelands splitting if in a state
+                    // Handle the wastelands province
                     provinceData = new PackProvince(i: 0, name: "Wastelands", burg: 0, state: 0);
-
-                    //TODO: get all cells in the province and group them by state
                     var WastelandCellsByState = province.GroupBy(c => c.Value.State).OrderBy(g => g.Key).OrderBy(g => g.Key);
-
-
-
-
-
                     //now for each state in the wastelands province, generate a duchy
 
                     foreach (var state in WastelandCellsByState)
@@ -327,11 +318,9 @@ namespace Converter.Lemur
                             continue;
                         }
 
-
-
                         //look up the state in the json data, we will reuse the state name as the duchy name
                         var stateData = map.JsonMap.pack.states.First(s => s.i == state.Key);
-                        var d = new Duchy(stateData.i, state.Select(c => c.Value).ToList(), stateData.name);
+                        var d = new Duchy(i: stateData.i, cells: state.Select(c => c.Value).ToList(), stateData.name);
                         duchies.Add(d);
 
                     }
@@ -351,6 +340,15 @@ namespace Converter.Lemur
 
             map.Duchies = duchies;
 
+            // Assign duchy to each cell directly
+            foreach (var duchy in duchies)
+            {
+                foreach (var cell in duchy.GetAllCells())
+                {
+                    cell.Duchy = duchy;
+                }
+            }
+
             if (Settings.Instance.Debug)
             {
                 foreach (var duchy in duchies)
@@ -361,8 +359,115 @@ namespace Converter.Lemur
             Console.WriteLine($"Generated {duchies.Count} duchies");
         }
 
+        private static void GenerateCounties(Map map)
+        {
+            Helper.PrintSectionHeader("Generating counties");
+
+            // start by working out the adjacencies of every barony on the map
+            GenerateBaronyAdjacency(map);
 
 
 
+            //For each duchy, generate a graph of the duchy
+            foreach (var duchy in map.Duchies!)
+            {
+                //Create a graph of the duchy
+                Graph graph = new(null!);
+                List<BaronyNode> baronyNodes = new();
+
+                //for each barony create a BaronyNode and populate it with the barony and the node
+                foreach (var barony in duchy.Baronies)
+                {
+                    Node node = new() { Name = barony.Name, Population = (int)barony.burg.Population };
+                    baronyNodes.Add(new BaronyNode(node, barony));
+
+                    // add the node to the graph
+                    graph.AddNode(node);
+                }
+
+                //Add the edges to the graph. This is done by looking at the adjacencies of the baronies
+                foreach (var baronyNode in baronyNodes)
+                {
+                    //Resolve what baronies this barony is adjacent to
+                    var adjacentBaronies = baronyNode.Barony.Neighbors;
+
+                    //if the adjacent baronies is null, then this barony has no adjacent baronies
+                    if (adjacentBaronies == null)
+                    {
+                        continue;
+                    }
+                    //then work out what nodes these baronies are represented by
+                    var adjacentNodes = baronyNodes.Where(bn => adjacentBaronies.Contains(bn.Barony)).Select(bn => bn.Node).ToList();
+
+                    //add the edge to the graph
+                    graph.AddEdge(baronyNode.Node, adjacentNodes);
+                }
+                //partition the graph into connected components
+                var partitions = Graph.PartitionGraph(graph);
+
+                //Each partition is a county, so nearly there. First we translate back from graphs to baronies
+                var counties = new List<County>();
+                foreach (var partition in partitions)
+                {
+                    //work out what baronies are in this partition from the BaronyNode
+                    var baroniesInPartition = baronyNodes.Where(bn => partition.adjacencyList.ContainsKey(bn.Node)).Select(bn => bn.Barony).ToList();
+                    //Create a county from the baronies:
+
+                    //We do this by:
+                    // 1. Determine the name of the county.
+                    string name = baroniesInPartition.Where(b => b.burg.Capital).Select(b => b.Name).FirstOrDefault()!;
+                    if (name == null || name == "")
+                    {
+                        name = baroniesInPartition.OrderByDescending(b => b.burg.Population).First().Name;
+                    }
+
+                    var county = new County(IdManager.Instance.GetNextId(), name, baronies: baroniesInPartition, duchy: duchy, capital: baroniesInPartition.First());
+                    if (Settings.Instance.Debug)
+                    {
+                        Console.WriteLine($"County {county.Name} has {baroniesInPartition.Count} baronies");
+                    }
+                    counties.Add(county);
+
+
+                }
+            }
+
+
+        }
+
+        struct BaronyNode(Node node, Barony barony)
+        {
+            public Node Node { get; } = node;
+            public Barony Barony { get; } = barony;
+        }
+
+
+
+
+        private static void GenerateBaronyAdjacency(Map map)
+        {
+
+            Helper.PrintSectionHeader("Generating barony adjacency");
+
+            foreach (var barony in map.Baronies!)
+            {
+                Console.WriteLine($"Barony {barony.Name}");
+                //fist get all the cells that the cells in this barony are adjacent to
+                var cells = barony.GetAllCells();
+                var adjacentCells = cells.SelectMany(c => c.Neighbors).Distinct().Select(k => map.Cells![k]).ToList();
+                // Remove any cell that is in this barony
+                adjacentCells.RemoveAll(cells.Contains);
+
+                // Now find all unique baronies that the adjacent cells are in
+                var adjacentBaronies = adjacentCells.Select(c => c.Province as Barony).Where(b => b != null).Distinct().ToList();
+
+                if (Settings.Instance.Debug)
+                {
+                    Console.WriteLine($"Barony {barony.Name} has {adjacentBaronies.Count} adjacent baronies");
+                }
+                //Add the found baronies to this barony¨s list of adjacent baronies. Can be null if there are no adjacent baronies
+                barony.Neighbors = adjacentBaronies!;
+            }
+        }
     }
 }

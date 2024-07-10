@@ -34,5 +34,9 @@ namespace Converter.Lemur.Entities
         /// </summary>
         /// <returns></returns>
         public List<Cell> GetAllCells();
+        
+        public string Ck3_Id(){
+            return $"x_{Name}_{Id}";
+        }
     }
 }

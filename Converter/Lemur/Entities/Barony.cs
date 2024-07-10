@@ -23,9 +23,28 @@ namespace Converter.Lemur.Entities
     
         }
 
+        public List<Barony>? Neighbors { get; set; }
+
         public List<Cell> GetAllCells()
         {
             return Cells;
         }
+
+        //Hash and equality check
+        public override int GetHashCode()
+        {
+            return Id;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is Barony other)
+            {
+                return Id == other.Id;
+            }
+            return false;
+        }
+
+
     }
 }
