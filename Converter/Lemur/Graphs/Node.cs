@@ -6,5 +6,7 @@ namespace Converter.Lemur.Graphs
         public int Population { get; set; }
 
         public bool InSubGraph { get; set; }
+
+        public bool Isolated { get; set; }
     }
 }

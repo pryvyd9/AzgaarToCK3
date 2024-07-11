@@ -20,6 +20,12 @@
         public List<Barony>? Baronies { get; set; }
         public List<Duchy>? Duchies { get; internal set; }
 
+        // list of wasteland provinces, ths is because provinces with no burgs counts as wasteland. Add 0 by default
+        public List<int> Wastelands { get; set; } = [0];
+        
+
+        
+
         public override string ToString()
         {
             // Return the name of the map and the number of cells in the packed map

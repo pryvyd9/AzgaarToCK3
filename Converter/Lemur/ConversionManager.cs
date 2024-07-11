@@ -1,6 +1,7 @@
 namespace Converter.Lemur
 {
     using System.Diagnostics;
+    using System.Security.Cryptography.X509Certificates;
     using Converter.Lemur.Entities;
     using Converter.Lemur.Graphs;
     using static Converter.Lemur.Entities.Cell;
@@ -26,19 +27,71 @@ namespace Converter.Lemur
 
             GenerateDuchies(map);
             GenerateBaronies(map);
+
+
+
             AssignCellsToBaronies(map);
-            //GenerateCounties(map);
 
+            AssertEveryLandCellIsAssignedToABurg(map);
 
-            AssignUniqueColorsToBaronies(map);
-            await ImageUtility.DrawProvincesImage(map);
+            AssignUniqueColorsToBaronies(map); //Debugging
+            await ImageUtility.DrawProvincesImage(map); //Debugging
 
+            GenerateBaronyAdjacency(map);
             GenerateCounties(map);
 
             Console.WriteLine("Finished conversion!");
         }
 
+        private static void AssertEveryLandCellIsAssignedToABurg(Map map)
+        {
+            //Every cell should at this point either be assigned to a barony or be assigned to the wastelands
+            var landCells = map.Cells!.Where(c => IsDryLand(c.Value.Type)).ToList();
 
+            if (Settings.Instance.Debug)
+            {
+                Helper.PrintSectionHeader("Asserting that every land cell is assigned to a barony or wasteland");
+                Console.WriteLine($"There are {landCells.Count} land cells");
+            }
+
+            bool listPassable = true;
+
+            //Now run through every land cell and see if it is assigned to a barony or wasteland
+            foreach (var cell in landCells)
+            {
+                var cellPassable = false;
+                if (cell.Value.Province is Barony)
+                {
+                    cellPassable = true;
+                }
+                else if (cell.Value.State == 0) // Wastelands are state 0
+                {
+                    cellPassable = true;
+                }
+                // Edge case: Cell can be assigned to burgless province in the data, but that counts as wasteland in the conversion
+                // We flagg these provinces during duchy creation.
+                else if (map.Wastelands.Contains(cell.Value.AzProvince))
+                {
+                    cellPassable = true;
+                }
+                if (!cellPassable)
+                {
+                    listPassable = false;
+                    Console.WriteLine($"Failed: Cell {cell.Value.Id}[{Helper.GeoToString(cell.Value.GeoDataCoordinates)}], AzProvince {cell.Value.AzProvince}, State {cell.Value.State}");
+                }
+            }
+
+            //If any cell is not assigned to a barony or wasteland, throw an exception
+            if (!listPassable)
+            {
+                throw new Exception("Not all land cells are assigned to a barony or wasteland");
+            }
+            else if (Settings.Instance.Debug)
+            {
+                Console.WriteLine("All land cells are assigned to a barony or wasteland");
+            }
+
+        }
 
         private static void AssignUniqueColorsToBaronies(Map map)
         {
@@ -65,6 +118,8 @@ namespace Converter.Lemur
                 foreach (Barony barony in baronies)
                 {
                     barony.Cells.Add(barony.burg.Cell!);
+                    // Assign the barony to the cell
+                    barony.burg.Cell!.Province = barony;
 
                     if (barony.burg.Cell == null) //should not be zero, i think but just in case
                     {
@@ -299,7 +354,9 @@ namespace Converter.Lemur
                 if (!province.Any(c => c.Value.Burg != null))
                 {
                     //log the name of the province skipped
-                    Console.WriteLine($"Skipping province {provinceData.name} as it has no burgs");
+                    Console.WriteLine($"Skipping province {provinceData.name} as it has no burgs (Wasteland)");
+                    //add the province Id to the list of wasteland provinces
+                    map.Wastelands.Add(province.Key);
                     continue;
                 }
                 if (province.Key == 0)
@@ -362,9 +419,6 @@ namespace Converter.Lemur
         private static void GenerateCounties(Map map)
         {
             Helper.PrintSectionHeader("Generating counties");
-
-            // start by working out the adjacencies of every barony on the map
-            GenerateBaronyAdjacency(map);
 
 
 
@@ -467,6 +521,44 @@ namespace Converter.Lemur
                 }
                 //Add the found baronies to this barony¨s list of adjacent baronies. Can be null if there are no adjacent baronies
                 barony.Neighbors = adjacentBaronies!;
+            }
+
+            // Debugging
+            // Find the barony Lufardet - IF all is well, it should have 7 adjacent baronies
+            if (Settings.Instance.Debug)
+            {
+                var lufardet = map.Baronies!.First(b => b.Name == "Lufardet");
+
+                Console.WriteLine($"Barony {lufardet.Name} has {lufardet.Neighbors.Count} adjacent baronies");
+
+                if (lufardet.Neighbors.Count != 7)
+                {
+                    //Run through the adjecancy logic again and print the result
+                    Console.WriteLine("Running through the adjacency logic again to find the error");
+                    //fist get all the cells that the cells in this barony are adjacent to
+                    var cells = lufardet.GetAllCells();
+                    Console.WriteLine($"Lufardet has {cells.Count} cells");
+                    var adjacentCells = cells.SelectMany(c => c.Neighbors).Distinct().Select(k => map.Cells![k]).Where(c => c.Province != null).ToList();
+                    int c = adjacentCells.Count;
+                    // Remove any cell that is in this barony
+                    adjacentCells.RemoveAll(cells.Contains);
+                    Console.WriteLine($"Removed {c - adjacentCells.Count} cells that were internal to Lufardet");
+
+                    //print the full list of adjacent cells
+                    adjacentCells.OrderBy(b => b.Province!.Name);
+                    Console.WriteLine("Cells that are adjacent to Lufardet and what barony they are in:");
+                    foreach (var cell in adjacentCells)
+                    {
+                        Console.WriteLine($"- {cell.Id} -> {cell.Province!.Name}");
+                    }
+
+                    // Now find all unique baronies that the adjacent cells are in
+                    var adjacentBaronies = adjacentCells.Select(c => c.Province as Barony).Where(b => b != null).Distinct().ToList();
+
+                    Console.WriteLine($"Barony {lufardet.Name} has {adjacentBaronies.Count} adjacent baronies");
+
+                    throw new Exception("Lufardet has the wrong number of adjacent baronies!!");
+                }
             }
         }
     }

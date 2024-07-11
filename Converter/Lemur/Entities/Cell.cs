@@ -57,16 +57,21 @@ namespace Converter.Lemur.Entities
         public enum FeatureType
         {
             ocean,
-            island,
+            island, // For larger landmasses that are not continents
             lake,
-            continent,
-            isle,
-            lake_island,
+            continent, // large landmass, often only one per map
+            isle, // single cell to few cell island
+            lake_island, //island in a lake
             freshwater,
             salt,
             dry,
             sinkhole,
             lava
+        }
+
+        public static bool IsDryLand(FeatureType type)
+        {
+            return type == FeatureType.continent || type == FeatureType.island || type == FeatureType.isle || type == FeatureType.lake_island;
         }
 
     }

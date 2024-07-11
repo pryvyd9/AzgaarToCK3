@@ -9,6 +9,12 @@ public static class Helper
         return new PointD((lon - map.XOffset) * map.XRatio, Map.MapHeight - (lat - map.YOffset) * map.YRatio);
     }
 
+    public static string GeoToString(float[][] geo)
+    {
+        return $"({geo[0][0]} , {geo[0][1]})";
+    }
+
+
     public static string GetPath(params string[] paths)
     {
         if (paths is null) return "";

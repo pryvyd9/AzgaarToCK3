@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace Converter.Lemur.Graphs
 {
     public class Graph(Graph parentGraph)
@@ -10,6 +12,29 @@ namespace Converter.Lemur.Graphs
             // Return the number of nodes and edges in the graph
             return $"Graph with {adjacencyList.Count} nodes, {adjacencyList.Values.Sum(x => x.Count)} edges and a population of {Population()}" +
             "\n Nodes: " + string.Join(", ", adjacencyList.Keys.Select(x => x.Name));
+        }
+
+        public string ToDetailedString()
+        {
+            StringBuilder stringBuilder = new();
+            stringBuilder.AppendLine($"============ Detailed Graph ============");
+            stringBuilder.AppendLine($"Graph with {adjacencyList.Count} nodes\n");
+
+
+            
+            // Then for each node add teh node and its adjacent nodes
+            foreach (var node in adjacencyList)
+            {
+                stringBuilder.AppendLine($"Node: {node.Key.Name}, Population: {node.Key.Population}");
+                stringBuilder.AppendLine("Neighbors:");
+                foreach (var neighbor in node.Value)
+                {
+                    stringBuilder.AppendLine($"- {neighbor.Name}. Isolated: {(neighbor.Isolated ? "[x]" : "[ ]")}. InSubGraph: {(neighbor.InSubGraph ? "[x]" : "[ ]")}");
+                }
+            }
+
+            return stringBuilder.ToString();
+
         }
 
         public void AddNode(Node node)
@@ -167,106 +192,136 @@ namespace Converter.Lemur.Graphs
             return adjacentNodes.Where(x => !adjacencyList.ContainsKey(x)).Distinct().ToList();
         }
         public static List<Graph> PartitionGraph(Graph graph)
-    {
-
-
-        // Determine the number of partitions for this graph
-        int numberOfPartitions = DetermineNumberOfPartitions(graph);
-        if (Settings.Instance.Debug)
         {
-            Console.WriteLine($"Partitioning graph {graph}. Ideal # partitions: {numberOfPartitions}");
-        }
 
-        if (numberOfPartitions == 1)
-        {
-            Console.WriteLine("Graph is already a single partition");
-            return [graph];
-        }
 
-        // Create a list of partitions
-        List<Graph> partitions = new(numberOfPartitions);
-
-        //while there are nodes not assigned a partition
-        while (partitions.Count < numberOfPartitions)
-        {
-            //if all nodes have been distributed, log
-            if (graph.GetNodes().All(x => x.InSubGraph == true))
+            // Determine the number of partitions for this graph
+            int numberOfPartitions = DetermineNumberOfPartitions(graph);
+            if (Settings.Instance.Debug)
             {
-                Console.WriteLine("All nodes have been distributed");
-                break;
+                Console.WriteLine($"Partitioning graph {graph}. Ideal # partitions: {numberOfPartitions}");
             }
 
-            // Create a new partition
-            Graph partition = new(graph);
-            partitions.Add(partition);
-
-            // Start with the most populous node that is not yet assigned to a partition
-            Node mostPopulousNode = graph.GetNodes().OrderByDescending(x => x.Population).Where(x => x.InSubGraph == false).First();
-            partition.AddNodeWithEdges(mostPopulousNode, graph.adjacencyList[mostPopulousNode]);
-            mostPopulousNode.InSubGraph = true;
-
-            //Get all the adjacent nodes of the current partition, not in a subgraph
-            List<Node> adjacentNodes = partition.GetAdjacentNodesInParentGraph().Where(x => x.InSubGraph == false).ToList();
-
-            // Add to own graph to remove edges into current partition
-            var tempGraph = new Graph(graph);
-            foreach (var node in adjacentNodes)
+            if (numberOfPartitions == 1)
             {
-                tempGraph.AddNodeWithEdges(node, graph.adjacencyList[node]);
+                Console.WriteLine("Graph is already a single partition");
+                return [graph];
             }
-            // Order by the fewest edges and then by population and get the first node
-            var isolatedSmallNeighbour = tempGraph.GetNodes().
-            OrderBy(x => graph.adjacencyList[x].Count).
-            ThenBy(x => x.Population).ToList().First();
 
+            // Create a list of partitions
+            List<Graph> partitions = new(numberOfPartitions);
 
-    
-            // Add the node to the partition
-            partition.AddNodeWithEdges(isolatedSmallNeighbour, graph.adjacencyList[isolatedSmallNeighbour]);
-            isolatedSmallNeighbour.InSubGraph = true;
-
-        }
-
-        // Print the initial partitions
-        Console.WriteLine("Initial partitions created");
-
-        var leftovers = graph.GetNodes().Where(x => x.InSubGraph == false).ToList();
-        if (leftovers.Count != 0)
-        {
-            Console.WriteLine($"Handeling leftovers...({string.Join(", ", leftovers.Select(x => x.Name))})");
-
-            //Handle Leftovers - focus on balancing the partitions
-            foreach (var node in leftovers)
+            //while there are nodes not assigned a partition
+            while (partitions.Count < numberOfPartitions)
             {
-                //Find bordering partitions, do this by finding adajcent nodes and checking what partitions they are in
-                List<Graph> borderingPartitions = new List<Graph>();
-                foreach (var neighbour in graph.adjacencyList[node]) // For each neighbour of the node
+                // Check if there are any nodes left to distribute. Must be at least 2 nodes left to form a new partition
+                var undistributedNodesCount = graph.GetNodes().Count(x => !x.InSubGraph && !x.Isolated);
+                if (undistributedNodesCount <= 1)
                 {
-                    foreach (var partition in partitions)
-                    {
-                        if (partition.adjacencyList.ContainsKey(neighbour))
-                        {
-                            borderingPartitions.Add(partition);
-                        }
-                    }
+                    Console.WriteLine(undistributedNodesCount == 0 ? "All nodes have been distributed" : "Only one node left, too few to form a new partition");
+                    break;
                 }
 
-                // Add this node to the partition where adding it would bring the partition closest to the ideal population
-                int idealPopulation = graph.Population() / numberOfPartitions;
-                Graph targetPartition = borderingPartitions.OrderBy(x => Math.Abs(x.Population() + node.Population - idealPopulation)).First();
-                targetPartition.AddNodeWithEdges(node, graph.adjacencyList[node]);
+                // Create a new partition
+                Graph partition = new(graph);
+
+                // Start with the most populous node that is not yet assigned to a partition
+                Node mostPopulousNode = graph.GetNodes().OrderByDescending(x => x.Population).Where(x => x.InSubGraph == false).Where(x => x.Isolated == false).First();
+                partition.AddNodeWithEdges(mostPopulousNode, graph.adjacencyList[mostPopulousNode]);
+
+                //Get all the adjacent nodes of the current partition, not in a subgraph
+                List<Node> adjacentNodes = partition.GetAdjacentNodesInParentGraph().Where(x => x.InSubGraph == false).ToList();
+
+                // If this is an isolated node, then this cannot be the basis of a partition. Mark it as isolated and continue
+                if (adjacentNodes.Count == 0)
+                {
+                    Console.WriteLine($"The node {mostPopulousNode.Name} is isolated");
+                    //print the duchy Graph i totality
+                    Console.WriteLine(graph.ToDetailedString());
+
+
+                
+
+
+                    mostPopulousNode.Isolated = true;
+                    continue;
+ 
+                }
+                mostPopulousNode.InSubGraph = true;
+
+                // Add to own graph to remove edges into current partition
+
+                // SOmething goes wrong when there is only one cell left in the lis of adjacent nodes
+                // Think it has to do with the fact that it does not get anny edges added
+                //if the adjacent node list is one, just add it to the partition
+                Node isolatedSmallNeighbour;
+                if (adjacentNodes.Count == 1)
+                {
+                    isolatedSmallNeighbour = adjacentNodes.First();
+                }
+                else
+                {
+                    var tempGraph = new Graph(graph);
+                    foreach (var node in adjacentNodes)
+                    {
+                        tempGraph.AddNodeWithEdges(node, graph.adjacencyList[node]);
+                    }
+                    // Order by the fewest edges and then by population and get the first node
+                    isolatedSmallNeighbour = tempGraph.GetNodes().
+                    OrderBy(x => graph.adjacencyList[x].Count).
+                    ThenBy(x => x.Population).ToList().First();
+                }
+
+
+
+                // Add the node to the partition
+                partition.AddNodeWithEdges(isolatedSmallNeighbour, graph.adjacencyList[isolatedSmallNeighbour]);
+                isolatedSmallNeighbour.InSubGraph = true;
+                // Add the partition to the list of partitions
+                partitions.Add(partition);
+
             }
 
-        }
+            // Print the initial partitions
+            Console.WriteLine("Initial partitions created");
 
-        // Print the final partitions
-        Console.WriteLine("Final partitions created:");
-        foreach (var partition in partitions)
-        {
-            Console.WriteLine(partition);
-        }
+            var leftovers = graph.GetNodes().Where(x => x.InSubGraph == false).ToList();
+            if (leftovers.Count != 0)
+            {
+                Console.WriteLine($"Handeling leftovers...({string.Join(", ", leftovers.Select(x => x.Name))})");
 
-        return partitions;
-    }
+                //Handle Leftovers - focus on balancing the partitions
+                foreach (var node in leftovers)
+                {
+                    //Find bordering partitions, do this by finding adajcent nodes and checking what partitions they are in
+                    List<Graph> borderingPartitions = new List<Graph>();
+                    foreach (var neighbour in graph.adjacencyList[node]) // For each neighbour of the node
+                    {
+                        foreach (var partition in partitions)
+                        {
+                            if (partition.adjacencyList.ContainsKey(neighbour))
+                            {
+                                borderingPartitions.Add(partition);
+                            }
+                        }
+                    }
+
+                    // Add this node to the partition where adding it would bring the partition closest to the ideal population
+                    int idealPopulation = graph.Population() / numberOfPartitions;
+                    Graph targetPartition = borderingPartitions.OrderBy(x => Math.Abs(x.Population() + node.Population - idealPopulation)).First();
+                    targetPartition.AddNodeWithEdges(node, graph.adjacencyList[node]);
+                }
+
+            }
+
+            // Print the final partitions
+            Console.WriteLine("Final partitions created:");
+            foreach (var partition in partitions)
+            {
+                Console.WriteLine(partition);
+            }
+
+            return partitions;
+        }
     }
 }
