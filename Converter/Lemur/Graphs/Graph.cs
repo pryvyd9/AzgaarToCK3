@@ -238,11 +238,6 @@ namespace Converter.Lemur.Graphs
                     Console.WriteLine($"The node {mostPopulousNode.Name} is isolated");
                     //print the duchy Graph i totality
                     Console.WriteLine(graph.ToDetailedString());
-
-
-                
-
-
                     mostPopulousNode.Isolated = true;
                     continue;
  

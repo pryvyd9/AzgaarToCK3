@@ -522,44 +522,6 @@ namespace Converter.Lemur
                 //Add the found baronies to this barony¨s list of adjacent baronies. Can be null if there are no adjacent baronies
                 barony.Neighbors = adjacentBaronies!;
             }
-
-            // Debugging
-            // Find the barony Lufardet - IF all is well, it should have 7 adjacent baronies
-            if (Settings.Instance.Debug)
-            {
-                var lufardet = map.Baronies!.First(b => b.Name == "Lufardet");
-
-                Console.WriteLine($"Barony {lufardet.Name} has {lufardet.Neighbors.Count} adjacent baronies");
-
-                if (lufardet.Neighbors.Count != 7)
-                {
-                    //Run through the adjecancy logic again and print the result
-                    Console.WriteLine("Running through the adjacency logic again to find the error");
-                    //fist get all the cells that the cells in this barony are adjacent to
-                    var cells = lufardet.GetAllCells();
-                    Console.WriteLine($"Lufardet has {cells.Count} cells");
-                    var adjacentCells = cells.SelectMany(c => c.Neighbors).Distinct().Select(k => map.Cells![k]).Where(c => c.Province != null).ToList();
-                    int c = adjacentCells.Count;
-                    // Remove any cell that is in this barony
-                    adjacentCells.RemoveAll(cells.Contains);
-                    Console.WriteLine($"Removed {c - adjacentCells.Count} cells that were internal to Lufardet");
-
-                    //print the full list of adjacent cells
-                    adjacentCells.OrderBy(b => b.Province!.Name);
-                    Console.WriteLine("Cells that are adjacent to Lufardet and what barony they are in:");
-                    foreach (var cell in adjacentCells)
-                    {
-                        Console.WriteLine($"- {cell.Id} -> {cell.Province!.Name}");
-                    }
-
-                    // Now find all unique baronies that the adjacent cells are in
-                    var adjacentBaronies = adjacentCells.Select(c => c.Province as Barony).Where(b => b != null).Distinct().ToList();
-
-                    Console.WriteLine($"Barony {lufardet.Name} has {adjacentBaronies.Count} adjacent baronies");
-
-                    throw new Exception("Lufardet has the wrong number of adjacent baronies!!");
-                }
-            }
         }
     }
 }
