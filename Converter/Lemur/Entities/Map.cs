@@ -18,6 +18,8 @@
         public Dictionary<int, Burg>? Burgs { get; set; }
 
         public List<Barony>? Baronies { get; set; }
+
+        public List<County>? Counties { get; set; }
         public List<Duchy>? Duchies { get; internal set; }
 
         // list of wasteland provinces, ths is because provinces with no burgs counts as wasteland. Add 0 by default

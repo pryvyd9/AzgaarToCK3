@@ -235,19 +235,13 @@ namespace Converter.Lemur.Graphs
                 // If this is an isolated node, then this cannot be the basis of a partition. Mark it as isolated and continue
                 if (adjacentNodes.Count == 0)
                 {
-                    Console.WriteLine($"The node {mostPopulousNode.Name} is isolated");
-                    //print the duchy Graph i totality
-                    Console.WriteLine(graph.ToDetailedString());
+                    if (Settings.Instance.Debug) Console.WriteLine($"The node {mostPopulousNode.Name} is isolated");
                     mostPopulousNode.Isolated = true;
                     continue;
- 
                 }
                 mostPopulousNode.InSubGraph = true;
 
-                // Add to own graph to remove edges into current partition
 
-                // SOmething goes wrong when there is only one cell left in the lis of adjacent nodes
-                // Think it has to do with the fact that it does not get anny edges added
                 //if the adjacent node list is one, just add it to the partition
                 Node isolatedSmallNeighbour;
                 if (adjacentNodes.Count == 1)
@@ -256,6 +250,7 @@ namespace Converter.Lemur.Graphs
                 }
                 else
                 {
+                    // Add to temporary graph to remove edges going into the existing partion
                     var tempGraph = new Graph(graph);
                     foreach (var node in adjacentNodes)
                     {
@@ -266,8 +261,6 @@ namespace Converter.Lemur.Graphs
                     OrderBy(x => graph.adjacencyList[x].Count).
                     ThenBy(x => x.Population).ToList().First();
                 }
-
-
 
                 // Add the node to the partition
                 partition.AddNodeWithEdges(isolatedSmallNeighbour, graph.adjacencyList[isolatedSmallNeighbour]);

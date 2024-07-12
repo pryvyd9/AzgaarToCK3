@@ -106,10 +106,53 @@ namespace Converter.Lemur
                 Debugger.Break();
                 throw;
             }
-
-
-
         }
+
+        public static async Task DrawCellsWithColourImage(Dictionary<MagickColor, List<Entities.Cell>> colorCellsMap, Entities.Map map, string name = "colorCellsMap")
+        {
+            Console.WriteLine("Drawing cells by couloured groups to image...");
+            try
+            {
+                var settings = new MagickReadSettings()
+                {
+                    Width = Map.MapWidth,
+                    Height = Map.MapHeight,
+                };
+                using var cellsMap = new MagickImage("xc:black", settings);
+
+                List<Drawables> drawablesList = new();
+
+                foreach (var group in colorCellsMap)
+                {
+                    //drawablesList.Add(GenerateCellPolygons(province.Cells, province.Color, map));
+                    drawablesList.Add(GenerateCellPolygons(group.Value, group.Key, map));
+                }
+
+                // Flatten the list of Drawables into a single collection of IDrawable
+                IEnumerable<IDrawable> drawables = drawablesList.SelectMany(d => d);
+
+                cellsMap.Draw(drawables);
+                var path = Helper.GetPath(Settings.OutputDirectory, "map_data", $"{name}.png");
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+                Console.WriteLine($"Saving image to '{path}'");
+                await cellsMap.WriteAsync(path);
+                Console.WriteLine($"Image has been drawn and saved to '{path}'");
+
+               if (Settings.Instance.Debug)
+                {
+                    Console.WriteLine($"Debug is on, opening {name}.png");
+                    OpenImageInExplorer(path);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Debugger.Break();
+                throw;
+            }
+        }
+
         private static Drawables GenerateCellPolygons(IEnumerable<Entities.Cell> cells, MagickColor color, Entities.Map map)
         {
             var drawables = new Drawables();

@@ -7,7 +7,7 @@ namespace Converter.Lemur.Entities
         public int Id { get; set; }
 
         public string Name { get; set; }
-        public MagickColor? Color { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public MagickColor? Color { get; set; }
         public List<Cell> Cells { get; set; }
 
         public Duchy? Duchy { get; set; }

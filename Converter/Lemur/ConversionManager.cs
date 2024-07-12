@@ -4,6 +4,7 @@ namespace Converter.Lemur
     using System.Security.Cryptography.X509Certificates;
     using Converter.Lemur.Entities;
     using Converter.Lemur.Graphs;
+    using ImageMagick;
     using static Converter.Lemur.Entities.Cell;
 
     public class ConversionManager
@@ -40,8 +41,20 @@ namespace Converter.Lemur
             GenerateBaronyAdjacency(map);
             GenerateCounties(map);
 
+
+            AssignUniqueColorsToCounties(map); //Debugging
+            Dictionary<MagickColor, List<Cell>> countyCellsByColour = new();
+            foreach (var county in map.Counties!)
+            {
+                countyCellsByColour.Add(county.Color, county.GetAllCells());
+            }
+            await ImageUtility.DrawCellsWithColourImage(countyCellsByColour, map, "counties"); //Debugging
+
+
             Console.WriteLine("Finished conversion!");
         }
+
+
 
         private static void AssertEveryLandCellIsAssignedToABurg(Map map)
         {
@@ -98,6 +111,13 @@ namespace Converter.Lemur
             for (int i = 0; i < map.Baronies!.Count; i++)
             {
                 map.Baronies[i].Color = Helper.GetColor(i, map.Baronies.Count);
+            }
+        }
+        private static void AssignUniqueColorsToCounties(Map map)
+        {
+            for (int i = 0; i < map.Counties!.Count; i++)
+            {
+                map.Counties[i].Color = Helper.GetColor(i, map.Counties.Count);
             }
         }
 
@@ -419,9 +439,6 @@ namespace Converter.Lemur
         private static void GenerateCounties(Map map)
         {
             Helper.PrintSectionHeader("Generating counties");
-
-
-
             //For each duchy, generate a graph of the duchy
             foreach (var duchy in map.Duchies!)
             {
@@ -481,10 +498,14 @@ namespace Converter.Lemur
                         Console.WriteLine($"County {county.Name} has {baroniesInPartition.Count} baronies");
                     }
                     counties.Add(county);
-
-
                 }
+
+                //add the counties to the map's list of counties
+                map.Counties ??= new();
+                map.Counties.AddRange(counties);
+                Console.WriteLine($"Duchy {duchy.Name} has {counties.Count} counties");
             }
+            Console.WriteLine($"Generated {map.Counties!.Count} counties");
 
 
         }
@@ -500,7 +521,6 @@ namespace Converter.Lemur
 
         private static void GenerateBaronyAdjacency(Map map)
         {
-
             Helper.PrintSectionHeader("Generating barony adjacency");
 
             foreach (var barony in map.Baronies!)
