@@ -37,19 +37,22 @@ namespace Converter.Lemur
             GenerateWastelandProvinces(map);
             AssertEveryLandCellIsAssignedToABurg(map);
 
-            AssignUniqueColorsToBaronies(map); //Debugging
-            await ImageUtility.DrawProvincesImage(map); //Debugging
 
             GenerateBaronyAdjacency(map);
             GenerateCounties(map);
 
 
+
+            AssignUniqueColorsToBaronies(map); //Debugging
+            await ImageUtility.DrawProvincesImage(map); //Debugging
             AssignUniqueColorsToCounties(map); //Debugging
             await ShowCounties(map);
 
 
             Console.WriteLine("Finished conversion!");
         }
+
+
 
         private static void GenerateWastelandProvinces(Map map)
         {
@@ -106,7 +109,7 @@ namespace Converter.Lemur
             //We start at 10 because we want to avoid black
             for (int i = 0; i < map.Baronies!.Count; i++)
             {
-                map.Baronies[i].Color = Helper.GetColor(i+10, map.Baronies.Count+20); //pad it just in case
+                map.Baronies[i].Color = Helper.GetColor(i + 10, map.Baronies.Count + 20); //pad it just in case
             }
         }
         private static void AssignUniqueColorsToCounties(Map map)
@@ -114,7 +117,7 @@ namespace Converter.Lemur
             //We start at 10 because we want to avoid black
             for (int i = 0; i < map.Counties!.Count; i++)
             {
-                map.Counties[i].Color = Helper.GetColor(i+10, map.Counties.Count+20); //pad it just in case
+                map.Counties[i].Color = Helper.GetColor(i + 10, map.Counties.Count + 20); //pad it just in case
             }
         }
 
