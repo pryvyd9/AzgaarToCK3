@@ -1,6 +1,7 @@
 namespace Converter.Lemur
 {
     using System.Diagnostics;
+    using System.Drawing;
     using System.Security.Cryptography.X509Certificates;
     using Converter.Lemur.Entities;
     using Converter.Lemur.Graphs;
@@ -33,6 +34,7 @@ namespace Converter.Lemur
 
             AssignCellsToBaronies(map);
 
+            GenerateWastelandProvinces(map);
             AssertEveryLandCellIsAssignedToABurg(map);
 
             AssignUniqueColorsToBaronies(map); //Debugging
@@ -43,19 +45,17 @@ namespace Converter.Lemur
 
 
             AssignUniqueColorsToCounties(map); //Debugging
-            Dictionary<MagickColor, List<Cell>> countyCellsByColour = new();
-            foreach (var county in map.Counties!)
-            {
-                countyCellsByColour.Add(county.Color, county.GetAllCells());
-            }
-            await ImageUtility.DrawCellsWithColourImage(countyCellsByColour, map, "counties"); //Debugging
+            await ShowCounties(map);
 
 
             Console.WriteLine("Finished conversion!");
         }
 
+        private static void GenerateWastelandProvinces(Map map)
+        {
+            //For each province flagged as not having a burg, generate a wasteland province
 
-
+        }
         private static void AssertEveryLandCellIsAssignedToABurg(Map map)
         {
             //Every cell should at this point either be assigned to a barony or be assigned to the wastelands
@@ -77,20 +77,15 @@ namespace Converter.Lemur
                 {
                     cellPassable = true;
                 }
-                else if (cell.Value.State == 0) // Wastelands are state 0
-                {
-                    cellPassable = true;
-                }
-                // Edge case: Cell can be assigned to burgless province in the data, but that counts as wasteland in the conversion
-                // We flagg these provinces during duchy creation.
-                else if (map.Wastelands.Contains(cell.Value.AzProvince))
+                // Check if the cell is in one of the wastelands
+                else if (cell.Value.Province is Wasteland)
                 {
                     cellPassable = true;
                 }
                 if (!cellPassable)
                 {
                     listPassable = false;
-                    Console.WriteLine($"Failed: Cell {cell.Value.Id}[{Helper.GeoToString(cell.Value.GeoDataCoordinates)}], AzProvince {cell.Value.AzProvince}, State {cell.Value.State}");
+                    Console.WriteLine($"Failed: Cell {cell.Value.Id}, AzProvince {cell.Value.AzProvince}, State {cell.Value.State}");
                 }
             }
 
@@ -108,16 +103,18 @@ namespace Converter.Lemur
 
         private static void AssignUniqueColorsToBaronies(Map map)
         {
+            //We start at 10 because we want to avoid black
             for (int i = 0; i < map.Baronies!.Count; i++)
             {
-                map.Baronies[i].Color = Helper.GetColor(i, map.Baronies.Count);
+                map.Baronies[i].Color = Helper.GetColor(i+10, map.Baronies.Count+20); //pad it just in case
             }
         }
         private static void AssignUniqueColorsToCounties(Map map)
         {
+            //We start at 10 because we want to avoid black
             for (int i = 0; i < map.Counties!.Count; i++)
             {
-                map.Counties[i].Color = Helper.GetColor(i, map.Counties.Count);
+                map.Counties[i].Color = Helper.GetColor(i+10, map.Counties.Count+20); //pad it just in case
             }
         }
 
@@ -172,19 +169,47 @@ namespace Converter.Lemur
                         neighbors[0].Province = barony;
                         //And remove it from the list of countryside cells
                         countrysideCells.Remove(neighbors[0]);
+
                     }
                     if (noMoreRoom)
                     {
-                        Console.WriteLine("No more room in any barony");
-                        break;
+                        //Check if there would be any cells left unassigned (there is room but it i across water)
+                        if (countrysideCells.Count > 0)
+                        {
+                            //This places a "seed" on any island cell and respect distance. It will assign whole islands contigously to the same barony.
+                            var shortestDistancePair = countrysideCells
+                                .Select(island => new
+                                {
+                                    Island = island,
+                                    ClosestBarony = baronies
+                                        .Select(b => new { Barony = b, Distance = b.burg.Cell!.DistanceSquared(island) })
+                                        .OrderBy(b => b.Distance)
+                                        .First()
+                                })
+                                .OrderBy(pair => pair.ClosestBarony.Distance)
+                                .First();
+
+                            // shortestDistancePair contains the island and the closest barony with the shortest distance among all pairs
+                            var island = shortestDistancePair.Island;
+                            var closestBarony = shortestDistancePair.ClosestBarony.Barony;
+
+                            // link the cell and the barony and remove the cell from the list of unassigned cells
+                            closestBarony.Cells.Add(island);
+                            island.Province = closestBarony;
+                            countrysideCells.Remove(island);
+
+                            continue;
+                        }
+                        else
+                        {
+                            break; //no more room in any barony and no more cells to assign
+                        }
                     }
+
+
                 }
 
-                //if not all countryside cells are assigned, print a warning
-                if (countrysideCells.Count > 0)
-                {
-                    Console.WriteLine($"Warning: {countrysideCells.Count} countryside cells are not assigned to any barony. Islands?");
-                }
+                // //if not all countryside cells are assigned, print a warning
 
                 if (Settings.Instance.Debug)
                 {
@@ -375,23 +400,26 @@ namespace Converter.Lemur
                 {
                     //log the name of the province skipped
                     Console.WriteLine($"Skipping province {provinceData.name} as it has no burgs (Wasteland)");
-                    //add the province Id to the list of wasteland provinces
-                    map.Wastelands.Add(province.Key);
+
+                    //We have also dicovered a wasteland province, so we generate a wasteland province and add it to the wastelands list
+                    List<Cell> wastelandCells = province.Select(c => c.Value).ToList();
+                    map.Wastelands?.Add(new Wasteland(province.Key, wastelandCells, provinceData.name));
+
                     continue;
                 }
                 if (province.Key == 0)
                 {
-                    // Handle the wastelands province
+                    // Handle the wastelands province, it might actually contain cells assigned to states
                     provinceData = new PackProvince(i: 0, name: "Wastelands", burg: 0, state: 0);
                     var WastelandCellsByState = province.GroupBy(c => c.Value.State).OrderBy(g => g.Key).OrderBy(g => g.Key);
                     //now for each state in the wastelands province, generate a duchy
 
                     foreach (var state in WastelandCellsByState)
                     {
-                        // remove the first group as it is the wastelands province (Wastelands should not be a duchy)
-                        // to find out if it is we must see if the first group is assigned to state 0
+                        // Handle the first group because that is actually the wastelands province
                         if (state.Key == 0)
                         {
+                            map.Wastelands?.Add(new Wasteland(0, state.Select(c => c.Value).ToList(), "Wastelands"));
                             continue;
                         }
 
@@ -516,8 +544,20 @@ namespace Converter.Lemur
             public Barony Barony { get; } = barony;
         }
 
-
-
+        /// <summary>
+        /// Debugging method to show the counties on the map
+        /// </summary>
+        /// <param name="map"></param>
+        /// <returns></returns>
+        private static async Task ShowCounties(Map map)
+        {
+            Dictionary<MagickColor, List<Cell>> countyCellsByColour = new();
+            foreach (var county in map.Counties!)
+            {
+                countyCellsByColour.Add(county.Color, county.GetAllCells());
+            }
+            await ImageUtility.DrawCellsWithColourImage(countyCellsByColour, map, "counties", Color.Transparent); //Debugging
+        }
 
         private static void GenerateBaronyAdjacency(Map map)
         {

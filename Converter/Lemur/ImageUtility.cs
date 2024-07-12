@@ -71,12 +71,18 @@ namespace Converter.Lemur
                     Width = Map.MapWidth,
                     Height = Map.MapHeight,
                 };
-                using var cellsMap = new MagickImage("xc:black", settings);
+                using var cellsMap = new MagickImage("xc:transparent", settings);
 
                 List<Drawables> drawablesList = new();
-
-                //concat thea list from baronies and in the future major rivers and sea zones
+                //=================
+                // EXTEND THIS TO DRAW ALL PROVINCEs, not just baronies. Should also draw inn wasteland, major rivers and sea zones
+                //=================
+                //concat the list from baronies and in the future major rivers and sea zones
                 List<IProvince> provincesToDraw = map.Baronies!.Cast<IProvince>().ToList();
+
+                //Add wasteland provinces to the list as black
+                
+
 
                 foreach (var province in provincesToDraw)
                 {
@@ -108,9 +114,9 @@ namespace Converter.Lemur
             }
         }
 
-        public static async Task DrawCellsWithColourImage(Dictionary<MagickColor, List<Entities.Cell>> colorCellsMap, Entities.Map map, string name = "colorCellsMap")
+        public static async Task DrawCellsWithColourImage(Dictionary<MagickColor, List<Entities.Cell>> colorCellsMap, Entities.Map map, string name = "colorCellsMap", System.Drawing.Color background = default)
         {
-            Console.WriteLine("Drawing cells by couloured groups to image...");
+            Console.WriteLine("Drawing cells by couloured groups to image...");   
             try
             {
                 var settings = new MagickReadSettings()
@@ -118,7 +124,7 @@ namespace Converter.Lemur
                     Width = Map.MapWidth,
                     Height = Map.MapHeight,
                 };
-                using var cellsMap = new MagickImage("xc:black", settings);
+                using var cellsMap = new MagickImage($"xc:{background.Name.ToLower()}", settings);
 
                 List<Drawables> drawablesList = new();
 
@@ -151,6 +157,8 @@ namespace Converter.Lemur
                 Debugger.Break();
                 throw;
             }
+
+
         }
 
         private static Drawables GenerateCellPolygons(IEnumerable<Entities.Cell> cells, MagickColor color, Entities.Map map)

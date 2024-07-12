@@ -17,13 +17,13 @@
         public Dictionary<int, Cell>? Cells { get; set; }
         public Dictionary<int, Burg>? Burgs { get; set; }
 
-        public List<Barony>? Baronies { get; set; }
+        public List<Barony>? Baronies { get; set; } = new();
 
-        public List<County>? Counties { get; set; }
-        public List<Duchy>? Duchies { get; internal set; }
+        public List<County>? Counties { get; set; } = new();
+        public List<Duchy>? Duchies { get; internal set; } = new();
 
         // list of wasteland provinces, ths is because provinces with no burgs counts as wasteland. Add 0 by default
-        public List<int> Wastelands { get; set; } = [0];
+        public List<Wasteland>? Wastelands { get; set; } = new();
         
 
         
