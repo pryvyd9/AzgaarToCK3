@@ -15,7 +15,6 @@ namespace Converter.Lemur.Entities
 
         public Barony? Capital { get; set; }
 
-
         //constructor
         public County(int id, string name, List<Barony>? baronies = null, Duchy? duchy = null, Barony? capital = null)
         {
@@ -33,6 +32,7 @@ namespace Converter.Lemur.Entities
             if (duchy != null)
             {
                 Duchy = duchy;
+                Duchy.Counties.Add(this);
             }
 
         }
@@ -41,6 +41,11 @@ namespace Converter.Lemur.Entities
         public List<Cell> GetAllCells()
         {
             return Baronies.SelectMany(barony => barony.GetAllCells()).ToList();
+        }
+
+        public MagickColor? GetColor()
+        {
+            return Color ?? Baronies.FirstOrDefault()?.GetColor();
         }
     }
 }

@@ -34,6 +34,11 @@ namespace Converter.Lemur.Entities
         /// </summary>
         /// <returns></returns>
         public List<Cell> GetAllCells();
+        /// <summary>
+        /// Get the color of the title. Shoule return the assigned colour,
+        /// but of null then look at the first ITitle lower in the hierarchy.
+        /// </summary>
+        public MagickColor? GetColor();
         
         public string Ck3_Id(){
             return $"x_{Name}_{Id}";

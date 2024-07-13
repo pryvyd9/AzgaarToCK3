@@ -12,6 +12,8 @@ namespace Converter.Lemur.Entities
         public List<Cell> Cells { get; set; } = cells;
         public List<Barony> Baronies { get; set; } = new List<Barony>();
 
+        public List<County> Counties { get; set; } = new List<County>();
+
         public List<Cell> GetAllCells()
         {
             //return directly assigned cells
@@ -21,6 +23,11 @@ namespace Converter.Lemur.Entities
         public string Ck3_Id()
         {
             return $"d_{Name}_{Id}";
+        }
+
+        public MagickColor? GetColor()
+        {
+            return Color ?? Counties.FirstOrDefault()?.GetColor();
         }
     }
 }

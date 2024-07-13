@@ -45,6 +45,9 @@ namespace Converter.Lemur.Entities
             return false;
         }
 
-
+        public MagickColor? GetColor()
+        {
+            return Color;
+        }
     }
 }

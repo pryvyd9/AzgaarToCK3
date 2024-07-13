@@ -41,12 +41,16 @@ namespace Converter.Lemur
             GenerateBaronyAdjacency(map);
             GenerateCounties(map);
 
+            GenerateKingdoms(map);
+
 
 
             AssignUniqueColorsToBaronies(map); //Debugging
             await ImageUtility.DrawProvincesImage(map); //Debugging
-            AssignUniqueColorsToCounties(map); //Debugging
             await ShowCounties(map);
+            await ShowDuchies(map);
+            await ShowKingdoms(map);
+
 
 
             Console.WriteLine("Finished conversion!");
@@ -541,6 +545,44 @@ namespace Converter.Lemur
 
         }
 
+        private static void GenerateKingdoms(Map map)
+        {
+            //(Not implemented) A kingdom is a state, but there will be an option to merge small kingdoms into neighbors within the same empire. A small kingdom is defined as having X or fewer duchies, where X is configurable in the settings.
+            // tODDO later
+            // Add a setting for turning off small kingdoms
+            // Add a setting for small kingdom threshold
+
+
+            // Get all the duchies, order them by state, get the state data from the json data and create a kingdom from the state data
+            // The kingdom will be named after the state
+            Helper.PrintSectionHeader("Generating kingdoms");
+            var duchiesByState = map.Duchies!.GroupBy(d => d.GetAllCells().First().State).OrderBy(g => g.Key);
+            List<Kingdom> kingdoms = new(duchiesByState.Count()); // preallocate memory for the kingdoms
+
+            foreach (var state in duchiesByState)
+            {
+                // Get the state data from the json data
+                var stateData = map.JsonMap.pack.states.First(s => s.i == state.Key);
+                var kingdom = new Kingdom(stateData.i, stateData.name, null)
+                {
+                    Duchies = state.ToList()
+                };
+                kingdoms.Add(kingdom);
+            }
+
+            // Assign the kingdoms to the map
+            map.Kingdoms = kingdoms;
+
+            if (Settings.Instance.Debug)
+            {
+                foreach (var kingdom in kingdoms)
+                {
+                    Console.WriteLine($"Kingdom {kingdom.Id} {kingdom.Name} has {kingdom.Duchies.Count} duchies");
+                }
+            }
+
+
+        }
         struct BaronyNode(Node node, Barony barony)
         {
             public Node Node { get; } = node;
@@ -557,10 +599,32 @@ namespace Converter.Lemur
             Dictionary<MagickColor, List<Cell>> countyCellsByColour = new();
             foreach (var county in map.Counties!)
             {
-                countyCellsByColour.Add(county.Color, county.GetAllCells());
+                countyCellsByColour.Add(county.GetColor(), county.GetAllCells());
             }
             await ImageUtility.DrawCellsWithColourImage(countyCellsByColour, map, "counties", Color.Transparent); //Debugging
         }
+
+        private static async Task ShowDuchies(Map map)
+        {
+            // Like with Counties, but for Duchies
+            Dictionary<MagickColor, List<Cell>> duchyCellsByColour = new();
+            foreach (var duchy in map.Duchies!)
+            {
+                duchyCellsByColour.Add(duchy.GetColor(), duchy.GetAllCells());
+            }
+            await ImageUtility.DrawCellsWithColourImage(duchyCellsByColour, map, "duchies", Color.Transparent); //Debugging
+        }
+        private static async Task ShowKingdoms(Map map)
+        {
+           // Liek for Duchies and Counties, but for Kingdoms
+            Dictionary<MagickColor, List<Cell>> kingdomCellsByColour = new();
+            foreach (var kingdom in map.Kingdoms!)
+            {
+                kingdomCellsByColour.Add(kingdom.GetColor(), kingdom.GetAllCells());
+            }
+            await ImageUtility.DrawCellsWithColourImage(kingdomCellsByColour, map, "kingdoms", Color.Transparent); //Debugging
+        }
+
 
         private static void GenerateBaronyAdjacency(Map map)
         {
