@@ -29,6 +29,8 @@ namespace Converter.Lemur.Entities
 
         public List<Cell> Cells { get; set; }
 
+        public ITitle? Parent { get; set; }
+
         /// <summary>
         /// A way to get all the cells in the title. 
         /// </summary>
@@ -43,5 +45,15 @@ namespace Converter.Lemur.Entities
         public string Ck3_Id(){
             return $"x_{Name}_{Id}";
         }
+
+        public Culture GetDominantCulture(Map map);
+        public Religion GetDominantReligion(Map map);
+
+
+        /// <summary>
+        /// Get the neighbours of the title. The key is the neighbour and the value is how often they share a border.
+        /// </summary>
+        /// <returns></returns>
+        public Dictionary<ITitle, int> GetNeighbours();
     }
 }

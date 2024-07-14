@@ -58,7 +58,21 @@ public class Settings
     /// </summary>
     /// <value>The maximum number of counties, default is 5.</value>
     public int MaxCounties { get; set; } = 5;
-
+    /// <summary>
+    /// If true then de jure empires will form based on culture.
+    /// If false then de jure empires will form based on religion.
+    /// </summary>
+    public bool EmpireFromCulture { get;  set; } = true;
+    /// <summary>
+    /// The minimum number of duchies per kingdom. 
+    /// Kingdoms below this number will be merged into adjacent larger kingdoms in same empire.
+    /// </summary>
+    public int MinimumDuchiesPerKingdom { get;  set; } = 4;
+    /// <summary>
+    /// The minimum number of kingdoms per empire.
+    /// Empires below this number will be merged into adjacent larger empires.
+    /// </summary>
+    public int MinimumKingdomsPerEmpire { get; set; } = 2;
 
     public override string ToString()
     {

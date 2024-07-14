@@ -21,7 +21,8 @@
 
         public List<County>? Counties { get; set; } = new();
         public List<Duchy>? Duchies { get; set; } = new();
-        public List<Kingdom> Kingdoms { get; set; }
+        public List<Kingdom> Kingdoms { get; set; } = new();
+        public List<Empire>? Empires { get; internal set; } = new();
 
         // list of wasteland provinces, ths is because provinces with no burgs counts as wasteland. Add 0 by default
         public List<Wasteland>? Wastelands { get; set; } = new();

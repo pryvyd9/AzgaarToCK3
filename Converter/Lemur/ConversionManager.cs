@@ -41,7 +41,11 @@ namespace Converter.Lemur
             GenerateBaronyAdjacency(map);
             GenerateCounties(map);
 
+            GenerateEmpires(map);
             GenerateKingdoms(map);
+
+            MergeTinyKingdoms(map); //Adjust Kingdoms
+            MergeTinyEmpires(map); //Adjust Empires
 
 
 
@@ -50,6 +54,7 @@ namespace Converter.Lemur
             await ShowCounties(map);
             await ShowDuchies(map);
             await ShowKingdoms(map);
+            await ShowEmpires(map);
 
 
 
@@ -545,14 +550,96 @@ namespace Converter.Lemur
 
         }
 
+
+        private static void GenerateEmpires(Map map)
+        {
+            //Empires will follow culture, unless the option to follow religion is enabled.
+            //If the option to follow religion is enabled, the empire will follow religion.
+
+            Helper.PrintSectionHeader("Generating empires");
+            if (Settings.Instance.EmpireFromCulture)
+            {
+                map.Empires = ByCulture();
+            }
+            else
+            {
+                map.Empires = ByReligion();
+            }
+
+            if (Settings.Instance.Debug)
+            {
+                foreach (var empire in map.Empires!)
+                {
+                    Console.WriteLine($"Empire {empire.Id} {empire.Name}");
+                }
+            }
+
+
+
+            List<Empire> ByCulture()
+            {
+                // The culture way:
+                // Get every culture in the map, they are packed in the json map
+                var cultures = map.JsonMap.pack.cultures.Skip(1).ToArray(); //skip the 0'eth entry, that is wildlands
+                                                                            //print each
+                Console.WriteLine($"Empire From Culture: True, there are {cultures.Length} cultures in the map");
+                foreach (var culture in cultures)
+                {
+                    Console.WriteLine($"Culture: {culture}");
+                }
+
+                // For each culture, form an empire
+                List<Empire> empires = new();
+                foreach (var culture in cultures)
+                {
+                    Empire empire = new Empire(culture.i, culture.name, null)
+                    {
+                        Culture = culture
+                    };
+                    empires.Add(empire);
+                    // Kingdoms will self add when created
+
+                }
+
+                return empires;
+            }
+
+            List<Empire> ByReligion()
+            {
+                // The religion way;
+                // Get every religion in the map, they are packed in the json map
+
+                // Todo: Religions are interesting because they can have children and parents, 
+                // so some religions could be said to belong to the same "family".
+                // This is relevant because it could be used to determine which religions are more likely to 
+                // form an empire together if they are close to each other and their size alone would make them a 
+                // poor candidate for an empire.
+
+                var religions = map.JsonMap.pack.religions.Skip(1).ToArray(); // 0'eth entry is "No religion"
+                Console.WriteLine($"Empire From Culture: False, there are {religions.Length} religions in the map");
+                foreach (var religion in religions)
+                {
+                    Console.WriteLine($"Religion: {religion}");
+                }
+
+                // For each religion, form an empire
+                List<Empire> empires = new();
+                foreach (var religion in religions)
+                {
+                    Empire empire = new Empire(religion.i, religion.name, null)
+                    {
+                        Religion = religion
+                    };
+                    empires.Add(empire);
+                    // Kingdoms will self add when created
+                }
+                return empires;
+            }
+        }
+
+
         private static void GenerateKingdoms(Map map)
         {
-            //(Not implemented) A kingdom is a state, but there will be an option to merge small kingdoms into neighbors within the same empire. A small kingdom is defined as having X or fewer duchies, where X is configurable in the settings.
-            // tODDO later
-            // Add a setting for turning off small kingdoms
-            // Add a setting for small kingdom threshold
-
-
             // Get all the duchies, order them by state, get the state data from the json data and create a kingdom from the state data
             // The kingdom will be named after the state
             Helper.PrintSectionHeader("Generating kingdoms");
@@ -563,15 +650,25 @@ namespace Converter.Lemur
             {
                 // Get the state data from the json data
                 var stateData = map.JsonMap.pack.states.First(s => s.i == state.Key);
-                var kingdom = new Kingdom(stateData.i, stateData.name, null)
-                {
-                    Duchies = state.ToList()
-                };
+                var kingdom = new Kingdom(stateData.i, stateData.name, null, state.ToList());
                 kingdoms.Add(kingdom);
-            }
+                //And depending on if the rule sais to use culture or religion hwne forming empires, add the kingdom to the correct empire
+                if (Settings.Instance.EmpireFromCulture)
+                {
+                    var culture = state.First().GetDominantCulture(map);
+                    var empire = map.Empires!.First(e => e.Culture == culture);
+                    empire.Kingdoms.Add(kingdom);
+                    kingdom.Parent = empire;
+                }
+                else
+                {
+                    var religion = state.First().GetDominantReligion(map);
+                    var empire = map.Empires!.First(e => e.Religion == religion);
+                    empire.Kingdoms.Add(kingdom);
+                    kingdom.Parent = empire;
+                }
 
-            // Assign the kingdoms to the map
-            map.Kingdoms = kingdoms;
+            }
 
             if (Settings.Instance.Debug)
             {
@@ -580,9 +677,140 @@ namespace Converter.Lemur
                     Console.WriteLine($"Kingdom {kingdom.Id} {kingdom.Name} has {kingdom.Duchies.Count} duchies");
                 }
             }
-
+            // Assign the kingdoms to the map
+            map.Kingdoms = kingdoms;
 
         }
+
+        private static void MergeTinyKingdoms(Map map)
+        {
+
+            Helper.PrintSectionHeader("Merging tiny kingdoms");
+            Console.WriteLine($"Merging kingdoms that are less than {Settings.Instance.MinimumDuchiesPerKingdom} duchies");
+
+
+            // Add all kingdoms to the dictionary so we can keep track of if they are mergable or not
+            Dictionary<Kingdom, bool> unmergableKingdoms = map.Kingdoms.ToDictionary(k => k, k => false);
+
+            // Now next step we do per empire
+            bool mergerOccurred;
+            do
+            {
+                mergerOccurred = false; // Reset the flag at the beginning of each iteration
+
+                foreach (var empire in map.Empires!)
+                {
+                    var kingdomsToMerge = empire.Kingdoms
+                        .Where(k => k.Duchies.Count < Settings.Instance.MinimumDuchiesPerKingdom)
+                        .OrderBy(k => k.Duchies.Count)
+                        .Where(k => unmergableKingdoms.ContainsKey(k) && unmergableKingdoms[k] == false)
+                        .ToList();
+
+                    if (!kingdomsToMerge.Any() || empire.Kingdoms.Count < 2)
+                    {
+                        continue;
+                    }
+
+                    var TinyKingdom = kingdomsToMerge.First();
+                    var adjacentKingdoms = TinyKingdom.GetNeighbours();
+
+                    if (!adjacentKingdoms.Any())
+                    {
+                        unmergableKingdoms[TinyKingdom] = true;
+                        continue;
+                    }
+
+                    // Filter out non-empire kingdoms and sort by shared border
+                    var sortedAdjacentKingdoms = adjacentKingdoms
+                        .Where(k => empire.Kingdoms.Contains(k.Key))
+                        .OrderByDescending(k => k.Value)
+                        .Select(k => k.Key)
+                        .ToList();
+
+                    if (!sortedAdjacentKingdoms.Any())
+                    {
+                        unmergableKingdoms[TinyKingdom] = true;
+                        continue;
+                    }
+
+                    Kingdom mergeTarget = sortedAdjacentKingdoms.First() as Kingdom;
+                    mergeTarget.Duchies.AddRange(TinyKingdom.Duchies);
+                    foreach (var duchy in TinyKingdom.Duchies)
+                    {
+                        duchy.Parent = mergeTarget;
+                    }
+                    // Remove the tiny kingdom from the empire
+                    empire.Kingdoms.Remove(TinyKingdom);
+                    map.Kingdoms.Remove(TinyKingdom);
+
+                    // Since the merge target changed shape, if it was unmergable before, it might be mergable now
+                    unmergableKingdoms[mergeTarget] = false;
+                    mergerOccurred = true; // A merger was successful, so set the flag to true
+                    Console.WriteLine($"Merged {TinyKingdom.Name} into {mergeTarget.Name}");
+                }
+            } while (mergerOccurred); // Continue looping as long as a merger occurred in the last iteration
+
+            if (Settings.Instance.Debug)
+            {
+                Console.WriteLine($"Kingdoms after merging:");
+                foreach (var kingdom in map.Kingdoms)
+                {
+                    Console.WriteLine($" - {kingdom.Name} has {kingdom.Duchies.Count} duchies");
+                }
+            }
+        }
+
+        private static void MergeTinyEmpires(Map map)
+        {
+            //Much like with Kingdoms, empires can be to small to be considered an empire. In that case we join it with a neighbour.
+            // - We could consider religion and or culture when merging empires, but for now we will just merge them based on shared borders
+
+
+            Helper.PrintSectionHeader("Merging tiny empires");
+            Console.WriteLine($"Merging empires that are less than {Settings.Instance.MinimumKingdomsPerEmpire} kingdoms");
+            var MergeTinyEmpires = map.Empires.Where(e => e.Kingdoms.Count < Settings.Instance.MinimumKingdomsPerEmpire).ToList();
+
+            foreach (var empire in MergeTinyEmpires)
+            {
+                var adjacentEmpires = empire.GetNeighbours();
+
+                if (!adjacentEmpires.Any())
+                {
+                    continue;
+                }
+
+                var sortedAdjacentEmpires = adjacentEmpires
+                     .OrderByDescending(e => e.Value)
+                     .Select(e => e.Key)
+                     .ToList();
+
+                if (!sortedAdjacentEmpires.Any())
+                {
+                    continue;
+                }
+
+                Empire mergeTarget = sortedAdjacentEmpires.First() as Empire;
+                mergeTarget.Kingdoms.AddRange(empire.Kingdoms);
+                foreach (var kingdom in empire.Kingdoms)
+                {
+                    kingdom.Parent = mergeTarget;
+                }
+                // Remove the tiny empire from the map
+                map.Empires.Remove(empire);
+
+                Console.WriteLine($"Merged {empire.Name} into {mergeTarget.Name}");
+            }
+
+            if (Settings.Instance.Debug)
+            {
+                Console.WriteLine($"Empires after merging:");
+                foreach (var empire in map.Empires)
+                {
+                    Console.WriteLine($" - {empire.Name} has {empire.Kingdoms.Count} kingdoms");
+                }
+            }
+        }
+
         struct BaronyNode(Node node, Barony barony)
         {
             public Node Node { get; } = node;
@@ -616,13 +844,24 @@ namespace Converter.Lemur
         }
         private static async Task ShowKingdoms(Map map)
         {
-           // Liek for Duchies and Counties, but for Kingdoms
+            // Liek for Duchies and Counties, but for Kingdoms
             Dictionary<MagickColor, List<Cell>> kingdomCellsByColour = new();
             foreach (var kingdom in map.Kingdoms!)
             {
                 kingdomCellsByColour.Add(kingdom.GetColor(), kingdom.GetAllCells());
             }
             await ImageUtility.DrawCellsWithColourImage(kingdomCellsByColour, map, "kingdoms", Color.Transparent); //Debugging
+        }
+
+        private static async Task ShowEmpires(Map map)
+        {
+            // Like for Duchies, Counties and Kingdoms, but for Empires
+            Dictionary<MagickColor, List<Cell>> empireCellsByColour = new();
+            foreach (var empire in map.Empires!)
+            {
+                empireCellsByColour.Add(empire.GetColor(), empire.GetAllCells());
+            }
+            await ImageUtility.DrawCellsWithColourImage(empireCellsByColour, map, "empires", Color.Transparent); //Debugging
         }
 
 
