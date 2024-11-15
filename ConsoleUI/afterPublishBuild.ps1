@@ -20,4 +20,7 @@ dotnet publish -c Release -r osx-x64 /p:PublishSingleFile=true /p:PublishTrimmed
 
 # Create Archive
 Compress-Archive "$($OutDir)win-x64\*" "$($SolutionDir)AzgaarToCK3_$($version)_win-x64.zip" -force
+Compress-Archive "$($SolutionDir)\Readme.md" "$($SolutionDir)AzgaarToCK3_$($version)_win-x64.zip" -update
+
 Compress-Archive "$($OutDir)osx-x64\*" "$($SolutionDir)AzgaarToCK3_$($version)_osx-x64.zip" -force
+Compress-Archive "$($SolutionDir)\Readme.md" "$($SolutionDir)AzgaarToCK3_$($version)_osx-x64.zip" -update

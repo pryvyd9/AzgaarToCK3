@@ -71,7 +71,8 @@ internal class Program
         Environment.Exit(0);
 #endif
 
-        Console.WriteLine("Map conversion finished successfully!");
+        Console.WriteLine("Map conversion finished successfully.");
+        Console.WriteLine("Add newly created mod to your playset and enjoy!");
 
         Exit();
     }

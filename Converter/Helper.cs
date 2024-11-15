@@ -4,6 +4,7 @@ namespace Converter;
 
 public static class Helper
 {
+    // Generates path that works in both Windows and Mac
     public static string GetPath(params string[] paths)
     {
         if (paths is null) return "";

@@ -1,3 +1,6 @@
+# 1.4.7
+- updated supported game version to 1.14.0
+
 # 1.4.6
 - removed parallelism from mask writing.
 

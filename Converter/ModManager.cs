@@ -1,7 +1,4 @@
-﻿using ImageMagick;
-using Microsoft.VisualBasic.FileIO;
-using System.Diagnostics;
-using System.Linq;
+﻿using Microsoft.VisualBasic.FileIO;
 
 namespace Converter;
 
@@ -9,24 +6,13 @@ public static class ModManager
 {
     public static async Task CreateMod()
     {
-        var outsideDescriptor = $@"version=""1.0""
-tags={{
-	""Total Conversion""
-}}
-name=""{Settings.Instance.ModName}""
-supported_version=""1.12.4""
-path=""mod/{Settings.Instance.ModName}""";
+        var outsideDescriptor = CreateDescriptor(true);
 
         await File.WriteAllTextAsync(Helper.GetPath(Settings.Instance.ModsDirectory, $"{Settings.Instance.ModName}.mod"), outsideDescriptor);
 
         FileSystem.CopyDirectory(Settings.Instance.TotalConversionSandboxPath, Helper.GetPath(Settings.Instance.ModsDirectory, Settings.Instance.ModName), true);
 
-        var insideDescriptor = $@"version=""1.0""
-tags={{
-	""Total Conversion""
-}}
-name=""{Settings.Instance.ModName}""
-supported_version=""1.12.4""";
+        var insideDescriptor = CreateDescriptor(false);
         await File.WriteAllTextAsync(Helper.GetPath(Settings.Instance.ModsDirectory, Settings.Instance.ModName, "descriptor.mod"), insideDescriptor);
     }
     public static bool DoesModExist()
@@ -80,6 +66,25 @@ supported_version=""1.12.4""";
         var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap);
         map.Settings = Settings.Instance;
         return map;
+    }
+
+    private static string CreateDescriptor(bool isOutsideDescriptor)
+    {
+        const string supportedGameVersion = "1.14.0";
+
+        var descriptor = $@"version=""1.0""
+tags={{
+	""Total Conversion""
+}}
+name=""{Settings.Instance.ModName}""
+supported_version=""{supportedGameVersion}""";
+
+        if (isOutsideDescriptor)
+        {
+            descriptor += $@"path=""mod/{Settings.Instance.ModName}""";
+        }
+
+        return descriptor;
     }
 
 #if DEBUG

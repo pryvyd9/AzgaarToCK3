@@ -102,8 +102,8 @@ public static class SettingsManager
         var libraries = File.ReadAllText(GetSteamLibraryFoldersPath());
         var pathRegex = new Regex("\"path\"\\s*\"(.+)\"");
         var paths = pathRegex.Matches(libraries).Select(n => n.Groups[1].Value);
-
-        var ck3Directories = paths.Select(n => Helper.GetPath(n, "steamapps", "workshop", "content", "1158310", "2524797018")).Where(Directory.Exists).ToArray();
+        
+        var ck3Directories = paths.Select(n => Helper.GetPath(n, "steamapps", "workshop", "content", "1158310", "3337607192")).Where(Directory.Exists).ToArray();
         if (ck3Directories.Length > 1)
         {
             Debugger.Break();

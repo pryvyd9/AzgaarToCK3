@@ -1,9 +1,9 @@
-# Azgaar's Fantasy Map Generator to Crusader Kings III
+﻿# Azgaar's Fantasy Map Generator to Crusader Kings III
 ## Installation
 - Download the latest release and extract it to any folder
-- Subscribe to [Total Conversion Sandbox](https://steamcommunity.com/sharedfiles/filedetails/?id=2524797018) mod on the workshop
+- Subscribe to [地圖沙盒(1.13)/Total Conversion Sandbox(1.13)](https://steamcommunity.com/sharedfiles/filedetails/?id=3337607192) mod on the workshop
 
-Supported game version: `1.12.5`
+Supported game version: `1.14.0`
 Discord: https://discord.gg/CqHcpRRH
 
 ## Generation requirements
@@ -52,26 +52,9 @@ Discord: https://discord.gg/CqHcpRRH
 ### Optional steps
 Do them if there are issues with holding/unit placement or terrain looks weird. Or it crashes.
 
-7. Go to properties of CK3 in Steam and add `-mapeditor` parameter
-8. Launch the game making sure the newly created mod is added to the playset and enabled
-9. Map Editing:
-    1. Repack heightmap
-		![screenshot](docs/Screenshot_2024-05-08_214628.png)
-	2. Go to Map Objects Editor. Click on any territory in the list and select all with Ctrl+A hotkey
-		![screenshot](docs/Screenshot_2024-05-08_214847.png)
-	3. Click on `Automatically place...` button
-		![screenshot](docs/Screenshot_2024-05-08_215322.png)
-	4. Some of the territories failed to add locators properly. Click on Filter all entries that contain errors
-	    ![screenshot](docs/Screenshot_2024-05-08_215116.png)
-	5. Repeat ii-iv until there are no entries with errors
-	6. If some entries won't fix themselves select the entry, check what object fails and click on `Configure Autonudge...` button.
-	    ![screenshot](docs/Screenshot_2024-05-08_215624.png)
-	Then find settings related to that type of object and tweak them then retry steps ii-iv. Usually changing some distance parameters helps. If that still did not help then select the object and move it by hand. Hopefully there not many of them.
-	7. Make any other changes in map editor.
-	8. Save all and exit (Alt+F4 if it restarts the game instead of exit)
-	    ![screenshot](docs/Screenshot_2024-05-08_220216.png)
-10. Remove -mapeditor launch option and run the game
+[Map editor guide](https://github.com/pryvyd9/AzgaarToCK3/blob/master/docs/MapEditor.md/)
 
 ## More Usage
 - You can delete the `settings.json` to reconfigure everything or edit `settings.json` to suit your needs.
 - Set `onlyCounts` = true to make all characters start as counts.
+- [No Steam or directory not found](https://github.com/pryvyd9/AzgaarToCK3/blob/master/docs/NoSteam.md/)
