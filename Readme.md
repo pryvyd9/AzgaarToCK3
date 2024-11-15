@@ -1,7 +1,8 @@
 ﻿# Azgaar's Fantasy Map Generator to Crusader Kings III
 ## Installation
 - Download the latest release and extract it to any folder
-- Subscribe to [地圖沙盒(1.13)/Total Conversion Sandbox(1.13)](https://steamcommunity.com/sharedfiles/filedetails/?id=3337607192) mod on the workshop
+- Subscribe to [地圖沙盒(1.13)/Total Conversion Sandbox(1.13)](https://steamcommunity.com/sharedfiles/filedetails/?id=3337607192) mod on the workshop.
+(You do not need to add it to playset. It is only required for map conversion process)
 
 Supported game version: `1.14.0`
 Discord: https://discord.gg/CqHcpRRH

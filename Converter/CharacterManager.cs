@@ -1,5 +1,4 @@
 ﻿using SixLabors.ImageSharp;
-using System.Text;
 
 namespace Converter;
 
@@ -283,21 +282,6 @@ public static class CharacterManager
         var lines = map.Characters.DistinctBy(n => n.dynastyName).Select(n => $"dynn_{n.dynastyName.id}: \"{n.dynastyName.name}\"");
         var content = string.Join("\n ", lines);
 
-        {
-            var file = $@"l_english:
- FOUNDER_BASED_NAME_POSTFIX:0 ""id""
- {content}";
-            var path = Helper.GetPath(Settings.OutputDirectory, "localization", "english", "dynasties", "dynasty_names_l_english.yml");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
-            await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
-        }
-        {
-            var file = $@"l_russian:
- FOUNDER_BASED_NAME_POSTFIX:0 ""ид""
- {content}";
-            var path = Helper.GetPath(Settings.OutputDirectory, "localization", "russian", "dynasties", "dynasty_names_l_russian.yml");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
-            await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
-        }
+        await Helper.WriteLocalizationFile(map, "dynasties", "dynasty_names_l_", content, "FOUNDER_BASED_NAME_POSTFIX");
     }
 }

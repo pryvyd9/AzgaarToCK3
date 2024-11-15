@@ -1,4 +1,5 @@
 ﻿using ImageMagick;
+using System.Text;
 
 namespace Converter;
 
@@ -185,5 +186,37 @@ public static class Helper
     public static PointD PixelToFullPixel(float x, float y, Map map)
     {
         return new PointD(x * map.pixelXRatio, Map.MapHeight - y * map.pixelYRatio);
+    }
+
+    /// <summary>
+    /// Examples:
+    /// 1. await WriteLocalizationFile(map, "dynasties", "dynasty_names_l_", content)
+    ///    localization\{language}\dynasties\{filePrefix}{language}.yml
+    /// 2. await WriteLocalizationFile(map, null, "dynasty_names_l_", content)
+    ///    localization\{language}\{filePrefix}{language}.yml
+    /// </summary>
+    /// <param name="localizationPath">pass null if in localization root</param>
+    /// <param name="filePrefix">dynasty_names_l_</param>
+    public static async Task WriteLocalizationFile(Map map, string? localizationPath, string filePrefix, string content, string lastHeaderLineContains)
+    {
+        var languages = new string[] { "english", "french", "german", "korean", "russian", "simp_chinese", "spanish" };
+
+        foreach (var language in languages)
+        {
+            var fileName = $"{filePrefix}{language}.yml";
+
+            var originalFilePath = localizationPath is null
+                ? GetPath(map.Settings.Ck3Directory, "localization", language, fileName)
+                : GetPath(map.Settings.Ck3Directory, "localization", language, localizationPath, fileName);
+
+            var header = File.ReadLines(originalFilePath).TakeWhile(n => !n.Contains(lastHeaderLineContains));
+            var file = $"{string.Join("\n", header)}\n{content}";
+
+            var outputPath = localizationPath is null
+                ? GetPath(Settings.OutputDirectory, "localization", language, fileName)
+                : GetPath(Settings.OutputDirectory, "localization", language, localizationPath, fileName);
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
+            await File.WriteAllTextAsync(outputPath, file, new UTF8Encoding(true));
+        }
     }
 }

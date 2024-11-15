@@ -291,33 +291,6 @@ e_roman_empire = {{ landless = yes }}";
             }
         }
 
-        {
-            var file = $@"l_english:
- TITLE_NAME:1 ""$NAME|U$""
- TITLE_TIERED_NAME:0 ""$TIER|U$ of $NAME$""
- TITLE_DEFINITIVE_NAME:0 ""the $TIER|U$ of $NAME$""
- TITLE_CLAN_TIERED_NAME:0 ""the $NAME$ $TIER|U$""
- TITLE_CLAN_TIERED_WITH_UNDERLYING_NAME:0 ""the $NAME$ $TIER|U$ #F ($TIER|U$ of $BASE_NAME$) #!""
- TITLE_CLAN_TIERED_WITH_UNDERLYING_NAME_DEFINITE_FORM:0 ""the $NAME$ $TIER|U$ #F ($BASE_NAME$) #!""
- TITLE_TIER_AS_NAME:0 ""$TIER|U$""
- {string.Join("\n ", lines)}";
-            var path = Helper.GetPath(Settings.OutputDirectory, "localization", "english", "titles_l_english.yml");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
-            await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
-        }
-        {
-            var file = $@"l_russian:
- TITLE_NAME: ""$NAME|U$""
- TITLE_TIERED_NAME: ""$TIER|U$ $NAME$""
- TITLE_DEFINITIVE_NAME: ""$TIER|U$ $NAME$""
- TITLE_CLAN_TIERED_NAME: ""$TIER|U$ $NAME$ов""
- TITLE_CLAN_TIERED_WITH_UNDERLYING_NAME: ""$TIER|U$ $NAME$ов #F ($TIER|U$ $BASE_NAME$) #!""
- TITLE_CLAN_TIERED_WITH_UNDERLYING_NAME_DEFINITE_FORM: ""$TIER|U$ $NAME$ов #F ($BASE_NAME$) #!""
- TITLE_TIER_AS_NAME: ""$TIER|U$""
- {string.Join("\n ", lines)}";
-            var path = Helper.GetPath(Settings.OutputDirectory, "localization", "russian", "titles_l_russian.yml");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
-            await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
-        }
+        await Helper.WriteLocalizationFile(map, null, "titles_l_", string.Join("\n ", lines), "TITLE_TIER_AS_NAME");
     }
 }

@@ -1,5 +1,9 @@
+# 1.4.8
+- added logging system.
+- added all languages support.
+
 # 1.4.7
-- updated supported game version to 1.14.0
+- updated supported game version to 1.14.0.
 
 # 1.4.6
 - removed parallelism from mask writing.
