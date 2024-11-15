@@ -140,8 +140,8 @@ public static class SettingsManager
         } 
         catch (Exception e)
         {
-            Console.WriteLine($"Failed to load settings: {e.Message} {e.StackTrace}");
-            Console.WriteLine($"Content was: {settings}");
+            MyConsole.Error($"Failed to load settings: {e.Message} {e.StackTrace}");
+            MyConsole.Error($"Content was: {settings}");
             return false;
         }
     }
