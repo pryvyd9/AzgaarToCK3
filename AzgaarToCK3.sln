@@ -16,8 +16,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Converter", "Converter\Conv
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{5EF68E0B-FAFA-4945-8851-96C43D875655}"
 	ProjectSection(SolutionItems) = preProject
-		NoSteam.md = NoSteam.md
-		MapEditor.md = MapEditor.md
+		docs\MapEditor.md = docs\MapEditor.md
+		docs\NoSteam.md = docs\NoSteam.md
 	EndProjectSection
 EndProject
 Global
