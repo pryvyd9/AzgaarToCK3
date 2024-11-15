@@ -210,7 +210,7 @@ public static class Helper
                 : GetPath(map.Settings.Ck3Directory, "localization", language, localizationPath, fileName);
 
             var header = File.ReadLines(originalFilePath).TakeWhile(n => !n.Contains(lastHeaderLineContains));
-            var file = $"{string.Join("\n", header)}\n{content}";
+            var file = $"{string.Join("\n", header)}\n\n {content}";
 
             var outputPath = localizationPath is null
                 ? GetPath(Settings.OutputDirectory, "localization", language, fileName)
