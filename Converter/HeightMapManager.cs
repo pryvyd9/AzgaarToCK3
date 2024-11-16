@@ -410,8 +410,8 @@ empty_tile_offset={{ 255 127 }}
 
             var drawables = new Drawables();
 
-            var landPackCells = map.JsonMap.pack.cells.Where(n => n.biome != 0);
-            var landGeoCells = map.GeoMap.features.Select(n => new
+            var landPackCells = map.Input.JsonMap.pack.cells.Where(n => n.biome != 0);
+            var landGeoCells = map.Input.GeoMap.features.Select(n => new
             {
                 Height = n.properties.height,
                 Id = n.properties.id,

@@ -118,7 +118,7 @@ supported_version=""{supportedGameVersion}""";
 
         var titles = TitleManager.CreateTitles(map);
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Titles created.");
-        map.Empires = titles;
+        map.Output.Empires = titles;
         await TitleManager.WriteLandedTitles(map);
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Landed titles created.");
         await TitleManager.WriteTitleLocalization(map);
@@ -129,11 +129,11 @@ supported_version=""{supportedGameVersion}""";
 
         if (Settings.Instance.OnlyCounts)
         {
-            map.Characters = await CharacterManager.CreateCharactersCountOnly(map);
+            map.Output.Characters = await CharacterManager.CreateCharactersCountOnly(map);
         }
         else
         {
-            map.Characters = await CharacterManager.CreateCharacters(map);
+            map.Output.Characters = await CharacterManager.CreateCharacters(map);
         }
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Characters created.");
         await CharacterManager.WriteHistoryCharacters(map);
@@ -191,7 +191,7 @@ supported_version=""{supportedGameVersion}""";
 
         var titles = TitleManager.CreateTitles(map);
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Titles created.");
-        map.Empires = titles;
+        map.Output.Empires = titles;
         await TitleManager.WriteLandedTitles(map);
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Landed titles created.");
         await TitleManager.WriteTitleLocalization(map);
@@ -202,11 +202,11 @@ supported_version=""{supportedGameVersion}""";
 
         if (Settings.Instance.OnlyCounts)
         {
-            map.Characters = await CharacterManager.CreateCharactersCountOnly(map);
+            map.Output.Characters = await CharacterManager.CreateCharactersCountOnly(map);
         }
         else
         {
-            map.Characters = await CharacterManager.CreateCharacters(map);
+            map.Output.Characters = await CharacterManager.CreateCharacters(map);
         }
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Characters created.");
         await CharacterManager.WriteHistoryCharacters(map);

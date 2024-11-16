@@ -324,12 +324,18 @@ public static class MapManager
 
         var map = new Map
         {
-            GeoMap = geoMap,
-            Rivers = geoMapRivers,
-            JsonMap = jsonMap,
-            Provinces = provinces,
-            IdToIndex = provinces.Select((n, i) => (n, i)).ToDictionary(n => n.n.Id, n => n.i),
-            NameBase = new NameBasePrepared(nameBase.name, nameBaseNames),
+            Input = new()
+            {
+                GeoMap = geoMap,
+                Rivers = geoMapRivers,
+                JsonMap = jsonMap,
+            },
+            Output = new()
+            {
+                Provinces = provinces,
+                IdToIndex = provinces.Select((n, i) => (n, i)).ToDictionary(n => n.n.Id, n => n.i),
+                NameBase = new NameBasePrepared(nameBase.name, nameBaseNames),
+            }
         };
 
         return map;
@@ -347,7 +353,7 @@ public static class MapManager
             using var cellsMap = new MagickImage("xc:white", settings);
 
             var drawables = new Drawables();
-            foreach (var feature in map.GeoMap.features)
+            foreach (var feature in map.Input.GeoMap.features)
             {
                 foreach (var cell in feature.geometry.coordinates)
                 {
@@ -382,7 +388,7 @@ public static class MapManager
             using var cellsMap = new MagickImage("xc:black", settings);
 
             var drawables = new Drawables();
-            foreach (var province in map.Provinces.Skip(1))
+            foreach (var province in map.Output.Provinces.Skip(1))
             {
                 foreach (var cell in province.Cells)
                 {
@@ -419,7 +425,7 @@ public static class MapManager
 
             var drawables = new Drawables();
             // Draw land
-            foreach (var province in map.Provinces.Skip(1).Where(n => !n.IsWater))
+            foreach (var province in map.Output.Provinces.Skip(1).Where(n => !n.IsWater))
             {
                 foreach (var cell in province.Cells)
                 {
@@ -431,7 +437,7 @@ public static class MapManager
                 }
             }
 
-            foreach (var river in map.Rivers.features)
+            foreach (var river in map.Input.Rivers.features)
             {
                 drawables
                     .DisableStrokeAntialias()
@@ -479,7 +485,7 @@ public static class MapManager
     }
     public static async Task WriteDefinition(Map map)
     {
-        var lines = map.Provinces.Select((n, i) => $"{i};{n.Color.R};{n.Color.G};{n.Color.B};{n.Name};x;");
+        var lines = map.Output.Provinces.Select((n, i) => $"{i};{n.Color.R};{n.Color.G};{n.Color.B};{n.Name};x;");
         var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "definition.csv");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllLinesAsync(path, lines);
@@ -489,12 +495,12 @@ public static class MapManager
     {
         var offset = new PointD(0);
 
-        var lines = map.Provinces.Where(n => n.Burg is not null).Select(n =>
+        var lines = map.Output.Provinces.Where(n => n.Burg is not null).Select(n =>
         {
             var p = Helper.PixelToFullPixel(n.Burg.x, n.Burg.y, map);
             var str =
 $@"        {{
-            id = {map.IdToIndex[n.Id]}
+            id = {map.Output.IdToIndex[n.Id]}
             position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
@@ -527,13 +533,13 @@ $@"game_object_locator={{
     private static async Task WriteSiegeLocators(Map map)
     {
         var offset = new PointD(10, -5);
-        var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
+        var lines = map.Output.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
             var p = Helper.PixelToFullPixel(n.Burg.x, n.Burg.y, map);
 
             var str =
 $@"        {{
-            id = {map.IdToIndex[n.Id]}
+            id = {map.Output.IdToIndex[n.Id]}
             position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
@@ -566,13 +572,13 @@ $@"game_object_locator={{
     private static async Task WriteCombatLocators(Map map)
     {
         var offset = new PointD(0, 10);
-        var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
+        var lines = map.Output.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
             var p = Helper.PixelToFullPixel(n.Burg.x, n.Burg.y, map);
 
             var str =
 $@"        {{
-            id = {map.IdToIndex[n.Id]}
+            id = {map.Output.IdToIndex[n.Id]}
             position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
@@ -605,7 +611,7 @@ $@"game_object_locator={{
     private static async Task WritePlayerStackLocators(Map map)
     {
         var offset = new PointD(-10, -5);
-        var lines = map.Provinces.Skip(1).Select((n, i) =>
+        var lines = map.Output.Provinces.Skip(1).Select((n, i) =>
         {
             var p = new PointD();
             if (n.Burg is null)
@@ -625,7 +631,7 @@ $@"game_object_locator={{
 
             var str =
 $@"        {{
-            id = {map.IdToIndex[n.Id]}
+            id = {map.Output.IdToIndex[n.Id]}
             position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
@@ -665,7 +671,7 @@ $@"game_object_locator={{
 
     public static async Task WriteDefault(Map map)
     {
-        var waterProvinces = map.Provinces.Select((n, i) => (n, i)).Where(n => n.n.IsWater).Select(n => n.i);
+        var waterProvinces = map.Output.Provinces.Select((n, i) => (n, i)).Where(n => n.n.IsWater).Select(n => n.i);
         var file = $@"#max_provinces = 1466
 definitions = ""definition.csv""
 provinces = ""provinces.png""
@@ -724,7 +730,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     {
         try
         {
-            var provinceBiomes = map.Provinces
+            var provinceBiomes = map.Output.Provinces
                 .Select((n, i) => (n, i))
                 .Skip(1)
                 .Where(n => !n.n.IsWater && n.n.Cells.Any())
@@ -788,13 +794,13 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     }
     public static async Task WriteMasks(Map map)
     {
-        var nonWaterProvinceCells = map.Provinces
+        var nonWaterProvinceCells = map.Output.Provinces
             .Skip(1)
             .Where(n => !n.IsWater && n.Cells.Any())
             .SelectMany(n => n.Cells)
             .ToArray();
 
-        var provinceBiomes = map.Provinces
+        var provinceBiomes = map.Output.Provinces
             .Skip(1)
             .Where(n => !n.IsWater && n.Cells.Any())
             .Select(n =>
@@ -919,14 +925,14 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     private static async Task<(Dictionary<int, int> baronyCultures, string[] toOriginalCultureName)> GetCultures(Map map)
     {
         var originalCultureNames = GetOriginalCultures();
-        var baronyCultures = map.Empires
+        var baronyCultures = map.Output.Empires
             .SelectMany(n => n.kingdoms)
             .SelectMany(n => n.duchies)
             .SelectMany(n => n.counties)
             .SelectMany(n => n.baronies)
             .ToDictionary(n => n.id, n => n.province.Cells.Select(m => m.culture).Max());
 
-        var totalCultures = map.JsonMap.pack.cultures.Length;
+        var totalCultures = map.Input.JsonMap.pack.cultures.Length;
         if (totalCultures > originalCultureNames.Length)
         {
             // Generated too many cultures.
@@ -961,14 +967,14 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     private static async Task<(Dictionary<int, int> baronyReligions, string[] toOriginalReligionName)> GetReligions(Map map)
     {
         var originalReligionNames = (await ConfigReader.GetCK3Religions(map.Settings)).SelectMany(n => n.faiths).Select(n => n.name).ToArray();
-        var baronyReligions = map.Empires
+        var baronyReligions = map.Output.Empires
             .SelectMany(n => n.kingdoms)
             .SelectMany(n => n.duchies)
             .SelectMany(n => n.counties)
             .SelectMany(n => n.baronies)
             .ToDictionary(n => n.id, n => n.province.Cells.Select(m => m.religion).Max());
 
-        var totalReligions = map.JsonMap.pack.religions.Length;
+        var totalReligions = map.Input.JsonMap.pack.religions.Length;
         if (totalReligions > originalReligionNames.Length)
         {
             // Generated too many cultures.
@@ -1005,7 +1011,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         var (baronyCultures, toOriginalCultureName) = await GetCultures(map);
         var (baronyReligions, toOriginalReligionName) = await GetReligions(map);
 
-        foreach (var empire in map.Empires)
+        foreach (var empire in map.Output.Empires)
         {
             foreach (var kingdom in empire.kingdoms)
             {
@@ -1035,7 +1041,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     }
     public static async Task WriteHistoryProvinces(Map map)
     {
-        foreach (var empire in map.Empires)
+        foreach (var empire in map.Output.Empires)
         {
             foreach (var kingdom in empire.kingdoms)
             {
@@ -1044,7 +1050,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     .SelectMany(n => n.baronies)
                     .Select(n =>
                     {
-                        var str = $@"{map.IdToIndex[n.province.Id]} = {{
+                        var str = $@"{map.Output.IdToIndex[n.province.Id]} = {{
     culture = {n.Culture}
     religion = {n.Religion}
     holding = auto
@@ -1094,7 +1100,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             .SelectMany(n => originalFaiths.First(m => m.name == n).holySites.Select(m => (name: m, holySite: originalHolySites[m])))
             .ToArray();
 
-        var counties = map.Empires.SelectMany(n => n.kingdoms).SelectMany(n => n.duchies).SelectMany(n => n.counties).ToArray();
+        var counties = map.Output.Empires.SelectMany(n => n.kingdoms).SelectMany(n => n.duchies).SelectMany(n => n.counties).ToArray();
 
         var rnd = new Random();
         var mappedHolySites = pickedHolySites.Select(n =>

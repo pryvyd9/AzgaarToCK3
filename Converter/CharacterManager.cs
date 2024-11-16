@@ -33,7 +33,7 @@ public static class CharacterManager
         const double HoldingLimit = 2;
         int i = 0;
 
-        foreach (var empire in map.Empires)
+        foreach (var empire in map.Output.Empires)
         {
             var isEmperor = IsYes(0.1);
             var isEmpire = isEmperor;
@@ -154,7 +154,7 @@ public static class CharacterManager
         {
             var age = rnd.Next(4, 70);
             var stewardship = rnd.Next(age / 2, age - 2) / 2;
-            var dynastyName = map.NameBase.names[rnd.Next(map.NameBase.names.Length)];
+            var dynastyName = map.Output.NameBase.names[rnd.Next(map.Output.NameBase.names.Length)];
 
             //var name = names[rnd.Next(names.Length)];
 
@@ -173,7 +173,7 @@ public static class CharacterManager
         var rnd = new Random(1);
         var characters = new List<Character>();
 
-        var counties = map.Empires.SelectMany(n => n.kingdoms).SelectMany(n => n.duchies).SelectMany(n => n.counties).ToArray();
+        var counties = map.Output.Empires.SelectMany(n => n.kingdoms).SelectMany(n => n.duchies).SelectMany(n => n.counties).ToArray();
         foreach (var county in counties)
         {
             if (IsYes(0.8))
@@ -197,7 +197,7 @@ public static class CharacterManager
         {
             var age = rnd.Next(4, 70);
             var stewardship = rnd.Next(age / 2, age - 2) / 2;
-            var dynastyName = map.NameBase.names[rnd.Next(map.NameBase.names.Length)];
+            var dynastyName = map.Output.NameBase.names[rnd.Next(map.Output.NameBase.names.Length)];
 
             //var name = names[rnd.Next(names.Length)];
 
@@ -211,7 +211,7 @@ public static class CharacterManager
     public static async Task WriteHistoryCharacters(Map map)
     {
         var rnd = new Random(1);
-        var lines = map.Characters.Select(n => $@"{n.id} = {{
+        var lines = map.Output.Characters.Select(n => $@"{n.id} = {{
     name = ""{n.name.name}""
     dynasty = ""{n.dynastyName.id}""
     religion = ""{n.religion}""
@@ -233,7 +233,7 @@ public static class CharacterManager
     {
         var lines = new List<string>();
 
-        foreach (var e in map.Empires)
+        foreach (var e in map.Output.Empires)
         {
             if (e.holder is not null) lines.Add($"{e.Id} = {{ 1066.1.1 = {{ holder = {e.holder.id} }} }}");
             foreach (var k in e.kingdoms)
@@ -264,7 +264,7 @@ public static class CharacterManager
     }
     public static async Task WriteDynasties(Map map)
     {
-        var lines = map.Characters.DistinctBy(n => n.dynastyName).Select(n => $@"{n.dynastyName.id} = {{
+        var lines = map.Output.Characters.DistinctBy(n => n.dynastyName).Select(n => $@"{n.dynastyName.id} = {{
     name = ""dynn_{n.dynastyName.id}""
     culture = ""{n.culture}""
 }}");
@@ -279,7 +279,7 @@ public static class CharacterManager
     }
     public static async Task WriteDynastyLocalization(Map map)
     {
-        var lines = map.Characters.DistinctBy(n => n.dynastyName).Select(n => $"dynn_{n.dynastyName.id}: \"{n.dynastyName.name}\"");
+        var lines = map.Output.Characters.DistinctBy(n => n.dynastyName).Select(n => $"dynn_{n.dynastyName.id}: \"{n.dynastyName.name}\"");
         var content = string.Join("\n ", lines);
 
         await Helper.WriteLocalizationFile(map, "dynasties", "dynasty_names_l_", content, "FOUNDER_BASED_NAME_POSTFIX");

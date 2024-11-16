@@ -16,11 +16,11 @@ public static class TitleManager
             var ci = 1;
             var di = 1;
 
-            foreach (var state in map.JsonMap.pack.states.Where(n => n.provinces.Any()))
+            foreach (var state in map.Input.JsonMap.pack.states.Where(n => n.provinces.Any()))
             {
                 // Some of the provinces were deleted since they were empty or too small.
                 // Skip those deleted provinces.
-                var provinces = state.provinces.Select(n => map.Provinces.FirstOrDefault(m => m.Id == n)).Where(n => n is not null && !n.IsWater).ToArray();
+                var provinces = state.provinces.Select(n => map.Output.Provinces.FirstOrDefault(m => m.Id == n)).Where(n => n is not null && !n.IsWater).ToArray();
 
                 // Each county should have 4 or fewer counties.
                 var countyCount = state.provinces.Length / 4;
@@ -136,7 +136,7 @@ public static class TitleManager
                     ki++,
                     duchies.ToArray(),
                     duchies.Count > 1,
-                    "Kingdom of " + map.JsonMap.pack.cultures.First(n => n.i == cultureId).name,
+                    "Kingdom of " + map.Input.JsonMap.pack.cultures.First(n => n.i == cultureId).name,
                     duchies[0].color,
                     duchies[0].capitalName);
             }).ToArray();
@@ -174,7 +174,7 @@ public static class TitleManager
                     ei++,
                     kingdoms.ToArray(),
                     kingdoms.Count > 1,
-                    "Empire of " + map.JsonMap.pack.religions.First(n => n.i == religionId).name,
+                    "Empire of " + map.Input.JsonMap.pack.religions.First(n => n.i == religionId).name,
                     kingdoms[0].color,
                     kingdoms[0].capitalName);
             }).ToArray();
@@ -198,7 +198,7 @@ public static class TitleManager
                 return $@"                {n.Id} = {{
                     color = {{ {n.color.R} {n.color.G} {n.color.B} }}
                     color2 = {{ 255 255 255 }}
-                    province = {map.IdToIndex[n.province.Id]}
+                    province = {map.Output.IdToIndex[n.province.Id]}
                 }}";
             }).ToArray();
         }
@@ -242,7 +242,7 @@ public static class TitleManager
 
         string[] GetEmpires()
         {
-            return map.Empires.Select((e, i) => $@"{e.Id} = {{
+            return map.Output.Empires.Select((e, i) => $@"{e.Id} = {{
     color = {{ {e.color.R} {e.color.G} {e.color.B} }}
     color2 = {{ 255 255 255 }}
     capital = c_{ci}
@@ -270,7 +270,7 @@ e_roman_empire = {{ landless = yes }}";
     {
         var lines = new List<string>();
 
-        foreach (var e in map.Empires)
+        foreach (var e in map.Output.Empires)
         {
             lines.Add($"{e.Id}: \"{e.name}\"");
             foreach (var k in e.kingdoms)

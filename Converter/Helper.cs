@@ -123,21 +123,6 @@ public static class Helper
         return MapBiome(biomeId);
     }
 
-    //public static double Percentile(double[] sequence, double excelPercentile)
-    //{
-    //    Array.Sort(sequence);
-    //    int N = sequence.Length;
-    //    double n = (N - 1) * excelPercentile + 1;
-    //    // Another method: double n = (N + 1) * excelPercentile;
-    //    if (n == 1d) return sequence[0];
-    //    else if (n == N) return sequence[N - 1];
-    //    else
-    //    {
-    //        int k = (int)n;
-    //        double d = n - k;
-    //        return sequence[k - 1] + d * (sequence[k] - sequence[k - 1]);
-    //    }
-    //}
     public static double Percentile(int[] sequence, double excelPercentile)
     {
         Array.Sort(sequence);
@@ -185,7 +170,7 @@ public static class Helper
     }
     public static PointD PixelToFullPixel(float x, float y, Map map)
     {
-        return new PointD(x * map.pixelXRatio, Map.MapHeight - y * map.pixelYRatio);
+        return new PointD(x * map.PixelXRatio, Map.MapHeight - y * map.PixelYRatio);
     }
 
     /// <summary>
@@ -209,7 +194,16 @@ public static class Helper
                 ? GetPath(map.Settings.Ck3Directory, "localization", language, fileName)
                 : GetPath(map.Settings.Ck3Directory, "localization", language, localizationPath, fileName);
 
-            var header = File.ReadLines(originalFilePath).TakeWhile(n => !n.Contains(lastHeaderLineContains));
+            bool isLastHeaderLineReached = false;
+            var header = File.ReadLines(originalFilePath).TakeWhile(n =>
+            {
+                if (isLastHeaderLineReached)
+                    return false;
+
+                isLastHeaderLineReached = n.Contains(lastHeaderLineContains);
+                return true;
+            }).ToArray();
+
             var file = $"{string.Join("\n", header)}\n\n {content}";
 
             var outputPath = localizationPath is null

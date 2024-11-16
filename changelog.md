@@ -1,3 +1,6 @@
+# 1.4.9
+- improved localization.
+
 # 1.4.8
 - added logging system.
 - added all languages support.
