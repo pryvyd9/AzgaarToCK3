@@ -20,10 +20,11 @@ public static class ModManager
         return Directory.Exists(Helper.GetPath(Settings.Instance.ModsDirectory, Settings.Instance.ModName));
     }
 
-    public static (string? jsonName, string? geojsonName) FindLatestInputs()
+    public static (string? jsonName, string? geojsonName, string? mapName) FindLatestInputs()
     {
         string? jsonName = null;
         string? geojsonName = null;
+        string? mapName = null;
 
         var filesToCheck = new DirectoryInfo(SettingsManager.ExecutablePath)
             .EnumerateFiles()
@@ -48,22 +49,27 @@ public static class ModManager
             {
                 geojsonName = f;
             }
+            else if (f.EndsWith(".map"))
+            {
+                mapName = f;
+            }
 
-            if (jsonName is not null && geojsonName is not null)
+            if (jsonName is not null && geojsonName is not null && mapName is not null)
             {
                 break;
             }
         }
 
-        return (jsonName, geojsonName);
+        return (jsonName, geojsonName, mapName);
     }
 
     private static async Task<Map> LoadMap()
     {
+        var xmlMap = await MapManager.LoadXml();
         var geoMap = await MapManager.LoadGeojson();
         var geoMapRivers = new GeoMapRivers([]);
         var jsonMap = await MapManager.LoadJson();
-        var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap);
+        var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap, xmlMap);
         map.Settings = Settings.Instance;
         return map;
     }

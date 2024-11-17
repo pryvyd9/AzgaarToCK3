@@ -44,6 +44,12 @@ internal class Program
             MyConsole.WriteLine($"Please, place it in '{Settings.Instance.InputGeojsonPath}' or change '{nameof(Settings.Instance.InputGeojsonPath)}' in 'settings.json'.");
             Exit();
         }
+        if (!File.Exists(Settings.Instance.InputMapPath))
+        {
+            MyConsole.WriteLine($".map file has not been found.");
+            MyConsole.WriteLine($"Please, place it in '{Settings.Instance.InputMapPath}' or change '{nameof(Settings.Instance.InputGeojsonPath)}' in 'settings.json'.");
+            Exit();
+        }
 
         MyConsole.WriteLine("Start conversion?");
         if (YesNo())
@@ -157,18 +163,20 @@ internal class Program
 
     private static void FindInputs()
     {
-        if (ModManager.FindLatestInputs() is ({ } jsonName, { } geojsonName) && 
-            (jsonName != Settings.Instance.InputJsonPath || geojsonName != Settings.Instance.InputGeojsonPath))
+        if (ModManager.FindLatestInputs() is ({ } jsonName, { } geojsonName, { } mapName) && 
+            (jsonName != Settings.Instance.InputJsonPath || geojsonName != Settings.Instance.InputGeojsonPath || mapName != Settings.Instance.InputMapPath))
         {
             MyConsole.WriteLine("Found new inputs in the directory:");
             MyConsole.WriteLine(Path.GetFileName(jsonName));
             MyConsole.WriteLine(Path.GetFileName(geojsonName));
+            MyConsole.WriteLine(Path.GetFileName(mapName));
             MyConsole.WriteLine("Use them as inputs?");
 
             if (YesNo())
             {
                 Settings.Instance.InputJsonPath = jsonName;
                 Settings.Instance.InputGeojsonPath = geojsonName;
+                Settings.Instance.InputMapPath = mapName;
             }
             else
             {
@@ -177,6 +185,7 @@ internal class Program
                 MyConsole.WriteLine("Previously used inputs will be used:");
                 MyConsole.WriteLine(Settings.Instance.InputJsonPath);
                 MyConsole.WriteLine(Settings.Instance.InputGeojsonPath);
+                MyConsole.WriteLine(Settings.Instance.InputMapPath);
             }
         }
         else

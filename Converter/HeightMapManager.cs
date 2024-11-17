@@ -1,9 +1,13 @@
-﻿using ImageMagick;
-using SixLabors.ImageSharp;
+﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using Svg;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using System.Xml;
 
 namespace Converter;
 
@@ -17,7 +21,8 @@ namespace Converter;
 /// </summary>
 public static class HeightMapManager
 {
-    private const int WaterLevelHeight = 30;
+    private const int AzgaarWaterLevel = 50;
+    private const int CK3WaterLevel = 20;
 
     private static readonly int[] detailSize = [33, 17, 9, 5, 3];
     // Width of average sampling for height. For detail size 9 averages of 4x4 squares are taken for every pixel in a tile.
@@ -201,14 +206,20 @@ public static class HeightMapManager
             const int samplesPerTile = 32;
 
             var path = $"{Settings.OutputDirectory}/map_data/heightmap.png";
-            using var file = new MagickImageCollection(path);
-            var heightMap = file[0];
 
-            // the values go like this: grayscale, alpha. We only need grayscale.
-            var pixels = heightMap.GetPixels().GetValues().Where((n, i) => i % 2 == 0).ToArray();
+            var file = new Bitmap(path);
+            var length8 = Map.MapWidth * Map.MapHeight * 1;
+            byte[] pixels = new byte[length8];
+            {
+                var bitmapData = file.LockBits(new System.Drawing.Rectangle(0, 0, Map.MapWidth, Map.MapHeight), ImageLockMode.ReadOnly, file.PixelFormat);
+                // Copy bitmap to byte[]
+                Marshal.Copy(bitmapData.Scan0, pixels, 0, length8);
+                file.UnlockBits(bitmapData);
+            }
 
-            var firstDerivative = Gradient(pixels, heightMap.Width, heightMap.Height);
-            var secondDerivative = Gradient(firstDerivative, heightMap.Width, heightMap.Height);
+
+            var firstDerivative = Gradient(pixels, Map.MapWidth, Map.MapHeight);
+            var secondDerivative = Gradient(firstDerivative, Map.MapWidth, Map.MapHeight);
 
             List<Vector2[,]> gradientAreas = [];
             List<byte[,]> heightAreas = [];
@@ -231,6 +242,15 @@ public static class HeightMapManager
                 weightedDerivatives.Where(n => n.nonZeroP90 is >= 1 and < 2).ToArray(),
                 weightedDerivatives.Where(n => n.nonZeroP90 < 1).ToArray(),
             };
+            //var detail = new[]
+            //{
+            //    weightedDerivatives.Where(n => n.nonZeroP90 >= 300).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 200 and < 300).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 150 and < 200).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 100 and < 150).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 < 100).ToArray(),
+            //};
+
             //var h = 800;
             //var detail = new[]
             //{
@@ -279,7 +299,6 @@ public static class HeightMapManager
                 else
                 {
                     d.Rows = detailSamples[i].Chunk(dPerLine[i]).ToArray();
-
                 }
 
                 packedHeightPixels += d.Rows.Length * detailSize[i];
@@ -295,8 +314,8 @@ public static class HeightMapManager
             {
                 Details = details,
                 PixelHeight = packedHeightPixels,
-                MapWidth = heightMap.Width,
-                MapHeight = heightMap.Height,
+                MapWidth = Map.MapWidth,
+                MapHeight = Map.MapHeight,
                 RowCount = rowCount,
             };
         }
@@ -308,16 +327,10 @@ public static class HeightMapManager
     }
     private static async Task WritePackedHeightMap(PackedHeightmap heightmap)
     {
-        using var packed_heightmap = new MagickImage("xc:black", new MagickReadSettings()
-        {
-            Width = packedWidth,
-            Height = heightmap.PixelHeight,
-        });
-        var phDrawables = new Drawables();
-
         var horizontalTiles = heightmap.MapWidth / indirectionProportion;
         var verticalTiles = heightmap.MapHeight / indirectionProportion;
         Rgba32[] indirection_heightmap_pixels = new Rgba32[horizontalTiles * verticalTiles];
+        byte[] packed_heightmap_pixels = new byte[packedWidth * heightmap.PixelHeight];
 
         int verticalOffset = 0;
         int[] levelOffsets = new int[5];
@@ -348,12 +361,7 @@ public static class HeightMapManager
                         for (int ty = 0; ty < detailSize[di]; ty++)
                         {
                             var c = tile.values[tx, ty];
-                            var phColor = new MagickColor(c, c, c);
-                            phDrawables
-                                .DisableStrokeAntialias()
-                                .StrokeColor(phColor)
-                                .FillColor(phColor)
-                                .Point(ti * detailSize[di] + tx, heightmap.PixelHeight - verticalOffset + ty);
+                            packed_heightmap_pixels[packedWidth * (heightmap.PixelHeight - verticalOffset + ty) + ti * detailSize[di] + tx] = c;
                         }
 
                     byte ihColumnIndex = colI;
@@ -374,12 +382,12 @@ public static class HeightMapManager
             }
         }
 
-        packed_heightmap.Draw(phDrawables);
+        var packed_heightmap = ToBitmap(packed_heightmap_pixels, packedWidth, heightmap.PixelHeight);
         var phPath = Helper.GetPath(Settings.OutputDirectory, "map_data", "packed_heightmap.png");
         Directory.CreateDirectory(Path.GetDirectoryName(phPath));
-        await packed_heightmap.WriteAsync(phPath);
+        packed_heightmap.Save(phPath);
 
-        using var indirection_heightmap2 = Image.LoadPixelData<Rgba32>(indirection_heightmap_pixels, horizontalTiles, verticalTiles);
+        using var indirection_heightmap2 = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(indirection_heightmap_pixels, horizontalTiles, verticalTiles);
         var ihPath = Helper.GetPath(Settings.OutputDirectory, "map_data", "indirection_heightmap.png");
         Directory.CreateDirectory(Path.GetDirectoryName(ihPath));
         indirection_heightmap2.Save(ihPath);
@@ -401,67 +409,172 @@ empty_tile_offset={{ 255 127 }}
     {
         try
         {
-            var settings = new MagickReadSettings()
-            {
-                Width = Map.MapWidth,
-                Height = Map.MapHeight,
-            };
-            using var cellsMap = new MagickImage("xc:black", settings);
+            // create ns manager
+            XmlNamespaceManager xmlnsManager = new XmlNamespaceManager(map.Input.XmlMap.NameTable);
+            xmlnsManager.AddNamespace("ns", "http://www.w3.org/2000/svg");
 
-            var drawables = new Drawables();
+            XmlNode? GetNode(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
 
-            var landPackCells = map.Input.JsonMap.pack.cells.Where(n => n.biome != 0);
-            var landGeoCells = map.Input.GeoMap.features.Select(n => new
+            void Remove(string attribute)
             {
-                Height = n.properties.height,
-                Id = n.properties.id,
-                C = n.geometry.coordinates
-            }).ToDictionary(n => n.Id, n => n);
-            var cells = landPackCells.Select(n =>
-            {
-                var c = landGeoCells[n.i];
-                return new
-                {
-                    Cells = c.C,
-                    c.Height,
-                };
-            }).ToArray();
-            var maxHeight = cells.MaxBy(n => n.Height)!.Height;
-
-            foreach (var cellPack in cells)
-            {
-                foreach (var cell in cellPack.Cells)
-                {
-                    var trimmedHeight = cellPack.Height * (255 - WaterLevelHeight) / maxHeight + WaterLevelHeight;
-                    var culledHeight = (byte)trimmedHeight;
-
-                    var color = new MagickColor(culledHeight, culledHeight, culledHeight);
-                    drawables
-                        .DisableStrokeAntialias()
-                        .StrokeColor(color)
-                        .FillColor(color)
-                        .Polygon(cell.Select(n => Helper.GeoToPixel(n[0], n[1], map)));
-                }
+                var node = map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
+                node?.ParentNode?.RemoveChild(node);
             }
 
-            cellsMap.Draw(drawables);
+            // Remove all blur
+            void removeFilterFromAll(string attribute) { 
+                for (XmlElement? element = GetNode(attribute) as XmlElement; element is not null; element = GetNode(attribute) as XmlElement)
+                {
+                    element.RemoveAttribute("filter");
+                }
+            }
+            removeFilterFromAll("@filter='url(#blur)'");
+            removeFilterFromAll("@filter='url(#blur05)'");
+            removeFilterFromAll("@filter='url(#blur10)'");
+
+            var viewbox = GetNode("@id='viewbox'");
+            var terrs = GetNode("@id='terrs'") as XmlElement;
+
+            viewbox.InnerXml = null;
+            viewbox.AppendChild(terrs);
+
+            terrs.SetAttribute("filter", "url(#blur10)");
+
+            // make only landHeights visible
+            var landHeights = GetNode("@id='landHeights'") as XmlElement;
+            terrs.InnerXml = null;
+            terrs.AppendChild(landHeights);
+
+            var landHeightsBackground = landHeights.SelectSingleNode($"//ns:rect[@fill='rgb(64, 64, 64)']", xmlnsManager);
+            var wl = AzgaarWaterLevel - CK3WaterLevel;
+            (landHeightsBackground as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+
+            // scale heights
+            foreach (XmlElement child in landHeights.ChildNodes)
+            {
+                var originalFill = child.GetAttribute("fill");
+                var originalHeight = int.Parse(new Regex(@"\((\d+)").Match(originalFill).Groups[1].Value);
+                const int maxHeight = 255;
+                //var newHeight = (originalHeight * (255 - WaterLevelHeight) / maxHeight + WaterLevelHeight);
+                //var newHeight = (originalHeight * (255 - WaterLevelHeight) / maxHeight);
+                var newHeight = originalHeight - AzgaarWaterLevel + CK3WaterLevel;
+
+                child.SetAttribute("fill", $"rgb({newHeight},{newHeight},{newHeight})");
+            }
+
+            // set blur value
+            //var blurValue = 10;
+            var blurValue = 8;
+            GetNode("@id='blur10'").InnerXml = $"<feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"{blurValue}\" />";
+
+
+            // shadows and weird colors
+            Remove("@id='dropShadow'");
+            Remove("@id='dropShadow01'");
+            Remove("@id='dropShadow05'");
+            Remove("@id='landmass'");
+            Remove("@id='sea_island'");
+
+            var svg = SvgDocument.Open(map.Input.XmlMap);
+            var bitmap = svg.Draw(Map.MapWidth, Map.MapHeight);
+
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            await cellsMap.WriteAsync(path);
+            var bitmap8 = ToGrayscale(bitmap);
 
-            //using var file = await Image.LoadAsync(path);
-            //file.Mutate(n => n.GaussianBlur(15));
-            //file.Save(path);
-            using var file = await Image.LoadAsync(path);
-            file.Mutate(n => n.GaussianBlur(6));
-            file.Save(path);
-
+            bitmap8.Save(path, ImageFormat.Png);
         }
         catch (Exception ex)
         {
-
+            MyConsole.Error(ex);
+            throw;
         }
     }
+
+    public static unsafe Bitmap ToGrayscale(Bitmap colorBitmap)
+    {
+        int Width = colorBitmap.Width;
+        int Height = colorBitmap.Height;
+
+        Bitmap grayscaleBitmap = new Bitmap(Width, Height, PixelFormat.Format8bppIndexed);
+
+        grayscaleBitmap.SetResolution(colorBitmap.HorizontalResolution,
+                             colorBitmap.VerticalResolution);
+
+        ///////////////////////////////////////
+        // Set grayscale palette
+        ///////////////////////////////////////
+        ColorPalette colorPalette = grayscaleBitmap.Palette;
+        for (int i = 0; i < colorPalette.Entries.Length; i++)
+        {
+            colorPalette.Entries[i] = System.Drawing.Color.FromArgb(i, i, i);
+        }
+        grayscaleBitmap.Palette = colorPalette;
+        ///////////////////////////////////////
+        // Set grayscale palette
+        ///////////////////////////////////////
+        BitmapData bitmapData = grayscaleBitmap.LockBits(
+            new System.Drawing.Rectangle(System.Drawing.Point.Empty, grayscaleBitmap.Size),
+            ImageLockMode.WriteOnly, PixelFormat.Format8bppIndexed);
+
+        Byte* pPixel = (Byte*)bitmapData.Scan0;
+
+        for (int y = 0; y < Height; y++)
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                System.Drawing.Color clr = colorBitmap.GetPixel(x, y);
+
+                Byte byPixel = (byte)((30 * clr.R + 59 * clr.G + 11 * clr.B) / 100);
+
+                pPixel[x] = byPixel;
+            }
+
+            pPixel += bitmapData.Stride;
+        }
+
+        grayscaleBitmap.UnlockBits(bitmapData);
+
+        return grayscaleBitmap;
+    }
+
+    public static unsafe Bitmap ToBitmap(byte[] colorBitmap, int width, int height)
+    {
+        Bitmap grayscaleBitmap = new Bitmap(width, height, PixelFormat.Format8bppIndexed);
+
+        ///////////////////////////////////////
+        // Set grayscale palette
+        ///////////////////////////////////////
+        ColorPalette colorPalette = grayscaleBitmap.Palette;
+        for (int i = 0; i < colorPalette.Entries.Length; i++)
+        {
+            colorPalette.Entries[i] = System.Drawing.Color.FromArgb(i, i, i);
+        }
+        grayscaleBitmap.Palette = colorPalette;
+        ///////////////////////////////////////
+        // Set grayscale palette
+        ///////////////////////////////////////
+        BitmapData bitmapData = grayscaleBitmap.LockBits(
+            new System.Drawing.Rectangle(System.Drawing.Point.Empty, grayscaleBitmap.Size),
+            ImageLockMode.WriteOnly, PixelFormat.Format8bppIndexed);
+
+        Byte* pPixel = (Byte*)bitmapData.Scan0;
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                pPixel[x] = colorBitmap[width * y + x];
+            }
+
+            pPixel += bitmapData.Stride;
+        }
+
+        grayscaleBitmap.UnlockBits(bitmapData);
+
+        return grayscaleBitmap;
+    }
+
 
     public static async Task WriteHeightMap(Map map)
     {

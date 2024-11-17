@@ -1,6 +1,7 @@
 ﻿using ImageMagick;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Xml;
 
 namespace Converter;
 
@@ -156,6 +157,7 @@ public class Map
         public required GeoMap GeoMap { get; init; }
         public required GeoMapRivers Rivers { get; init; }
         public required JsonMap JsonMap { get; init; }
+        public required XmlDocument XmlMap { get; init; }
     }
     public required MapInput Input { get; init; }
 

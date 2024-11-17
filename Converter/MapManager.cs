@@ -5,6 +5,7 @@ using SixLabors.ImageSharp.Processing;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Xml;
 
 namespace Converter;
 
@@ -53,6 +54,28 @@ public static class MapManager
             var file = await File.ReadAllTextAsync(Settings.Instance.InputJsonPath);
             var jsonmap = JsonSerializer.Deserialize(file, JsonMapJsonContext.Default.JsonMap);
             return jsonmap;
+        }
+        catch (Exception e)
+        {
+            Debugger.Break();
+            throw;
+        }
+
+    }
+    public static async Task<XmlDocument> LoadXml()
+    {
+        try
+        {
+            var file = File.ReadAllText(Settings.Instance.InputMapPath);
+            var start = file.IndexOf("<svg");
+            var count = file.IndexOf("svg>") - start + "svg>".Length;
+            var xmlPart = file.Substring(start, count);
+
+            var xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(xmlPart);
+
+
+            return xmlDoc;
         }
         catch (Exception e)
         {
@@ -170,6 +193,11 @@ public static class MapManager
     }
     private static List<Province> CreateWaterProvinces(Province waterProvince)
     {
+        var logEverySeconds = 30;
+        var timer = new System.Timers.Timer(logEverySeconds * 1000);
+        timer.AutoReset = true;
+        timer.Start();
+
         try
         {
             var cells = waterProvince.Cells;
@@ -179,6 +207,11 @@ public static class MapManager
 
             var unprocessedCells = waterProvince.Cells.ToDictionary(n => n.id, n => n);
             var provinces = new List<Province>();
+
+            timer.Elapsed += (s, e) =>
+            {
+                MyConsole.WriteLine($"Water provinces created: {provinces.Count}...");
+            };
 
             do
             {
@@ -221,11 +254,15 @@ public static class MapManager
                 }
             } while (unprocessedCells.Count > 0);
 
+            timer.Stop();
+
             return provinces;
         }
         catch (Exception ex)
         {
             Debugger.Break();
+            timer.Stop();
+
             throw;
         }
     }
@@ -309,7 +346,7 @@ public static class MapManager
         return finalProvinces;
     }
 
-    public static async Task<Map> ConvertMap(GeoMap geoMap, GeoMapRivers geoMapRivers, JsonMap jsonMap)
+    public static async Task<Map> ConvertMap(GeoMap geoMap, GeoMapRivers geoMapRivers, JsonMap jsonMap, XmlDocument xmlMap)
     {
         var provinces = CreateProvinces(geoMap, jsonMap);
 
@@ -329,6 +366,7 @@ public static class MapManager
                 GeoMap = geoMap,
                 Rivers = geoMapRivers,
                 JsonMap = jsonMap,
+                XmlMap = xmlMap,
             },
             Output = new()
             {
@@ -452,7 +490,7 @@ public static class MapManager
 
             cellsMap.Settings.SetDefine("png:color-type", "1");
 
-            string[] colormap = new string[] {
+            string[] colormap = [
                "#00FF00",
                "#FF0000",
                "#FFFC00",
@@ -471,7 +509,7 @@ public static class MapManager
                "#18CE00",
                "#FF0080",
                "#FFFFFF",
-            };
+            ];
 
             cellsMap.Map(colormap.Select(n => new MagickColor(n)));
 
