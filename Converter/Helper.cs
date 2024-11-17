@@ -1,4 +1,6 @@
 ﻿using ImageMagick;
+using System.Drawing.Imaging;
+using System.Drawing;
 using System.Text;
 
 namespace Converter;
@@ -212,5 +214,90 @@ public static class Helper
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
             await File.WriteAllTextAsync(outputPath, file, new UTF8Encoding(true));
         }
+    }
+
+
+    public static unsafe Bitmap ToGrayscale(Bitmap colorBitmap)
+    {
+        int Width = colorBitmap.Width;
+        int Height = colorBitmap.Height;
+
+        Bitmap grayscaleBitmap = new Bitmap(Width, Height, PixelFormat.Format8bppIndexed);
+
+        grayscaleBitmap.SetResolution(colorBitmap.HorizontalResolution,
+                             colorBitmap.VerticalResolution);
+
+        ///////////////////////////////////////
+        // Set grayscale palette
+        ///////////////////////////////////////
+        ColorPalette colorPalette = grayscaleBitmap.Palette;
+        for (int i = 0; i < colorPalette.Entries.Length; i++)
+        {
+            colorPalette.Entries[i] = System.Drawing.Color.FromArgb(i, i, i);
+        }
+        grayscaleBitmap.Palette = colorPalette;
+        ///////////////////////////////////////
+        // Set grayscale palette
+        ///////////////////////////////////////
+        BitmapData bitmapData = grayscaleBitmap.LockBits(
+            new System.Drawing.Rectangle(System.Drawing.Point.Empty, grayscaleBitmap.Size),
+            ImageLockMode.WriteOnly, PixelFormat.Format8bppIndexed);
+
+        Byte* pPixel = (Byte*)bitmapData.Scan0;
+
+        for (int y = 0; y < Height; y++)
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                System.Drawing.Color clr = colorBitmap.GetPixel(x, y);
+
+                Byte byPixel = (byte)((30 * clr.R + 59 * clr.G + 11 * clr.B) / 100);
+
+                pPixel[x] = byPixel;
+            }
+
+            pPixel += bitmapData.Stride;
+        }
+
+        grayscaleBitmap.UnlockBits(bitmapData);
+
+        return grayscaleBitmap;
+    }
+
+    public static unsafe Bitmap ToBitmap(byte[] colorBitmap, int width, int height)
+    {
+        Bitmap grayscaleBitmap = new Bitmap(width, height, PixelFormat.Format8bppIndexed);
+
+        ///////////////////////////////////////
+        // Set grayscale palette
+        ///////////////////////////////////////
+        ColorPalette colorPalette = grayscaleBitmap.Palette;
+        for (int i = 0; i < colorPalette.Entries.Length; i++)
+        {
+            colorPalette.Entries[i] = System.Drawing.Color.FromArgb(i, i, i);
+        }
+        grayscaleBitmap.Palette = colorPalette;
+        ///////////////////////////////////////
+        // Set grayscale palette
+        ///////////////////////////////////////
+        BitmapData bitmapData = grayscaleBitmap.LockBits(
+            new System.Drawing.Rectangle(System.Drawing.Point.Empty, grayscaleBitmap.Size),
+            ImageLockMode.WriteOnly, PixelFormat.Format8bppIndexed);
+
+        Byte* pPixel = (Byte*)bitmapData.Scan0;
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                pPixel[x] = colorBitmap[width * y + x];
+            }
+
+            pPixel += bitmapData.Stride;
+        }
+
+        grayscaleBitmap.UnlockBits(bitmapData);
+
+        return grayscaleBitmap;
     }
 }

@@ -382,7 +382,7 @@ public static class HeightMapManager
             }
         }
 
-        var packed_heightmap = ToBitmap(packed_heightmap_pixels, packedWidth, heightmap.PixelHeight);
+        var packed_heightmap = Helper.ToBitmap(packed_heightmap_pixels, packedWidth, heightmap.PixelHeight);
         var phPath = Helper.GetPath(Settings.OutputDirectory, "map_data", "packed_heightmap.png");
         Directory.CreateDirectory(Path.GetDirectoryName(phPath));
         packed_heightmap.Save(phPath);
@@ -480,7 +480,7 @@ empty_tile_offset={{ 255 127 }}
 
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            var bitmap8 = ToGrayscale(bitmap);
+            var bitmap8 = Helper.ToGrayscale(bitmap);
 
             bitmap8.Save(path, ImageFormat.Png);
         }
@@ -490,91 +490,6 @@ empty_tile_offset={{ 255 127 }}
             throw;
         }
     }
-
-    public static unsafe Bitmap ToGrayscale(Bitmap colorBitmap)
-    {
-        int Width = colorBitmap.Width;
-        int Height = colorBitmap.Height;
-
-        Bitmap grayscaleBitmap = new Bitmap(Width, Height, PixelFormat.Format8bppIndexed);
-
-        grayscaleBitmap.SetResolution(colorBitmap.HorizontalResolution,
-                             colorBitmap.VerticalResolution);
-
-        ///////////////////////////////////////
-        // Set grayscale palette
-        ///////////////////////////////////////
-        ColorPalette colorPalette = grayscaleBitmap.Palette;
-        for (int i = 0; i < colorPalette.Entries.Length; i++)
-        {
-            colorPalette.Entries[i] = System.Drawing.Color.FromArgb(i, i, i);
-        }
-        grayscaleBitmap.Palette = colorPalette;
-        ///////////////////////////////////////
-        // Set grayscale palette
-        ///////////////////////////////////////
-        BitmapData bitmapData = grayscaleBitmap.LockBits(
-            new System.Drawing.Rectangle(System.Drawing.Point.Empty, grayscaleBitmap.Size),
-            ImageLockMode.WriteOnly, PixelFormat.Format8bppIndexed);
-
-        Byte* pPixel = (Byte*)bitmapData.Scan0;
-
-        for (int y = 0; y < Height; y++)
-        {
-            for (int x = 0; x < Width; x++)
-            {
-                System.Drawing.Color clr = colorBitmap.GetPixel(x, y);
-
-                Byte byPixel = (byte)((30 * clr.R + 59 * clr.G + 11 * clr.B) / 100);
-
-                pPixel[x] = byPixel;
-            }
-
-            pPixel += bitmapData.Stride;
-        }
-
-        grayscaleBitmap.UnlockBits(bitmapData);
-
-        return grayscaleBitmap;
-    }
-
-    public static unsafe Bitmap ToBitmap(byte[] colorBitmap, int width, int height)
-    {
-        Bitmap grayscaleBitmap = new Bitmap(width, height, PixelFormat.Format8bppIndexed);
-
-        ///////////////////////////////////////
-        // Set grayscale palette
-        ///////////////////////////////////////
-        ColorPalette colorPalette = grayscaleBitmap.Palette;
-        for (int i = 0; i < colorPalette.Entries.Length; i++)
-        {
-            colorPalette.Entries[i] = System.Drawing.Color.FromArgb(i, i, i);
-        }
-        grayscaleBitmap.Palette = colorPalette;
-        ///////////////////////////////////////
-        // Set grayscale palette
-        ///////////////////////////////////////
-        BitmapData bitmapData = grayscaleBitmap.LockBits(
-            new System.Drawing.Rectangle(System.Drawing.Point.Empty, grayscaleBitmap.Size),
-            ImageLockMode.WriteOnly, PixelFormat.Format8bppIndexed);
-
-        Byte* pPixel = (Byte*)bitmapData.Scan0;
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                pPixel[x] = colorBitmap[width * y + x];
-            }
-
-            pPixel += bitmapData.Stride;
-        }
-
-        grayscaleBitmap.UnlockBits(bitmapData);
-
-        return grayscaleBitmap;
-    }
-
 
     public static async Task WriteHeightMap(Map map)
     {
