@@ -203,7 +203,10 @@ public static class MapManager
             var cells = waterProvince.Cells;
 
             var largestWaterProvince = cells.MaxBy(n => n.area).area;
-            var areaPerProvince = largestWaterProvince / 2;
+            var cellsBy128 = cells.Count / 128;
+            var areaPerProvince = largestWaterProvince > cellsBy128
+                ? largestWaterProvince / 2
+                : cellsBy128 / 2;
 
             var unprocessedCells = waterProvince.Cells.ToDictionary(n => n.id, n => n);
             var provinces = new List<Province>();
@@ -255,6 +258,11 @@ public static class MapManager
             } while (unprocessedCells.Count > 0);
 
             timer.Stop();
+
+            if (provinces.Count > short.MaxValue)
+            {
+                throw new Exception($"Water province count exceeded max supported value of {short.MaxValue}");
+            }
 
             return provinces;
         }
