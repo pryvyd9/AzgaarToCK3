@@ -25,29 +25,17 @@ internal class Program
 
         if (string.IsNullOrWhiteSpace(Settings.Instance.ModName))
         {
-            MyConsole.Write("Name your mod: ");
+            MyConsole.WriteLine("Name your mod: ");
             Settings.Instance.ModName = MyConsole.ReadLine()!;
         }
 
         CheckIfShouldOverride();
         FindInputs();
 
-        if (!File.Exists(Settings.Instance.InputJsonPath))
+        if (!File.Exists(Settings.Instance.InputXmlPath))
         {
-            MyConsole.WriteLine($".json file has not been found.");
-            MyConsole.WriteLine($"Please, place it in '{Settings.Instance.InputJsonPath}' or change '{nameof(Settings.Instance.InputJsonPath)}' in 'settings.json'.");
-            Exit();
-        }
-        if (!File.Exists(Settings.Instance.InputGeojsonPath))
-        {
-            MyConsole.WriteLine($".geojson file has not been found.");
-            MyConsole.WriteLine($"Please, place it in '{Settings.Instance.InputGeojsonPath}' or change '{nameof(Settings.Instance.InputGeojsonPath)}' in 'settings.json'.");
-            Exit();
-        }
-        if (!File.Exists(Settings.Instance.InputMapPath))
-        {
-            MyConsole.WriteLine($".map file has not been found.");
-            MyConsole.WriteLine($"Please, place it in '{Settings.Instance.InputMapPath}' or change '{nameof(Settings.Instance.InputGeojsonPath)}' in 'settings.json'.");
+            MyConsole.WriteLine($".xml file has not been found.");
+            MyConsole.WriteLine($"Please, place it in '{Settings.Instance.InputXmlPath}' or change '{nameof(Settings.Instance.InputXmlPath)}' in 'settings.json'.");
             Exit();
         }
 
@@ -161,31 +149,85 @@ internal class Program
 
     }
 
+    //private static void FindInputs()
+    //{
+    //    if (ModManager.FindLatestInputs() is ({ } jsonName, { } geojsonName, { } mapName) && 
+    //        (jsonName != Settings.Instance.InputJsonPath || geojsonName != Settings.Instance.InputGeojsonPath || mapName != Settings.Instance.InputMapPath))
+    //    {
+    //        MyConsole.WriteLine("Found new inputs in the directory:");
+    //        MyConsole.WriteLine(Path.GetFileName(jsonName));
+    //        MyConsole.WriteLine(Path.GetFileName(geojsonName));
+    //        MyConsole.WriteLine(Path.GetFileName(mapName));
+    //        MyConsole.WriteLine("Use them as inputs?");
+
+    //        if (YesNo())
+    //        {
+    //            Settings.Instance.InputJsonPath = jsonName;
+    //            Settings.Instance.InputGeojsonPath = geojsonName;
+    //            Settings.Instance.InputMapPath = mapName;
+    //        }
+    //        else
+    //        {
+    //            EnsureInputsExist();
+
+    //            MyConsole.WriteLine("Previously used inputs will be used:");
+    //            MyConsole.WriteLine(Settings.Instance.InputJsonPath);
+    //            MyConsole.WriteLine(Settings.Instance.InputGeojsonPath);
+    //            MyConsole.WriteLine(Settings.Instance.InputMapPath);
+    //        }
+    //    }
+    //    else
+    //    {
+    //        EnsureInputsExist();
+    //    }
+
+    //    // Exit if inputs not found
+    //    static void EnsureInputsExist()
+    //    {
+    //        var jsonExists = File.Exists(Settings.Instance.InputJsonPath);
+    //        var geojsonExists = File.Exists(Settings.Instance.InputGeojsonPath);
+
+    //        if (!jsonExists)
+    //        {
+    //            MyConsole.Warning(".json input was not found.");
+    //        }
+    //        if (!geojsonExists)
+    //        {
+    //            MyConsole.Warning(".geojson input was not found.");
+    //        }
+
+    //        if (!jsonExists || !geojsonExists)
+    //        {
+    //            MyConsole.WriteLine($"-------------------------------------------------");
+    //            MyConsole.WriteLine($"Put your exported .json, .geojson files to this app's folder ({SettingsManager.ExecutablePath}).");
+    //            MyConsole.WriteLine("Make sure they are they have the latest 'modification date'.");
+    //            MyConsole.WriteLine("If the wrong files are found delete other exported .json, .geojson files from the folder.");
+    //            MyConsole.WriteLine("If the files cannot be found open 'settings.json' and modify 'InputJsonPath' and 'InputGeojsonPath' values to point to your files.");
+    //            MyConsole.WriteLine($"-------------------------------------------------");
+
+    //            Exit();
+    //        }
+    //    }
+    //}
+
     private static void FindInputs()
     {
-        if (ModManager.FindLatestInputs() is ({ } jsonName, { } geojsonName, { } mapName) && 
-            (jsonName != Settings.Instance.InputJsonPath || geojsonName != Settings.Instance.InputGeojsonPath || mapName != Settings.Instance.InputMapPath))
+        if (ModManager.FindLatestInputs() is { } xmlName && xmlName != Settings.Instance.InputXmlPath)
         {
             MyConsole.WriteLine("Found new inputs in the directory:");
-            MyConsole.WriteLine(Path.GetFileName(jsonName));
-            MyConsole.WriteLine(Path.GetFileName(geojsonName));
-            MyConsole.WriteLine(Path.GetFileName(mapName));
+            MyConsole.WriteLine(Path.GetFileName(xmlName));
             MyConsole.WriteLine("Use them as inputs?");
 
             if (YesNo())
             {
-                Settings.Instance.InputJsonPath = jsonName;
-                Settings.Instance.InputGeojsonPath = geojsonName;
-                Settings.Instance.InputMapPath = mapName;
+                Settings.Instance.InputXmlPath = xmlName;
             }
             else
             {
                 EnsureInputsExist();
 
                 MyConsole.WriteLine("Previously used inputs will be used:");
-                MyConsole.WriteLine(Settings.Instance.InputJsonPath);
-                MyConsole.WriteLine(Settings.Instance.InputGeojsonPath);
-                MyConsole.WriteLine(Settings.Instance.InputMapPath);
+                MyConsole.WriteLine(Settings.Instance.InputXmlPath);
             }
         }
         else
@@ -196,30 +238,27 @@ internal class Program
         // Exit if inputs not found
         static void EnsureInputsExist()
         {
-            var jsonExists = File.Exists(Settings.Instance.InputJsonPath);
-            var geojsonExists = File.Exists(Settings.Instance.InputGeojsonPath);
+            var xmlExists = File.Exists(Settings.Instance.InputXmlPath);
 
-            if (!jsonExists)
+            if (!xmlExists)
             {
-                MyConsole.Warning(".json input was not found.");
+                MyConsole.Warning(".xml input was not found.");
             }
-            if (!geojsonExists)
-            {
-                MyConsole.Warning(".geojson input was not found.");
-            }
+            
 
-            if (!jsonExists || !geojsonExists)
+            if (!xmlExists)
             {
                 MyConsole.WriteLine($"-------------------------------------------------");
-                MyConsole.WriteLine($"Put your exported .json, .geojson files to this app's folder ({SettingsManager.ExecutablePath}).");
-                MyConsole.WriteLine("Make sure they are they have the latest 'modification date'.");
-                MyConsole.WriteLine("If the wrong files are found delete other exported .json, .geojson files from the folder.");
-                MyConsole.WriteLine("If the files cannot be found open 'settings.json' and modify 'InputJsonPath' and 'InputGeojsonPath' values to point to your files.");
+                MyConsole.WriteLine($"Put your exported .xml file to this app's folder ({SettingsManager.ExecutablePath}).");
+                MyConsole.WriteLine("Make sure they it has the latest 'modification date'.");
+                MyConsole.WriteLine("If the wrong files are found delete other exported .xml files from the folder.");
+                MyConsole.WriteLine("If the files cannot be found open 'settings.json' and modify 'InputXmlPath' value to point to your file.");
                 MyConsole.WriteLine($"-------------------------------------------------");
 
                 Exit();
             }
         }
     }
+
 
 }

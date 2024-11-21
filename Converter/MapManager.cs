@@ -62,20 +62,40 @@ public static class MapManager
         }
 
     }
+    //public static async Task<XmlDocument> LoadXml()
+    //{
+    //    try
+    //    {
+    //        var file = File.ReadAllText(Settings.Instance.InputMapPath);
+    //        var start = file.IndexOf("<svg");
+    //        var count = file.IndexOf("svg>") - start + "svg>".Length;
+    //        var xmlPart = file.Substring(start, count);
+
+    //        var xmlDoc = new XmlDocument();
+    //        xmlDoc.LoadXml(xmlPart);
+
+
+    //        return xmlDoc;
+    //    }
+    //    catch (Exception e)
+    //    {
+    //        Debugger.Break();
+    //        throw;
+    //    }
+
+    //}
+
     public static async Task<XmlDocument> LoadXml()
     {
         try
         {
-            var file = File.ReadAllText(Settings.Instance.InputMapPath);
-            var start = file.IndexOf("<svg");
-            var count = file.IndexOf("svg>") - start + "svg>".Length;
-            var xmlPart = file.Substring(start, count);
+            var unescapedFile = File.ReadAllText(Settings.Instance.InputXmlPath);
+            unescapedFile = unescapedFile.Replace("&amp;quot;", "\"");
 
-            var xmlDoc = new XmlDocument();
-            xmlDoc.LoadXml(xmlPart);
+            var file = new XmlDocument();
+            file.LoadXml(unescapedFile);
 
-
-            return xmlDoc;
+            return file;
         }
         catch (Exception e)
         {
@@ -354,14 +374,28 @@ public static class MapManager
         return finalProvinces;
     }
 
-    public static async Task<Map> ConvertMap(GeoMap geoMap, GeoMapRivers geoMapRivers, JsonMap jsonMap, XmlDocument xmlMap)
+    public static async Task<Map> ConvertMap(XmlDocument xmlMap)
     {
+        XmlNamespaceManager xmlnsManager = new(xmlMap.NameTable);
+        xmlnsManager.AddNamespace("ns", "http://www.w3.org/1999/xhtml");
+
+        XmlNode? GetNode(string attribute) => xmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
+        var geoMapXml = GetNode("@id='geojson'").InnerXml;
+        var geoMap = JsonSerializer.Deserialize(geoMapXml, GeoMapJsonContext.Default.GeoMap);
+
+        var jsonMapXml = GetNode("@id='json'").InnerXml;
+        var jsonMap = JsonSerializer.Deserialize(jsonMapXml, JsonMapJsonContext.Default.JsonMap);
+
+        var geoMapRivers = new GeoMapRivers([]);
+
+
+
         var provinces = CreateProvinces(geoMap, jsonMap);
 
         var rnd = new Random(1);
         var nameBase = jsonMap.nameBases[rnd.Next(jsonMap.nameBases.Length)];
         var nameBaseNames = nameBase.b.Split(',')
-            .Select(n => 
+            .Select(n =>
             {
                 var id = n.Replace("'", "").Replace(' ', '_').ToLowerInvariant();
                 return new NameBaseName(id, n);
@@ -387,14 +421,15 @@ public static class MapManager
         return map;
     }
 
+
     public static async Task DrawCells(Map map)
     {
         try
         {
             var settings = new MagickReadSettings()
             {
-                Width = Map.MapWidth,
-                Height = Map.MapHeight,
+                Width = map.Settings.MapWidth,
+                Height = map.Settings.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:white", settings);
 
@@ -428,8 +463,8 @@ public static class MapManager
         {
             var settings = new MagickReadSettings()
             {
-                Width = Map.MapWidth,
-                Height = Map.MapHeight,
+                Width = map.Settings.MapWidth,
+                Height = map.Settings.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:black", settings);
 
@@ -442,7 +477,7 @@ public static class MapManager
                         .DisableStrokeAntialias()
                         .StrokeColor(province.Color)
                         .FillColor(province.Color)
-                        .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, Map.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+                        .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, map.Settings.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
                 }
             }
 
@@ -464,8 +499,8 @@ public static class MapManager
         {
             var settings = new MagickReadSettings()
             {
-                Width = Map.MapWidth,
-                Height = Map.MapHeight,
+                Width = map.Settings.MapWidth,
+                Height = map.Settings.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:#ff0080", settings);
 
@@ -860,43 +895,17 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                 };
             }).ToArray();
 
-        //var tasks = new[]
-        //{
-        //    //// drylands
-        //    //WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "drylands"), map, "drylands_01_mask"),
-        //    // taiga
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is var b && (b == "taiga" || b == "drylands" && Helper.IsCellLowMountains(n.height) || b == "drylands" && Helper.IsCellMountains(n.height))), map, "forest_pine_01_mask"),
-        //    // plains
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "plains"), map, "plains_01_mask"),
-        //    // farmlands
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "farmlands"), map, "farmland_01_mask"),
-        //    // Desert
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "desert" && !Helper.IsCellMountains(n.height) && !Helper.IsCellHighMountains(n.height)), map, "desert_01_mask"),
-        //    // desert_mountains
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "desert" && Helper.IsCellMountains(n.height)), map, "mountain_02_desert_mask"),
-        //    // oasis
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "oasis"), map, "oasis_mask"),
-        //     // hills
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.IsCellHills(n.biome, n.height)), map, "hills_01_mask"),
-        //    // low mountains
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellLowMountains(n.height)), map, "mountain_02_mask"),
-        //    // mountains
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellMountains(n.height) || Helper.IsCellHighMountains(n.height)), map, "mountain_02_snow_mask"),
-        //    // HighMountains
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellHighMountains(n.height)), map, "mountain_02_c_snow_mask"),
-        //    // jungle
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "jungle"), map, "forest_jungle_01_mask"),
-        //    // forest
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "forest"), map, "forest_leaf_01_mask"),
-        //    // wetlands
-        //    WriteMask(provinceBiomes.Where(n => n.Biome == "wetlands").SelectMany(n => n.Province.Cells).Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask"),
-        //    // steppe
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "steppe"), map, "wetlands_02_mask"),
-        //    // floodplains
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask"),
-        //};
-
-        //await Task.WhenAll(tasks);
+        // Remove all masks
+        {
+            var templatePath = Helper.GetPath(SettingsManager.ExecutablePath, "template_mask.png");
+            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain");
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            foreach (var fileName in Directory.EnumerateFiles(path).Where(n => n.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
+            {
+                File.Delete(fileName);
+                File.Copy(templatePath, fileName);
+            }
+        }
 
         //// drylands
         //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "drylands"), map, "drylands_01_mask"),
@@ -938,12 +947,14 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         File.Copy(Helper.GetPath(SettingsManager.ExecutablePath, "00_graphics.txt"), path, true);
     }
-    public static async Task WriteDefines()
+    public static async Task WriteDefines(Map map)
     {
+        //var maxElevation = 51;
+        var maxElevation = 255;
         var file = $@"NJominiMap = {{
-	WORLD_EXTENTS_X = {Map.MapWidth - 1}
-	WORLD_EXTENTS_Y = 51
-	WORLD_EXTENTS_Z = {Map.MapHeight - 1}
+	WORLD_EXTENTS_X = {map.Settings.MapWidth - 1}
+	WORLD_EXTENTS_Y = {maxElevation}
+	WORLD_EXTENTS_Z = {map.Settings.MapHeight - 1}
 	WATERLEVEL = 3.8
 }}";
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "00_defines.txt");

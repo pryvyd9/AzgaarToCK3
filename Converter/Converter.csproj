@@ -17,6 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CK3Tools\CK3Tools.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="00_graphics.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

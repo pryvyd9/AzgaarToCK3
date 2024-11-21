@@ -164,7 +164,7 @@ public static class Helper
 
     public static PointD GeoToPixel(float lon, float lat, Map map)
     {
-        return new PointD((lon - map.XOffset) * map.XRatio, Map.MapHeight - (lat - map.YOffset) * map.YRatio);
+        return new PointD((lon - map.XOffset) * map.XRatio, map.Settings.MapHeight - (lat - map.YOffset) * map.YRatio);
     }
     public static PointD GeoToPixelCrutch(float lon, float lat, Map map)
     {
@@ -172,7 +172,7 @@ public static class Helper
     }
     public static PointD PixelToFullPixel(float x, float y, Map map)
     {
-        return new PointD(x * map.PixelXRatio, Map.MapHeight - y * map.PixelYRatio);
+        return new PointD(x * map.PixelXRatio, map.Settings.MapHeight - y * map.PixelYRatio);
     }
 
     /// <summary>

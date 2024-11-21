@@ -173,16 +173,16 @@ public class Map
     public required MapOutput Output { get; init; }
 
 
-    public const int MapWidth = 8192;
-    public const int MapHeight = 4096;
+    //public const int MapWidth = 8192;
+    //public const int MapHeight = 4096;
 
     public float XOffset => Input.JsonMap.mapCoordinates.lonW;
     public float YOffset => Input.JsonMap.mapCoordinates.latS;
-    public float XRatio => MapWidth / Input.JsonMap.mapCoordinates.lonT;
-    public float YRatio => MapHeight / Input.JsonMap.mapCoordinates.latT;
+    public float XRatio => Settings.MapWidth / Input.JsonMap.mapCoordinates.lonT;
+    public float YRatio => Settings.MapHeight / Input.JsonMap.mapCoordinates.latT;
 
-    public double PixelXRatio => (double)MapWidth / Input.JsonMap.info.width;
-    public double PixelYRatio => (double)MapHeight / Input.JsonMap.info.height;
+    public double PixelXRatio => (double)Settings.MapWidth / Input.JsonMap.info.width;
+    public double PixelYRatio => (double)Settings.MapHeight / Input.JsonMap.info.height;
 
     public Settings Settings { get; set; }
 }

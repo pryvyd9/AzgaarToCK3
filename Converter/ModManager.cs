@@ -20,56 +20,88 @@ public static class ModManager
         return Directory.Exists(Helper.GetPath(Settings.Instance.ModsDirectory, Settings.Instance.ModName));
     }
 
-    public static (string? jsonName, string? geojsonName, string? mapName) FindLatestInputs()
+    //public static (string? jsonName, string? geojsonName, string? mapName) FindLatestInputs()
+    //{
+    //    string? jsonName = null;
+    //    string? geojsonName = null;
+    //    string? mapName = null;
+
+    //    var filesToCheck = new DirectoryInfo(SettingsManager.ExecutablePath)
+    //        .EnumerateFiles()
+    //        .OrderByDescending(n => n.CreationTime)
+    //        .Select(n => n.Name)
+    //        .Where(n => Settings.Instance.InputJsonPath != n && Settings.Instance.InputGeojsonPath != n);
+
+    //    //var filesToCheck = Directory.EnumerateFiles(SettingsManager.ExecutablePath)
+    //    //    .Where(n => Settings.Instance.InputJsonPath != n && Settings.Instance.InputGeojsonPath != n);
+
+    //    foreach (var f in filesToCheck)
+    //    {
+    //        if (f.EndsWith(".json"))
+    //        {
+    //            var p = Path.GetFileName(f);
+    //            if (!p.EndsWith("settings.json") && !p.StartsWith("ConsoleUI"))
+    //            {
+    //                jsonName = f;
+    //            }
+    //        }
+    //        else if (f.EndsWith(".geojson"))
+    //        {
+    //            geojsonName = f;
+    //        }
+    //        else if (f.EndsWith(".map"))
+    //        {
+    //            mapName = f;
+    //        }
+
+    //        if (jsonName is not null && geojsonName is not null && mapName is not null)
+    //        {
+    //            break;
+    //        }
+    //    }
+
+    //    return (jsonName, geojsonName, mapName);
+    //}
+
+
+    public static string? FindLatestInputs()
     {
-        string? jsonName = null;
-        string? geojsonName = null;
-        string? mapName = null;
+        string? xmlName = null;
 
         var filesToCheck = new DirectoryInfo(SettingsManager.ExecutablePath)
             .EnumerateFiles()
             .OrderByDescending(n => n.CreationTime)
             .Select(n => n.Name)
-            .Where(n => Settings.Instance.InputJsonPath != n && Settings.Instance.InputGeojsonPath != n);
+            .Where(n => Settings.Instance.InputXmlPath != n);
 
         //var filesToCheck = Directory.EnumerateFiles(SettingsManager.ExecutablePath)
         //    .Where(n => Settings.Instance.InputJsonPath != n && Settings.Instance.InputGeojsonPath != n);
 
         foreach (var f in filesToCheck)
         {
-            if (f.EndsWith(".json"))
+            if (f.EndsWith(".xml"))
             {
-                var p = Path.GetFileName(f);
-                if (!p.EndsWith("settings.json") && !p.StartsWith("ConsoleUI"))
-                {
-                    jsonName = f;
-                }
-            }
-            else if (f.EndsWith(".geojson"))
-            {
-                geojsonName = f;
-            }
-            else if (f.EndsWith(".map"))
-            {
-                mapName = f;
+                xmlName = f;
             }
 
-            if (jsonName is not null && geojsonName is not null && mapName is not null)
+            if (xmlName is not null)
             {
                 break;
             }
         }
 
-        return (jsonName, geojsonName, mapName);
+        return xmlName;
     }
+
 
     private static async Task<Map> LoadMap()
     {
         var xmlMap = await MapManager.LoadXml();
-        var geoMap = await MapManager.LoadGeojson();
-        var geoMapRivers = new GeoMapRivers([]);
-        var jsonMap = await MapManager.LoadJson();
-        var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap, xmlMap);
+        //var geoMap = await MapManager.LoadGeojson();
+        //var geoMapRivers = new GeoMapRivers([]);
+        //var jsonMap = await MapManager.LoadJson();
+        //var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap, xmlMap);
+        var map = await MapManager.ConvertMap(xmlMap);
         map.Settings = Settings.Instance;
         return map;
     }
@@ -111,7 +143,7 @@ supported_version=""{supportedGameVersion}""";
 
         await MapManager.WriteGraphics();
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
-        await MapManager.WriteDefines();
+        await MapManager.WriteDefines(map);
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Defines file created.");
 
         await MapManager.DrawRivers(map);
@@ -150,7 +182,7 @@ supported_version=""{supportedGameVersion}""";
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Dynasties created.");
         await CharacterManager.WriteDynastyLocalization(map);
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Dynasty localization created.");
-
+         
         await MapManager.WriteHistoryProvinces(map);
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Province history created.");
         await MapManager.CopyOriginalReligions(map);
@@ -184,7 +216,7 @@ supported_version=""{supportedGameVersion}""";
 
         await MapManager.WriteGraphics();
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
-        await MapManager.WriteDefines();
+        await MapManager.WriteDefines(map);
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Defines file created.");
 
         await MapManager.DrawRivers(map);

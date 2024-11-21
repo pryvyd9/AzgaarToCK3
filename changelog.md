@@ -1,4 +1,4 @@
-# 1.4.9
+# 2.0.0
 - improved localization.
 
 # 1.4.8
