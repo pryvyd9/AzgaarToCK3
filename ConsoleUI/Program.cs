@@ -149,74 +149,13 @@ internal class Program
 
     }
 
-    //private static void FindInputs()
-    //{
-    //    if (ModManager.FindLatestInputs() is ({ } jsonName, { } geojsonName, { } mapName) && 
-    //        (jsonName != Settings.Instance.InputJsonPath || geojsonName != Settings.Instance.InputGeojsonPath || mapName != Settings.Instance.InputMapPath))
-    //    {
-    //        MyConsole.WriteLine("Found new inputs in the directory:");
-    //        MyConsole.WriteLine(Path.GetFileName(jsonName));
-    //        MyConsole.WriteLine(Path.GetFileName(geojsonName));
-    //        MyConsole.WriteLine(Path.GetFileName(mapName));
-    //        MyConsole.WriteLine("Use them as inputs?");
-
-    //        if (YesNo())
-    //        {
-    //            Settings.Instance.InputJsonPath = jsonName;
-    //            Settings.Instance.InputGeojsonPath = geojsonName;
-    //            Settings.Instance.InputMapPath = mapName;
-    //        }
-    //        else
-    //        {
-    //            EnsureInputsExist();
-
-    //            MyConsole.WriteLine("Previously used inputs will be used:");
-    //            MyConsole.WriteLine(Settings.Instance.InputJsonPath);
-    //            MyConsole.WriteLine(Settings.Instance.InputGeojsonPath);
-    //            MyConsole.WriteLine(Settings.Instance.InputMapPath);
-    //        }
-    //    }
-    //    else
-    //    {
-    //        EnsureInputsExist();
-    //    }
-
-    //    // Exit if inputs not found
-    //    static void EnsureInputsExist()
-    //    {
-    //        var jsonExists = File.Exists(Settings.Instance.InputJsonPath);
-    //        var geojsonExists = File.Exists(Settings.Instance.InputGeojsonPath);
-
-    //        if (!jsonExists)
-    //        {
-    //            MyConsole.Warning(".json input was not found.");
-    //        }
-    //        if (!geojsonExists)
-    //        {
-    //            MyConsole.Warning(".geojson input was not found.");
-    //        }
-
-    //        if (!jsonExists || !geojsonExists)
-    //        {
-    //            MyConsole.WriteLine($"-------------------------------------------------");
-    //            MyConsole.WriteLine($"Put your exported .json, .geojson files to this app's folder ({SettingsManager.ExecutablePath}).");
-    //            MyConsole.WriteLine("Make sure they are they have the latest 'modification date'.");
-    //            MyConsole.WriteLine("If the wrong files are found delete other exported .json, .geojson files from the folder.");
-    //            MyConsole.WriteLine("If the files cannot be found open 'settings.json' and modify 'InputJsonPath' and 'InputGeojsonPath' values to point to your files.");
-    //            MyConsole.WriteLine($"-------------------------------------------------");
-
-    //            Exit();
-    //        }
-    //    }
-    //}
-
     private static void FindInputs()
     {
         if (ModManager.FindLatestInputs() is { } xmlName && xmlName != Settings.Instance.InputXmlPath)
         {
-            MyConsole.WriteLine("Found new inputs in the directory:");
+            MyConsole.WriteLine("Found new input in the directory:");
             MyConsole.WriteLine(Path.GetFileName(xmlName));
-            MyConsole.WriteLine("Use them as inputs?");
+            MyConsole.WriteLine("Use it as input?");
 
             if (YesNo())
             {
@@ -226,7 +165,7 @@ internal class Program
             {
                 EnsureInputsExist();
 
-                MyConsole.WriteLine("Previously used inputs will be used:");
+                MyConsole.WriteLine("Previously used input will be used:");
                 MyConsole.WriteLine(Settings.Instance.InputXmlPath);
             }
         }
@@ -250,7 +189,7 @@ internal class Program
             {
                 MyConsole.WriteLine($"-------------------------------------------------");
                 MyConsole.WriteLine($"Put your exported .xml file to this app's folder ({SettingsManager.ExecutablePath}).");
-                MyConsole.WriteLine("Make sure they it has the latest 'modification date'.");
+                MyConsole.WriteLine("Make sure it has the latest 'modification date'.");
                 MyConsole.WriteLine("If the wrong files are found delete other exported .xml files from the folder.");
                 MyConsole.WriteLine("If the files cannot be found open 'settings.json' and modify 'InputXmlPath' value to point to your file.");
                 MyConsole.WriteLine($"-------------------------------------------------");

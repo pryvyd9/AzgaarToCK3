@@ -8,24 +8,11 @@
     <Configurations>Debug;Release;Publish</Configurations>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Publish|AnyCPU'">
-    <Optimize>True</Optimize>
-    <DebugType>portable</DebugType>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DebugType>portable</DebugType>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DebugType>portable</DebugType>
-  </PropertyGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)'=='Publish' And '$(BuildingInsideVisualStudio)' == 'true'">
+    <Exec Command="powershell -ExecutionPolicy Unrestricted $(ProjectDir)afterPublishBuild.ps1 -ProjectDir $(ProjectDir) -OutDir $(OutDir)" />
+  </Target>
 
   <ItemGroup>
     <ProjectReference Include="..\Converter\Converter.csproj" />
   </ItemGroup>
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)'=='Publish' And '$(BuildingInsideVisualStudio)' == 'true'">
-    <Exec Command="powershell -ExecutionPolicy Unrestricted $(ProjectDir)afterPublishBuild.ps1 -ProjectDir $(ProjectDir) -OutDir $(OutDir)" />
-  </Target>
 </Project>
