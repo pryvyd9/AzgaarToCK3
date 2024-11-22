@@ -476,7 +476,7 @@ empty_tile_offset={{ 255 127 }}
             var bitmap = svg.Draw(map.Settings.MapWidth, map.Settings.MapHeight);
 
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             var bitmap8 = Helper.ToGrayscale(bitmap);
 
             bitmap8.Save(path, ImageFormat.Png);
@@ -487,51 +487,12 @@ empty_tile_offset={{ 255 127 }}
             throw;
         }
     }
-    private static async Task DrawFlatMap(Map map)
-    {
-        try
-        {
-            // create ns manager
-            XmlNamespaceManager xmlnsManager = new(map.Input.XmlMap.NameTable);
-            xmlnsManager.AddNamespace("ns", "http://www.w3.org/2000/svg");
-
-            XmlNode? GetNode(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
-
-            void Remove(string attribute)
-            {
-                var node = map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
-                node?.ParentNode?.RemoveChild(node);
-            }
-
-            var terrain = GetNode("@id='svgterrain'");
-
-            var xml = new XmlDocument();
-            xml.LoadXml(terrain.OuterXml);
-            var svg = SvgDocument.Open(xml);
-            File.WriteAllText("flatMap.svg", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>" + xml.OuterXml);
-
-            var bitmap = svg.Draw(map.Settings.MapWidth, map.Settings.MapHeight);
-            bitmap.Save("flatmap.png", ImageFormat.Png);
-
-            using var heightMap = new MagickImage("flatmap.png");
-            heightMap.SepiaTone();
-
-            await heightMap.WriteAsync(Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "flatmap.dds"), MagickFormat.Dds);
-        }
-        catch (Exception ex)
-        {
-            Debugger.Break();
-            throw;
-        }
-
-    }
 
     public static async Task WriteHeightMap(Map map)
     {
         await DrawHeightMap(map);
         var heightmap = await CreatePackedHeightMap(map);
         await WritePackedHeightMap(heightmap);
-        await DrawFlatMap(map);
     }
 
 }

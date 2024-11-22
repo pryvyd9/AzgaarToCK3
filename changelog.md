@@ -1,5 +1,8 @@
-# 2.0.0
+# 1.5.0
 - improved localization.
+- moved to single file export.
+- draw flatmap.
+- draw lakes on heightmap.
 
 # 1.4.8
 - added logging system.

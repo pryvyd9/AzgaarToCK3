@@ -2,7 +2,9 @@
 using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using Svg;
 using System.Diagnostics;
+using System.Drawing.Imaging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml;
@@ -19,78 +21,18 @@ public partial class JsonMapJsonContext : JsonSerializerContext {}
 
 public static class MapManager
 {
-    public static async Task<GeoMap> LoadGeojson()
-    {
-        try
-        {
-            var file = await File.ReadAllTextAsync(Settings.Instance.InputGeojsonPath);
-            var geomap = JsonSerializer.Deserialize(file, GeoMapJsonContext.Default.GeoMap);
-            return geomap;
-        }
-        catch (Exception e)
-        {
-            Debugger.Break();
-            throw;
-        }
-    }
-    //public static async Task<GeoMapRivers> LoadGeojsonRivers()
-    //{
-    //    try
-    //    {
-    //        var file = await File.ReadAllTextAsync("inputRivers.geojson");
-    //        var geomap = JsonSerializer.Deserialize<GeoMapRivers>(file);
-    //        return geomap;
-    //    }
-    //    catch (Exception e)
-    //    {
-    //        Debugger.Break();
-    //        throw;
-    //    }
-    //}
-    public static async Task<JsonMap> LoadJson()
-    {
-        try
-        {
-            var file = await File.ReadAllTextAsync(Settings.Instance.InputJsonPath);
-            var jsonmap = JsonSerializer.Deserialize(file, JsonMapJsonContext.Default.JsonMap);
-            return jsonmap;
-        }
-        catch (Exception e)
-        {
-            Debugger.Break();
-            throw;
-        }
-
-    }
-    //public static async Task<XmlDocument> LoadXml()
-    //{
-    //    try
-    //    {
-    //        var file = File.ReadAllText(Settings.Instance.InputMapPath);
-    //        var start = file.IndexOf("<svg");
-    //        var count = file.IndexOf("svg>") - start + "svg>".Length;
-    //        var xmlPart = file.Substring(start, count);
-
-    //        var xmlDoc = new XmlDocument();
-    //        xmlDoc.LoadXml(xmlPart);
-
-
-    //        return xmlDoc;
-    //    }
-    //    catch (Exception e)
-    //    {
-    //        Debugger.Break();
-    //        throw;
-    //    }
-
-    //}
-
     public static async Task<XmlDocument> LoadXml()
     {
         try
         {
             var unescapedFile = File.ReadAllText(Settings.Instance.InputXmlPath);
             unescapedFile = unescapedFile.Replace("&amp;quot;", "\"");
+            unescapedFile = unescapedFile.Replace("xmlns=\"http://www.w3.org/2000/svg\"", "");
+            unescapedFile = unescapedFile.Replace("xmlns:dc=\"http://purl.org/dc/elements/1.1/\"", "");
+            unescapedFile = unescapedFile.Replace("xmlns:xlink=\"http://www.w3.org/1999/xlink\"", "");
+            unescapedFile = unescapedFile.Replace("xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"", "");
+            unescapedFile = unescapedFile.Replace("xmlns=\"http://www.w3.org/1999/xhtml\"", "");
+            unescapedFile = unescapedFile.Replace("xmlns:svg=\"http://www.w3.org/2000/svg\"", "");
 
             var file = new XmlDocument();
             file.LoadXml(unescapedFile);
@@ -102,7 +44,6 @@ public static class MapManager
             Debugger.Break();
             throw;
         }
-
     }
 
     private static MagickColor GetColor(int i, int maxI)
@@ -380,20 +321,20 @@ public static class MapManager
         xmlnsManager.AddNamespace("ns", "http://www.w3.org/1999/xhtml");
 
         XmlNode? GetNode(string attribute) => xmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
-        var geoMapXml = GetNode("@id='geojson'").InnerXml;
+        var geoMapXml = GetNode("@id='geojson'")!.InnerXml;
         var geoMap = JsonSerializer.Deserialize(geoMapXml, GeoMapJsonContext.Default.GeoMap);
 
-        var jsonMapXml = GetNode("@id='json'").InnerXml;
+        var jsonMapXml = GetNode("@id='json'")!.InnerXml;
         var jsonMap = JsonSerializer.Deserialize(jsonMapXml, JsonMapJsonContext.Default.JsonMap);
 
         var geoMapRivers = new GeoMapRivers([]);
 
 
 
-        var provinces = CreateProvinces(geoMap, jsonMap);
+        var provinces = CreateProvinces(geoMap!, jsonMap!);
 
         var rnd = new Random(1);
-        var nameBase = jsonMap.nameBases[rnd.Next(jsonMap.nameBases.Length)];
+        var nameBase = jsonMap!.nameBases[rnd.Next(jsonMap.nameBases.Length)];
         var nameBaseNames = nameBase.b.Split(',')
             .Select(n =>
             {
@@ -405,7 +346,7 @@ public static class MapManager
         {
             Input = new()
             {
-                GeoMap = geoMap,
+                GeoMap = geoMap!,
                 Rivers = geoMapRivers,
                 JsonMap = jsonMap,
                 XmlMap = xmlMap,
@@ -483,7 +424,7 @@ public static class MapManager
 
             cellsMap.Draw(drawables);
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "provinces.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             await cellsMap.WriteAsync(path);
         }
         catch (Exception ex)
@@ -529,7 +470,7 @@ public static class MapManager
 
             cellsMap.Draw(drawables);
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "rivers.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
             cellsMap.Settings.SetDefine("png:color-type", "1");
 
@@ -568,7 +509,7 @@ public static class MapManager
     {
         var lines = map.Output.Provinces.Select((n, i) => $"{i};{n.Color.R};{n.Color.G};{n.Color.B};{n.Name};x;");
         var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "definition.csv");
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        Helper.EnsureDirectoryExists(path);
         await File.WriteAllLinesAsync(path, lines);
     }
 
@@ -602,7 +543,7 @@ $@"game_object_locator={{
     }}
 }}";
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "building_locators.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
         }
         catch (Exception e)
@@ -641,7 +582,7 @@ $@"game_object_locator={{
     }}
 }}";
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "siege_locators.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
         }
         catch (Exception e)
@@ -680,7 +621,7 @@ $@"game_object_locator={{
     }}
 }}";
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "combat_locators.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
         }
         catch (Exception e)
@@ -733,7 +674,7 @@ $@"game_object_locator={{
     }}
 }}";
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "player_stack_locators.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
         }
         catch (Exception e)
@@ -802,9 +743,52 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 ";
 
         var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "default.map");
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        Helper.EnsureDirectoryExists(path);
         await File.WriteAllTextAsync(path, file);
     }
+
+    public static async Task DrawFlatMap(Map map)
+    {
+        try
+        {
+            XmlNode? GetNode(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]");
+
+            void Remove(string attribute)
+            {
+                var node = map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]");
+                node?.ParentNode?.RemoveChild(node);
+            }
+
+            var terrain = GetNode("@id='svgFlatMap'");
+
+            {
+                // remove all title elements. They break svg.
+                var titleElements = map.Input.XmlMap.SelectNodes("//title");
+                foreach (XmlElement item in titleElements)
+                {
+                    item.ParentNode.RemoveChild(item);
+                }
+            }
+
+            var xml = new XmlDocument();
+            xml.LoadXml(terrain.OuterXml);
+            var svg = SvgDocument.Open(xml);
+            //File.WriteAllText("flatMap.svg", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>" + xml.OuterXml);
+
+            var bitmap = svg.Draw(map.Settings.MapWidth, map.Settings.MapHeight);
+            bitmap.Save("flatmap.png", ImageFormat.Png);
+
+            using var flatmap = new MagickImage("flatmap.png");
+            await flatmap.WriteAsync(Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "flatmap.dds"), MagickFormat.Dds);
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+            throw;
+        }
+
+    }
+
 
     // Town Biomes
     public static async Task WriteTerrain(Map map)
@@ -831,7 +815,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             var file = $@"default=plains
 {string.Join("\n", provinceBiomes)}";
             var path = Helper.GetPath(Settings.OutputDirectory, "common", "province_terrain", "00_province_terrain.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
         }
         catch (Exception ex)
@@ -860,7 +844,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             cellsMap.Draw(drawables);
 
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", $"{filename}.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             await cellsMap.WriteAsync(path, MagickFormat.Png00);
 
             using var file = await Image.LoadAsync(path);
@@ -899,7 +883,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         {
             var templatePath = Helper.GetPath(SettingsManager.ExecutablePath, "template_mask.png");
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             foreach (var fileName in Directory.EnumerateFiles(path).Where(n => n.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
             {
                 File.Delete(fileName);
@@ -944,7 +928,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     public static async Task WriteGraphics()
     {
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "graphic", "00_graphics.txt");
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        Helper.EnsureDirectoryExists(path);
         File.Copy(Helper.GetPath(SettingsManager.ExecutablePath, "00_graphics.txt"), path, true);
     }
     public static async Task WriteDefines(Map map)
@@ -958,7 +942,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 	WATERLEVEL = 3.8
 }}";
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "00_defines.txt");
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        Helper.EnsureDirectoryExists(path);
         await File.WriteAllTextAsync(path, file);
     }
 
@@ -1118,7 +1102,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
                 var file = string.Join('\n', baronies);
                 var path = Helper.GetPath(Settings.OutputDirectory, "history", "provinces", $"k_{kingdom.id}.txt");
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                Helper.EnsureDirectoryExists(path);
                 await File.WriteAllTextAsync(path, file);
             }
         }
@@ -1183,7 +1167,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
         var file = string.Join('\n', mappedHolySites);
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "religion", "holy_sites", "00_holy_sites.txt");
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        Helper.EnsureDirectoryExists(path);
         await File.WriteAllTextAsync(path, file);
     }
 }

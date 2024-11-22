@@ -1,9 +1,5 @@
 ﻿using System.Text.Json;
-using Microsoft.Win32;
-using System.Diagnostics;
-using System.Text.RegularExpressions;
 using System.Text.Json.Serialization;
-using CK3Tools;
 
 namespace Converter;
 
@@ -13,9 +9,6 @@ public class Settings
     public required string Ck3Directory { get; init; }
     public required string TotalConversionSandboxPath { get; init; }
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-    public string InputJsonPath { get; set; }
-    public string InputGeojsonPath { get; set; }
-    public string InputMapPath { get; set; }
     public string InputXmlPath { get; set; }
     public string ModName { get; set; }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -55,7 +48,7 @@ public static class SettingsManager
 
     public static void Configure()
     {
-        CK3Configuration.ConfigureNumberDecimalSeparator();
+        CK3FileSystem.ConfigureNumberDecimalSeparator();
     }
     public static bool TryLoad()
     {
@@ -96,7 +89,7 @@ public static class SettingsManager
     {
         Settings.Instance = new Settings
         {
-            ModsDirectory = CK3FileSystem.defaultModsDirectory,
+            ModsDirectory =  CK3FileSystem.defaultModsDirectory,
             TotalConversionSandboxPath = CK3FileSystem.GetTotalConversionSandboxDirectory(),
             Ck3Directory = CK3FileSystem.GetGameDirectory(),
         };
@@ -109,4 +102,3 @@ public static class SettingsManager
         File.WriteAllText(SettingsFileName, JsonSerializer.Serialize(Settings.Instance, SettingsJsonContext.Default.Settings));
     }
 }
-

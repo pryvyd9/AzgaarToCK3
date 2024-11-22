@@ -20,87 +20,21 @@ public static class ModManager
         return Directory.Exists(Helper.GetPath(Settings.Instance.ModsDirectory, Settings.Instance.ModName));
     }
 
-    //public static (string? jsonName, string? geojsonName, string? mapName) FindLatestInputs()
-    //{
-    //    string? jsonName = null;
-    //    string? geojsonName = null;
-    //    string? mapName = null;
-
-    //    var filesToCheck = new DirectoryInfo(SettingsManager.ExecutablePath)
-    //        .EnumerateFiles()
-    //        .OrderByDescending(n => n.CreationTime)
-    //        .Select(n => n.Name)
-    //        .Where(n => Settings.Instance.InputJsonPath != n && Settings.Instance.InputGeojsonPath != n);
-
-    //    //var filesToCheck = Directory.EnumerateFiles(SettingsManager.ExecutablePath)
-    //    //    .Where(n => Settings.Instance.InputJsonPath != n && Settings.Instance.InputGeojsonPath != n);
-
-    //    foreach (var f in filesToCheck)
-    //    {
-    //        if (f.EndsWith(".json"))
-    //        {
-    //            var p = Path.GetFileName(f);
-    //            if (!p.EndsWith("settings.json") && !p.StartsWith("ConsoleUI"))
-    //            {
-    //                jsonName = f;
-    //            }
-    //        }
-    //        else if (f.EndsWith(".geojson"))
-    //        {
-    //            geojsonName = f;
-    //        }
-    //        else if (f.EndsWith(".map"))
-    //        {
-    //            mapName = f;
-    //        }
-
-    //        if (jsonName is not null && geojsonName is not null && mapName is not null)
-    //        {
-    //            break;
-    //        }
-    //    }
-
-    //    return (jsonName, geojsonName, mapName);
-    //}
-
-
     public static string? FindLatestInputs()
     {
-        string? xmlName = null;
-
         var filesToCheck = new DirectoryInfo(SettingsManager.ExecutablePath)
             .EnumerateFiles()
             .OrderByDescending(n => n.CreationTime)
             .Select(n => n.Name)
             .Where(n => Settings.Instance.InputXmlPath != n);
 
-        //var filesToCheck = Directory.EnumerateFiles(SettingsManager.ExecutablePath)
-        //    .Where(n => Settings.Instance.InputJsonPath != n && Settings.Instance.InputGeojsonPath != n);
-
-        foreach (var f in filesToCheck)
-        {
-            if (f.EndsWith(".xml"))
-            {
-                xmlName = f;
-            }
-
-            if (xmlName is not null)
-            {
-                break;
-            }
-        }
-
-        return xmlName;
+        return filesToCheck.FirstOrDefault(n => n.EndsWith(".xml"));
     }
 
 
     private static async Task<Map> LoadMap()
     {
         var xmlMap = await MapManager.LoadXml();
-        //var geoMap = await MapManager.LoadGeojson();
-        //var geoMapRivers = new GeoMapRivers([]);
-        //var jsonMap = await MapManager.LoadJson();
-        //var map = await MapManager.ConvertMap(geoMap, geoMapRivers, jsonMap, xmlMap);
         var map = await MapManager.ConvertMap(xmlMap);
         map.Settings = Settings.Instance;
         return map;
@@ -129,7 +63,7 @@ supported_version=""{supportedGameVersion}""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 23;
+        int totalStageCount = 24;
 
         var map = await LoadMap();
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -140,6 +74,9 @@ supported_version=""{supportedGameVersion}""";
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         await HeightMapManager.WriteHeightMap(map);
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
+
+        await MapManager.DrawFlatMap(map);
+        MyConsole.WriteLine($"{i++}/{totalStageCount}. Flat map created.");
 
         await MapManager.WriteGraphics();
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
@@ -202,7 +139,7 @@ supported_version=""{supportedGameVersion}""";
     public static async Task Run()
     {
         int i = 1;
-        int totalStageCount = 23;
+        int totalStageCount = 24;
 
         var map = await LoadMap();
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
@@ -213,6 +150,9 @@ supported_version=""{supportedGameVersion}""";
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         await HeightMapManager.WriteHeightMap(map);
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
+
+        await MapManager.DrawFlatMap(map);
+        MyConsole.WriteLine($"{i++}/{totalStageCount}. Flat map created.");
 
         await MapManager.WriteGraphics();
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");

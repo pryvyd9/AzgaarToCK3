@@ -21,6 +21,11 @@ public static class Helper
         }
     }
 
+    public static void EnsureDirectoryExists(string path)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    }
+
     public static bool IsCellHighMountains(int height)
     {
         return height > 2000;
