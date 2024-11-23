@@ -51,6 +51,8 @@ internal class Program
             try
             {
                 await ModManager.Run();
+                MyConsole.WriteLine("Map conversion finished successfully.");
+                MyConsole.WriteLine("Add newly created mod to your playset and enjoy!");
             }
             catch (Exception ex)
             {
@@ -65,8 +67,7 @@ internal class Program
         Environment.Exit(0);
 #endif
 
-        MyConsole.WriteLine("Map conversion finished successfully.");
-        MyConsole.WriteLine("Add newly created mod to your playset and enjoy!");
+    
 
         Exit();
     }

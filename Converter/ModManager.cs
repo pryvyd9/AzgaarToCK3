@@ -70,8 +70,8 @@ supported_version=""{supportedGameVersion}""";
 
         //await MapManager.DrawCells(map);
 
-        await MapManager.DrawProvinces(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
+        //await MapManager.DrawProvinces(map);
+        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
         await HeightMapManager.WriteHeightMap(map);
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
 

@@ -1,7 +1,10 @@
-﻿using ImageMagick;
+﻿using Aspose.Svg;
+using Aspose.Svg.Builder;
+using Aspose.Svg.Converters;
+using Aspose.Svg.Saving;
+using ImageMagick;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using Svg;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -28,7 +31,7 @@ public static class HeightMapManager
     private static readonly int[] detailSize = [33, 17, 9, 5, 3];
     // Width of average sampling for height. For detail size 9 averages of 4x4 squares are taken for every pixel in a tile.
     private static readonly byte[] averageSize = [1, 2, 4, 8, 16];
-    private static readonly int maxColumnN = Settings.Instance.MapWidth / indirectionProportion;
+    private static readonly int maxColumnN = (int)Settings.Instance.MapWidth / indirectionProportion;
     private static readonly int packedWidth = (int)(maxColumnN * 17);
     private const int indirectionProportion = 32;
 
@@ -212,15 +215,15 @@ public static class HeightMapManager
             var length8 = map.Settings.MapWidth * map.Settings.MapHeight * 1;
             byte[] pixels = new byte[length8];
             {
-                var bitmapData = file.LockBits(new System.Drawing.Rectangle(0, 0, map.Settings.MapWidth, map.Settings.MapHeight), ImageLockMode.ReadOnly, file.PixelFormat);
+                var bitmapData = file.LockBits(new System.Drawing.Rectangle(0, 0, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight), ImageLockMode.ReadOnly, file.PixelFormat);
                 // Copy bitmap to byte[]
-                Marshal.Copy(bitmapData.Scan0, pixels, 0, length8);
+                Marshal.Copy(bitmapData.Scan0, pixels, 0, (int)length8);
                 file.UnlockBits(bitmapData);
             }
 
 
-            var firstDerivative = Gradient(pixels, map.Settings.MapWidth, map.Settings.MapHeight);
-            var secondDerivative = Gradient(firstDerivative, map.Settings.MapWidth, map.Settings.MapHeight);
+            var firstDerivative = Gradient(pixels, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var secondDerivative = Gradient(firstDerivative, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
 
             List<Vector2[,]> gradientAreas = [];
             List<byte[,]> heightAreas = [];
@@ -266,7 +269,7 @@ public static class HeightMapManager
                 d.Select(n =>
                     new Tile
                     {
-                        values = GetPackedArea(pixels, map.Settings.MapHeight - (int)n.coordinates.Y, (int)n.coordinates.X, i, map.Settings.MapHeight, map.Settings.MapWidth),
+                        values = GetPackedArea(pixels, (int)map.Settings.MapHeight - (int)n.coordinates.Y, (int)n.coordinates.X, i, (int)map.Settings.MapHeight, (int)map.Settings.MapWidth),
                         i = (int)n.coordinates.Y / indirectionProportion,
                         j = (int)n.coordinates.X / indirectionProportion,
                     }).ToArray()
@@ -315,8 +318,8 @@ public static class HeightMapManager
             {
                 Details = details,
                 PixelHeight = packedHeightPixels,
-                MapWidth = map.Settings.MapWidth,
-                MapHeight = map.Settings.MapHeight,
+                MapWidth = (int)map.Settings.MapWidth,
+                MapHeight = (int)map.Settings.MapHeight,
                 RowCount = rowCount,
             };
         }
@@ -434,16 +437,34 @@ empty_tile_offset={{ 255 127 }}
             removeFilterFromAll("@filter='url(#blur10)'");
 
             var land = GetNode("@id='svgland'");
+            //(land as XmlElement).RemoveAttribute("filter");
+            var background = map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
+            (background as XmlElement).SetAttribute("fill", "black");
+            (background as XmlElement).SetAttribute("x", "0");
+            (background as XmlElement).SetAttribute("y", "0");
+            (background as XmlElement).SetAttribute("width", "100%");
+            (background as XmlElement).SetAttribute("height", "100%");
+            land.PrependChild(background);
 
-            (land as XmlElement).SetAttribute("filter", "url(#blur10)");
+            (land as XmlElement).SetAttribute("filter", "url(#blur5)");
+            (land as XmlElement).SetAttribute("background-color", "black");
+            (land as XmlElement).SetAttribute("fill", "black");
 
             // make only landHeights visible
             var landHeights = GetNode("@id='landHeights'") as XmlElement;
-            landHeights.SetAttribute("filter", "url(#blur10)");
+            //landHeights.SetAttribute("filter", "url(#blur10)");
+            //landHeights.SetAttribute("filter", "url(#blurFilter)");
 
             var landHeightsBackground = landHeights.FirstChild;
-            var wl = 0;
+            var wl = AzgaarWaterLevel;
             (landHeightsBackground as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+
+            var water = GetNode("@id='water'");
+            (water.FirstChild as XmlElement).SetAttribute("fill", "black");
+
+            (GetNode("@id='vignette-mask'").FirstChild as XmlElement).SetAttribute("fill", "black");
+            (GetNode("@id='fog'").FirstChild as XmlElement).SetAttribute("fill", "black");
+
 
             // scale heights
             foreach (XmlElement child in landHeights.ChildNodes)
@@ -469,17 +490,31 @@ empty_tile_offset={{ 255 127 }}
             Remove("@id='landmass'");
             Remove("@id='sea_island'");
 
-            var xml = new XmlDocument();
-            xml.LoadXml(land.OuterXml);
-            var svg = SvgDocument.Open(xml);
-            //File.WriteAllText("landHeights.svg", xml.OuterXml);
-            var bitmap = svg.Draw(map.Settings.MapWidth, map.Settings.MapHeight);
+            var svg = new MagickImage(land.OuterXml.Select(n => (byte)n).ToArray(), MagickFormat.Svg);
 
+            //var colormap = Enumerable.Range(0, 256).Select(n => new MagickColor((byte)n, (byte)n, (byte)n));
+            //svg.Remap(colormap);
+            //svg.BackgroundColor = new MagickColor(0, 0, 0);
+
+            svg.Resize(new MagickGeometry
+            {
+                Width = map.Settings.MapWidth,
+                Height = map.Settings.MapHeight,
+                IgnoreAspectRatio = true,
+            });
+            //await svg.WriteAsync("landHeights.png", MagickFormat.Png8);
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
             Helper.EnsureDirectoryExists(path);
-            var bitmap8 = Helper.ToGrayscale(bitmap);
+            await svg.WriteAsync(path, MagickFormat.Png8);
 
-            bitmap8.Save(path, ImageFormat.Png);
+            //using var svg = new SVGDocument(land.OuterXml, ".");
+            //var options = new ImageSaveOptions(Aspose.Svg.Rendering.Image.ImageFormat.Png)
+            //{
+            //    Format = Aspose.Svg.Rendering.Image.ImageFormat.Png,
+            //    HorizontalResolution = map.Settings.MapWidth,
+            //    VerticalResolution = map.Settings.MapHeight,
+            //};
+            //Aspose.Svg.Converters.Converter.ConvertSVG(svg, options, Helper.GetPath(SettingsManager.ExecutablePath, "landHeights.png"));
         }
         catch (Exception ex)
         {

@@ -1,10 +1,9 @@
 ﻿using ImageMagick;
+using ImageMagick.Drawing;
 using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using Svg;
 using System.Diagnostics;
-using System.Drawing.Imaging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml;
@@ -495,7 +494,7 @@ public static class MapManager
                "#FFFFFF",
             ];
 
-            cellsMap.Map(colormap.Select(n => new MagickColor(n)));
+            cellsMap.Remap(colormap.Select(n => new MagickColor(n)));
 
             await cellsMap.WriteAsync(path);
         }
@@ -769,17 +768,47 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     item.ParentNode.RemoveChild(item);
                 }
             }
+            {
+                // Preprocess all use tags as they are not supported in ImageMagick
+                var useElements = map.Input.XmlMap.SelectNodes("//use");
+                List<XmlElement> useElementsCopy = [];
+                foreach (XmlElement e in useElements)
+                {
+                    useElementsCopy.Add(e);
+                }
 
-            var xml = new XmlDocument();
-            xml.LoadXml(terrain.OuterXml);
-            var svg = SvgDocument.Open(xml);
-            //File.WriteAllText("flatMap.svg", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>" + xml.OuterXml);
+                foreach (XmlElement e in useElementsCopy)
+                {
+                    var reference = e.GetAttribute("href").Substring(1);
+                    if (GetNode($"@id='{reference}'") is { } r && r.CloneNode(true) is var referencedElement)
+                    {
+                        while(e.Attributes.Count > 0)
+                        {
+                            referencedElement!.Attributes!.Append(e.Attributes[0]);
+                        }
+                        referencedElement!.Attributes!.RemoveNamedItem("id");
+                        referencedElement!.Attributes.RemoveNamedItem("href");
 
-            var bitmap = svg.Draw(map.Settings.MapWidth, map.Settings.MapHeight);
-            bitmap.Save("flatmap.png", ImageFormat.Png);
+                        e.ParentNode!.ReplaceChild(referencedElement, e);
+                    }
+                    else
+                    {
+                        // skip non-existing references
+                    }
+                }
+            }
 
-            using var flatmap = new MagickImage("flatmap.png");
-            await flatmap.WriteAsync(Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "flatmap.dds"), MagickFormat.Dds);
+            var svg = new MagickImage(terrain.OuterXml.Select(n => (byte)n).ToArray(), MagickFormat.Svg);
+            svg.Resize(new MagickGeometry
+            {
+                Width = map.Settings.MapWidth,
+                Height = map.Settings.MapHeight,
+                IgnoreAspectRatio = true,
+            });
+            await svg.WriteAsync("terrain.dds", MagickFormat.Dds);
+            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "flatmap.dds");
+            Helper.EnsureDirectoryExists(path);
+            await svg.WriteAsync(path, MagickFormat.Dds);
         }
         catch (Exception ex)
         {
