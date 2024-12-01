@@ -968,8 +968,8 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     }
     public static async Task WriteDefines(Map map)
     {
-        //var maxElevation = 51;
-        var maxElevation = 255;
+        var maxElevation = 51;
+        //var maxElevation = 255;
         var file = $@"NJominiMap = {{
 	WORLD_EXTENTS_X = {map.Settings.MapWidth - 1}
 	WORLD_EXTENTS_Y = {maxElevation}

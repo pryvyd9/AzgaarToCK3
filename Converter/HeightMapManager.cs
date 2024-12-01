@@ -204,22 +204,11 @@ public static class HeightMapManager
 
             var path = $"{Settings.OutputDirectory}/map_data/heightmap.png";
 
-            using var file = SixLabors.ImageSharp.Image.Load<L8>(path);
+            using var file = Image.Load<L8>(path);
 
             var pixelCount = file.Width * file.Height;
             var pixels = new byte[pixelCount];
             file.CopyPixelDataTo(pixels);
-
-            //var file = new Bitmap(path);
-            //var length8 = map.Settings.MapWidth * map.Settings.MapHeight * 1;
-            //byte[] pixels = new byte[length8];
-            //{
-            //    var bitmapData = file.LockBits(new System.Drawing.Rectangle(0, 0, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight), ImageLockMode.ReadOnly, file.PixelFormat);
-            //    // Copy bitmap to byte[]
-            //    Marshal.Copy(bitmapData.Scan0, pixels, 0, (int)length8);
-            //    file.UnlockBits(bitmapData);
-            //}
-
 
             var firstDerivative = Gradient(pixels, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
             var secondDerivative = Gradient(firstDerivative, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
@@ -438,7 +427,10 @@ empty_tile_offset={{ 255 127 }}
             var land = GetNode("@id='svgland'");
             //(land as XmlElement).RemoveAttribute("filter");
             var background = map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
-            (background as XmlElement).SetAttribute("fill", "black");
+            //var wl = CK3WaterLevel;
+            var wl = 0;
+
+            (background as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
             (background as XmlElement).SetAttribute("x", "0");
             (background as XmlElement).SetAttribute("y", "0");
             (background as XmlElement).SetAttribute("width", "100%");
@@ -446,23 +438,26 @@ empty_tile_offset={{ 255 127 }}
             land.PrependChild(background);
 
             //(land as XmlElement).SetAttribute("filter", "url(#blur10)");
-            (land as XmlElement).SetAttribute("background-color", "black");
-            (land as XmlElement).SetAttribute("fill", "black");
+            (land as XmlElement).SetAttribute("background-color", $"rgb({wl},{wl},{wl})");
+            (land as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
 
             // make only landHeights visible
             var landHeights = GetNode("@id='landHeights'") as XmlElement;
             landHeights.SetAttribute("filter", "url(#blur10)");
             //landHeights.SetAttribute("filter", "url(#blurFilter)");
 
+            var rect = (landHeights.SelectSingleNode("//*[@id='landHeights']/rect") as XmlElement);
+            rect.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+            //rect.ParentNode.RemoveChild(rect);
+
             var landHeightsBackground = landHeights.FirstChild;
-            var wl = AzgaarWaterLevel;
             (landHeightsBackground as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
 
             var water = GetNode("@id='water'");
-            (water.FirstChild as XmlElement).SetAttribute("fill", "black");
+            (water.FirstChild as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
 
-            (GetNode("@id='vignette-mask'").FirstChild as XmlElement).SetAttribute("fill", "black");
-            (GetNode("@id='fog'").FirstChild as XmlElement).SetAttribute("fill", "black");
+            //(GetNode("@id='vignette-mask'").FirstChild as XmlElement).SetAttribute("fill", "black");
+            //(GetNode("@id='fog'").FirstChild as XmlElement).SetAttribute("fill", "black");
 
 
             // scale heights
@@ -476,26 +471,22 @@ empty_tile_offset={{ 255 127 }}
                 child.SetAttribute("fill", $"rgb({newHeight},{newHeight},{newHeight})");
             }
 
-            // set blur value
-            //var blurValue = 10;
-            //var blurValue = 8;
-            //GetNode("@id='blur10'").InnerXml = $"<feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"{blurValue}\" />";
-
-
             // shadows and weird colors
             Remove("@id='dropShadow'");
             Remove("@id='dropShadow01'");
             Remove("@id='dropShadow05'");
             Remove("@id='landmass'");
             Remove("@id='sea_island'");
-                
+            Remove("@id='vignette-mask'");
+            Remove("@id='fog'");
+
             var svg = SvgDocument.FromSvg<SvgDocument>(land.OuterXml);
             var img = svg.ToGrayscaleImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
 
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
             Helper.EnsureDirectoryExists(path);
 
-            //img.Save("landHeights.png");
+            img.Save("landHeights.png");
             img.Save(path);
         }
         catch (Exception ex)
