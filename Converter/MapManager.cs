@@ -472,8 +472,6 @@ public static class MapManager
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "rivers.png");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-            cellsMap.Settings.SetDefine("png:color-type", "1");
-
             string[] colormap = [
                "#00FF00",
                "#FF0000",
@@ -495,9 +493,15 @@ public static class MapManager
                "#FFFFFF",
             ];
 
-            cellsMap.Remap(colormap.Select(n => new MagickColor(n)));
+            var qs = new QuantizeSettings
+            {
+                Colors = (uint)colormap.Length,
+                DitherMethod = DitherMethod.No
+            };
+            cellsMap.ColorType = ColorType.Palette;
+            cellsMap.Remap(colormap.Select(n => new MagickColor(n)), qs);
 
-            await cellsMap.WriteAsync(path);
+            await cellsMap.WriteAsync(path, MagickFormat.Png8);
         }
         catch (Exception ex)
         {
@@ -694,7 +698,7 @@ $@"game_object_locator={{
     public static async Task WriteDefault(Map map)
     {
         var waterProvinces = map.Output.Provinces!.Select((n, i) => (n, i)).Where(n => n.n.IsWater).Select(n => n.i).ToArray();
-        var file = $@"#max_provinces = {map.Output.Provinces!.Length}
+        var file = $@"#max_provinces = 1466
 definitions = ""definition.csv""
 provinces = ""provinces.png""
 #positions = ""positions.txt""
@@ -773,37 +777,6 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     item.ParentNode.RemoveChild(item);
                 }
             }
-            //{
-            //    // Preprocess all use tags as they are not supported in ImageMagick
-            //    var useElements = map.Input.XmlMap.SelectNodes("//use");
-            //    List<XmlElement> useElementsCopy = [];
-            //    foreach (XmlElement e in useElements)
-            //    {
-            //        useElementsCopy.Add(e);
-            //    }
-
-            //    foreach (XmlElement e in useElementsCopy)
-            //    {
-            //        var reference = e.GetAttribute("href").Substring(1);
-            //        if (GetNode($"@id='{reference}'") is { } r && r.CloneNode(true) is var referencedElement)
-            //        {
-            //            while(e.Attributes.Count > 0)
-            //            {
-            //                referencedElement!.Attributes!.Append(e.Attributes[0]);
-            //            }
-            //            referencedElement!.Attributes!.RemoveNamedItem("id");
-            //            referencedElement!.Attributes.RemoveNamedItem("href");
-
-            //            e.ParentNode!.ReplaceChild(referencedElement, e);
-            //        }
-            //        else
-            //        {
-            //            // skip non-existing references
-            //        }
-            //    }
-            //}
-
-         
 
             var svg = SvgDocument.FromSvg<SvgDocument>(terrain.OuterXml);
             var img = svg.ToImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
@@ -914,17 +887,17 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                 };
             }).ToArray();
 
-        //// Remove all masks
-        //{
-        //    var templatePath = Helper.GetPath(SettingsManager.ExecutablePath, "template_mask.png");
-        //    var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain");
-        //    Helper.EnsureDirectoryExists(path);
-        //    foreach (var fileName in Directory.EnumerateFiles(path).Where(n => n.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
-        //    {
-        //        File.Delete(fileName);
-        //        File.Copy(templatePath, fileName);
-        //    }
-        //}
+        // Remove all masks
+        {
+            var templatePath = Helper.GetPath(SettingsManager.ExecutablePath, "template_mask.png");
+            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain");
+            Helper.EnsureDirectoryExists(path);
+            foreach (var fileName in Directory.EnumerateFiles(path).Where(n => n.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
+            {
+                File.Delete(fileName);
+                File.Copy(templatePath, fileName);
+            }
+        }
 
         //// drylands
         //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "drylands"), map, "drylands_01_mask"),
