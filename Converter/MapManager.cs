@@ -693,8 +693,8 @@ $@"game_object_locator={{
 
     public static async Task WriteDefault(Map map)
     {
-        var waterProvinces = map.Output.Provinces.Select((n, i) => (n, i)).Where(n => n.n.IsWater).Select(n => n.i);
-        var file = $@"#max_provinces = 1466
+        var waterProvinces = map.Output.Provinces!.Select((n, i) => (n, i)).Where(n => n.n.IsWater).Select(n => n.i).ToArray();
+        var file = $@"#max_provinces = {map.Output.Provinces!.Length}
 definitions = ""definition.csv""
 provinces = ""provinces.png""
 #positions = ""positions.txt""
@@ -914,17 +914,17 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                 };
             }).ToArray();
 
-        // Remove all masks
-        {
-            var templatePath = Helper.GetPath(SettingsManager.ExecutablePath, "template_mask.png");
-            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain");
-            Helper.EnsureDirectoryExists(path);
-            foreach (var fileName in Directory.EnumerateFiles(path).Where(n => n.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
-            {
-                File.Delete(fileName);
-                File.Copy(templatePath, fileName);
-            }
-        }
+        //// Remove all masks
+        //{
+        //    var templatePath = Helper.GetPath(SettingsManager.ExecutablePath, "template_mask.png");
+        //    var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain");
+        //    Helper.EnsureDirectoryExists(path);
+        //    foreach (var fileName in Directory.EnumerateFiles(path).Where(n => n.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
+        //    {
+        //        File.Delete(fileName);
+        //        File.Copy(templatePath, fileName);
+        //    }
+        //}
 
         //// drylands
         //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "drylands"), map, "drylands_01_mask"),

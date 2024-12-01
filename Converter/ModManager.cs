@@ -75,8 +75,8 @@ supported_version=""{supportedGameVersion}""";
         await HeightMapManager.WriteHeightMap(map);
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
 
-        //await MapManager.DrawFlatMap(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Flat map created.");
+        await MapManager.DrawFlatMap(map);
+        MyConsole.WriteLine($"{i++}/{totalStageCount}. Flat map created.");
 
         await MapManager.WriteGraphics();
         MyConsole.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
