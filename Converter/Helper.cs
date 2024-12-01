@@ -2,6 +2,8 @@
 using System.Drawing.Imaging;
 using System.Drawing;
 using System.Text;
+using Svg;
+using SixLabors.ImageSharp;
 
 namespace Converter;
 
@@ -305,4 +307,68 @@ public static class Helper
 
         return grayscaleBitmap;
     }
+
+
+    public static unsafe byte[] ToGrayscaleByteArray(Bitmap colorBitmap)
+    {
+        int Width = colorBitmap.Width;
+        int Height = colorBitmap.Height;
+
+        byte[] array = new byte[Width * Height];
+
+        for (int y = 0; y < Height; y++)
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                System.Drawing.Color clr = colorBitmap.GetPixel(x, y);
+
+                Byte byPixel = (byte)((30 * clr.R + 59 * clr.G + 11 * clr.B) / 100);
+
+                array[Width * y + x] = byPixel;
+            }
+        }
+
+        return array;
+    }
+
+
+    public static unsafe byte[] ToRGBAByteArray(Bitmap colorBitmap)
+    {
+        int Width = colorBitmap.Width;
+        int Height = colorBitmap.Height;
+        int stride = 4;
+
+        byte[] array = new byte[Width * Height * stride];
+
+        for (int y = 0; y < Height; y++)
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                System.Drawing.Color clr = colorBitmap.GetPixel(x, y);
+
+                array[Width * stride * y + x * stride + 0] = clr.R;
+                array[Width * stride * y + x * stride + 1] = clr.G;
+                array[Width * stride * y + x * stride + 2] = clr.B;
+                array[Width * stride * y + x * stride + 3] = clr.A;
+            }
+        }
+
+        return array;
+    }
+
+    public static SixLabors.ImageSharp.Image ToGrayscaleImage(this SvgDocument svgDocument, int width, int height)
+    {
+        var bitmap = svgDocument.Draw(width, height);
+        var img = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.L8>(Helper.ToGrayscaleByteArray(bitmap).AsSpan(), width, height);
+        //img.Mutate(x => x.Grayscale(GrayscaleMode.Bt709));
+        return img;
+    }
+
+    public static SixLabors.ImageSharp.Image ToImage(this SvgDocument svgDocument, int width, int height)
+    {
+        var bitmap = svgDocument.Draw(width, height);
+        var img = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Rgba32>(Helper.ToRGBAByteArray(bitmap).AsSpan(), width, height);
+        return img;
+    }
+
 }

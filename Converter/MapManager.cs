@@ -3,6 +3,7 @@ using ImageMagick.Drawing;
 using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using Svg;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -759,6 +760,10 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             }
 
             var terrain = GetNode("@id='svgFlatMap'");
+            //var sea_island = GetNode("@id='sea_island'") as XmlElement;
+            //sea_island.SetAttribute("opacity", "0.5");
+            //Remove("@id='coastline'");
+            //Remove("@layers='-6, -3, -1'");
 
             {
                 // remove all title elements. They break svg.
@@ -768,47 +773,48 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     item.ParentNode.RemoveChild(item);
                 }
             }
-            {
-                // Preprocess all use tags as they are not supported in ImageMagick
-                var useElements = map.Input.XmlMap.SelectNodes("//use");
-                List<XmlElement> useElementsCopy = [];
-                foreach (XmlElement e in useElements)
-                {
-                    useElementsCopy.Add(e);
-                }
+            //{
+            //    // Preprocess all use tags as they are not supported in ImageMagick
+            //    var useElements = map.Input.XmlMap.SelectNodes("//use");
+            //    List<XmlElement> useElementsCopy = [];
+            //    foreach (XmlElement e in useElements)
+            //    {
+            //        useElementsCopy.Add(e);
+            //    }
 
-                foreach (XmlElement e in useElementsCopy)
-                {
-                    var reference = e.GetAttribute("href").Substring(1);
-                    if (GetNode($"@id='{reference}'") is { } r && r.CloneNode(true) is var referencedElement)
-                    {
-                        while(e.Attributes.Count > 0)
-                        {
-                            referencedElement!.Attributes!.Append(e.Attributes[0]);
-                        }
-                        referencedElement!.Attributes!.RemoveNamedItem("id");
-                        referencedElement!.Attributes.RemoveNamedItem("href");
+            //    foreach (XmlElement e in useElementsCopy)
+            //    {
+            //        var reference = e.GetAttribute("href").Substring(1);
+            //        if (GetNode($"@id='{reference}'") is { } r && r.CloneNode(true) is var referencedElement)
+            //        {
+            //            while(e.Attributes.Count > 0)
+            //            {
+            //                referencedElement!.Attributes!.Append(e.Attributes[0]);
+            //            }
+            //            referencedElement!.Attributes!.RemoveNamedItem("id");
+            //            referencedElement!.Attributes.RemoveNamedItem("href");
 
-                        e.ParentNode!.ReplaceChild(referencedElement, e);
-                    }
-                    else
-                    {
-                        // skip non-existing references
-                    }
-                }
-            }
+            //            e.ParentNode!.ReplaceChild(referencedElement, e);
+            //        }
+            //        else
+            //        {
+            //            // skip non-existing references
+            //        }
+            //    }
+            //}
 
-            var svg = new MagickImage(terrain.OuterXml.Select(n => (byte)n).ToArray(), MagickFormat.Svg);
-            svg.Resize(new MagickGeometry
-            {
-                Width = map.Settings.MapWidth,
-                Height = map.Settings.MapHeight,
-                IgnoreAspectRatio = true,
-            });
-            await svg.WriteAsync("terrain.dds", MagickFormat.Dds);
+         
+
+            var svg = SvgDocument.FromSvg<SvgDocument>(terrain.OuterXml);
+            var img = svg.ToImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var base64 = img.ToBase64String(SixLabors.ImageSharp.Formats.Png.PngFormat.Instance);
+            var magickImage = MagickImage.FromBase64(base64.Split(',')[1]);
+            //magickImage.Write("terrain.dds", MagickFormat.Dds);
+
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "flatmap.dds");
             Helper.EnsureDirectoryExists(path);
-            await svg.WriteAsync(path, MagickFormat.Dds);
+            magickImage.Write(path, MagickFormat.Dds);
+
         }
         catch (Exception ex)
         {

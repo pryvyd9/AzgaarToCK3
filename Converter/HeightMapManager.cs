@@ -1,15 +1,8 @@
-﻿using Aspose.Svg;
-using Aspose.Svg.Builder;
-using Aspose.Svg.Converters;
-using Aspose.Svg.Saving;
-using ImageMagick;
-using SixLabors.ImageSharp;
+﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using Svg;
 using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Xml;
 
@@ -211,15 +204,21 @@ public static class HeightMapManager
 
             var path = $"{Settings.OutputDirectory}/map_data/heightmap.png";
 
-            var file = new Bitmap(path);
-            var length8 = map.Settings.MapWidth * map.Settings.MapHeight * 1;
-            byte[] pixels = new byte[length8];
-            {
-                var bitmapData = file.LockBits(new System.Drawing.Rectangle(0, 0, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight), ImageLockMode.ReadOnly, file.PixelFormat);
-                // Copy bitmap to byte[]
-                Marshal.Copy(bitmapData.Scan0, pixels, 0, (int)length8);
-                file.UnlockBits(bitmapData);
-            }
+            using var file = SixLabors.ImageSharp.Image.Load<L8>(path);
+
+            var pixelCount = file.Width * file.Height;
+            var pixels = new byte[pixelCount];
+            file.CopyPixelDataTo(pixels);
+
+            //var file = new Bitmap(path);
+            //var length8 = map.Settings.MapWidth * map.Settings.MapHeight * 1;
+            //byte[] pixels = new byte[length8];
+            //{
+            //    var bitmapData = file.LockBits(new System.Drawing.Rectangle(0, 0, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight), ImageLockMode.ReadOnly, file.PixelFormat);
+            //    // Copy bitmap to byte[]
+            //    Marshal.Copy(bitmapData.Scan0, pixels, 0, (int)length8);
+            //    file.UnlockBits(bitmapData);
+            //}
 
 
             var firstDerivative = Gradient(pixels, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
@@ -446,13 +445,13 @@ empty_tile_offset={{ 255 127 }}
             (background as XmlElement).SetAttribute("height", "100%");
             land.PrependChild(background);
 
-            (land as XmlElement).SetAttribute("filter", "url(#blur5)");
+            //(land as XmlElement).SetAttribute("filter", "url(#blur10)");
             (land as XmlElement).SetAttribute("background-color", "black");
             (land as XmlElement).SetAttribute("fill", "black");
 
             // make only landHeights visible
             var landHeights = GetNode("@id='landHeights'") as XmlElement;
-            //landHeights.SetAttribute("filter", "url(#blur10)");
+            landHeights.SetAttribute("filter", "url(#blur10)");
             //landHeights.SetAttribute("filter", "url(#blurFilter)");
 
             var landHeightsBackground = landHeights.FirstChild;
@@ -489,32 +488,15 @@ empty_tile_offset={{ 255 127 }}
             Remove("@id='dropShadow05'");
             Remove("@id='landmass'");
             Remove("@id='sea_island'");
+                
+            var svg = SvgDocument.FromSvg<SvgDocument>(land.OuterXml);
+            var img = svg.ToGrayscaleImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
 
-            var svg = new MagickImage(land.OuterXml.Select(n => (byte)n).ToArray(), MagickFormat.Svg);
-
-            //var colormap = Enumerable.Range(0, 256).Select(n => new MagickColor((byte)n, (byte)n, (byte)n));
-            //svg.Remap(colormap);
-            //svg.BackgroundColor = new MagickColor(0, 0, 0);
-
-            svg.Resize(new MagickGeometry
-            {
-                Width = map.Settings.MapWidth,
-                Height = map.Settings.MapHeight,
-                IgnoreAspectRatio = true,
-            });
-            //await svg.WriteAsync("landHeights.png", MagickFormat.Png8);
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
             Helper.EnsureDirectoryExists(path);
-            await svg.WriteAsync(path, MagickFormat.Png8);
 
-            //using var svg = new SVGDocument(land.OuterXml, ".");
-            //var options = new ImageSaveOptions(Aspose.Svg.Rendering.Image.ImageFormat.Png)
-            //{
-            //    Format = Aspose.Svg.Rendering.Image.ImageFormat.Png,
-            //    HorizontalResolution = map.Settings.MapWidth,
-            //    VerticalResolution = map.Settings.MapHeight,
-            //};
-            //Aspose.Svg.Converters.Converter.ConvertSVG(svg, options, Helper.GetPath(SettingsManager.ExecutablePath, "landHeights.png"));
+            //img.Save("landHeights.png");
+            img.Save(path);
         }
         catch (Exception ex)
         {
