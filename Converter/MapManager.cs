@@ -1,6 +1,7 @@
 ﻿using ImageMagick;
 using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Tga;
 using SixLabors.ImageSharp.Processing;
 using Svg;
 using System.Diagnostics;
@@ -853,32 +854,15 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             throw;
         }
     }
-    public static async Task WriteMasks(Map map)
-    {
-        // Remove all masks
-        {
-            var templatePath = Helper.GetPath(SettingsManager.ExecutablePath, "template_mask.png");
-            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain");
-            Helper.EnsureDirectoryExists(path);
-            foreach (var fileName in Directory.EnumerateFiles(path).Where(n => n.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
-            {
-                File.Delete(fileName);
-                File.Copy(templatePath, fileName);
-            }
-        }
 
+    private static async Task WriteMaskFromXml(Map map, XmlDocument detail_index, XmlDocument detail_intensity, AzgaarBiome biomeId)
+    {
         // create ns manager
         XmlNamespaceManager xmlnsManager = new(map.Input.XmlMap.NameTable);
         xmlnsManager.AddNamespace("ns", "http://www.w3.org/2000/svg");
 
         XmlElement? GetNodeFromDoc(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager) as XmlElement;
         XmlElement? GetNode(XmlNode xmlElement, string attribute) => xmlElement.SelectSingleNode($"//*[{attribute}]", xmlnsManager) as XmlElement;
-
-        void Remove(string attribute)
-        {
-            var node = map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
-            node?.ParentNode?.RemoveChild(node);
-        }
         void RemoveExcept(XmlNode xmlElement, string attribute)
         {
             XmlElement? childExcept = GetNode(xmlElement, attribute);
@@ -897,103 +881,163 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             }
         }
 
-        void WriteMaskFromXml(int biomeId, string filename)
+        var doc = new XmlDocument();
+        doc.LoadXml(GetNodeFromDoc("@id='svgbiomes'")!.OuterXml);
+        var biomeAttribute = $"@id='biome{(int)biomeId}'";
+        var biome = GetNode(doc, biomeAttribute);
+        if (biome is null)
         {
-            var doc = new XmlDocument();
-            doc.LoadXml(GetNodeFromDoc("@id='svgbiomes'")!.OuterXml);
-            var biomeAttribute = $"@id='biome{biomeId}'";
-            var biome = GetNode(doc, biomeAttribute);
-            if (biome is null)
-            {
-                return;
-            }
-            biome.SetAttribute("stroke", "white");
+            return;
+        }
+        biome.SetAttribute("stroke", "white");
+        biome.SetAttribute("fill", "white");
 
-            var biomes = GetNode(doc, "@id='biomes'");
-            biomes!.SetAttribute("filter", "url(#blur10)");
+        var biomes = GetNode(doc, "@id='biomes'");
+        //biomes!.SetAttribute("filter", "url(#blur10)");
 
-            RemoveExcept(biomes, biomeAttribute);
+        RemoveExcept(biomes, biomeAttribute);
 
-            var defs = doc.CreateDocumentFragment();
-            defs.InnerXml = @" <defs>
-    <filter id=""blur10"">
-      <feGaussianBlur in=""SourceGraphic"" stdDeviation=""10"" />
-    </filter>
-  </defs>";
-            doc.DocumentElement.FirstChild.PrependChild(defs);
+        var defs = doc.CreateDocumentFragment();
+        defs.InnerXml = @"<defs><filter id=""blur10""><feGaussianBlur in=""SourceGraphic"" stdDeviation=""10"" /></filter></defs>";
+        doc.DocumentElement.FirstChild.PrependChild(defs);
 
-            var svg = SvgDocument.FromSvg<SvgDocument>(doc.OuterXml);
-            var img = svg.ToGrayscaleImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+        var svg = SvgDocument.FromSvg<SvgDocument>(doc.OuterXml);
+        var img = svg.ToGrayscaleImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
 
-            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", $"{filename}.png");
-            Helper.EnsureDirectoryExists(path);
-            //img.Save($"{filename}.png");
-            img.Save(path);
+        var ck3Biome = biomeId.ToCk3Biome();
+
+        var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", ck3Biome.ToMaskFilename());
+        Helper.EnsureDirectoryExists(path);
+        //img.Save($"{filename}.png");
+        await img.SaveAsync(path);
+
+        // Detail Index
+        {
+            var indexColor = $"rgba({(int)ck3Biome},255,255,255)";
+            biome.SetAttribute("stroke", indexColor);
+            biome.SetAttribute("fill", indexColor);
+
+            var detail_index_biome = detail_index.CreateDocumentFragment();
+            detail_index_biome.InnerXml = biome.OuterXml;
+            detail_index.DocumentElement!.AppendChild(detail_index_biome);
+
+            var detail_index_svg = GetNode(detail_index, "@id='detail_index'")!;
+            detail_index_svg.AppendChild(detail_index_biome);
+        }
+        // Detail Intensity
+        {
+            var intensityColor = $"rgba(255,0,0,1)";
+            biome.SetAttribute("stroke", intensityColor);
+            biome.SetAttribute("fill", intensityColor);
+
+            var detail_intensity_biome = detail_intensity.CreateDocumentFragment();
+            detail_intensity_biome.InnerXml = biome.OuterXml;
+            detail_intensity.DocumentElement!.AppendChild(detail_intensity_biome);
+
+            var detail_intensity_svg = GetNode(detail_intensity, "@id='detail_intensity'")!;
+            detail_intensity_svg.AppendChild(detail_intensity_biome);
+        }
+    }
+    public static async Task WriteMasks(Map map)
+    {
+        var detail_index = new XmlDocument();
+        {
+            detail_index.LoadXml(@"<svg id=""detail_index"" width=""1704"" height=""927"" version=""1.1"" background-color=""white"" >
+<rect x=""0"" y=""0"" width=""1704"" height=""927"" fill=""white"" />
+</svg>");
         }
 
-        WriteMaskFromXml(3, "wetlands_02_mask");
-        WriteMaskFromXml(4, "plains_01_mask");
-        WriteMaskFromXml(5, "farmland_01_mask");
-        WriteMaskFromXml(7, "forest_jungle_01_mask");
-        WriteMaskFromXml(8, "forest_leaf_01_mask");
-        WriteMaskFromXml(12, "wetlands_02_mask");
 
+        var detail_intensity = new XmlDocument();
+        {
+            detail_intensity.LoadXml(@"<svg id=""detail_intensity"" width=""1704"" height=""927"" version=""1.1"" background-color=""black"" >
+<rect x=""0"" y=""0"" width=""1704"" height=""927"" fill=""black"" />
+</svg>");
+        }
 
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.HotDesert);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.ColdDesert);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Savanna);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Grassland);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.TropicalSeasonalForest);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.TemperateDeciduousForest);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.TropicalRainforest);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.TemperateRainforest);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Taiga);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Tundra);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Glacier);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Wetland);
 
-        var nonWaterProvinceCells = map.Output.Provinces
-            .Skip(1)
-            .Where(n => !n.IsWater && n.Cells.Any())
-            .SelectMany(n => n.Cells)
-            .ToArray();
-
-        var provinceBiomes = map.Output.Provinces
-            .Skip(1)
-            .Where(n => !n.IsWater && n.Cells.Any())
-            .Select(n =>
+        // write detail_index
+        {
+            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "detail_index.tga");
+            Helper.EnsureDirectoryExists(path);
+            var svg = SvgDocument.FromSvg<SvgDocument>(detail_index.OuterXml);
+            var img = svg.ToImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var encoder = new TgaEncoder
             {
-                var primaryBiome = n.Cells.Select(m => m.biome).Max();
-                var heightDifference = (int)Helper.HeightDifference(n);
-                return new
-                {
-                    Province = n,
-                    Biome = Helper.GetProvinceBiomeName(primaryBiome, heightDifference)
-                };
-            }).ToArray();
+                BitsPerPixel = TgaBitsPerPixel.Pixel32,
+                Compression = TgaCompression.None,
+            };
+            //await img.SaveAsync("detail_index.tga", encoder);
+            await img.SaveAsync(path, encoder);
+        }
+
+        // write detail_intensity
+        {
+            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "detail_intensity.tga");
+            Helper.EnsureDirectoryExists(path);
+            var svg = SvgDocument.FromSvg<SvgDocument>(detail_intensity.OuterXml);
+            var img = svg.ToImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var encoder = new TgaEncoder
+            {
+                BitsPerPixel = TgaBitsPerPixel.Pixel32,
+                Compression = TgaCompression.None,
+            };
+            //await img.SaveAsync("detail_intensity.tga", encoder);
+            await img.SaveAsync(path, encoder);
+        }
+
+        //var nonWaterProvinceCells = map.Output.Provinces
+        //    .Skip(1)
+        //    .Where(n => !n.IsWater && n.Cells.Any())
+        //    .SelectMany(n => n.Cells)
+        //    .ToArray();
+
+        //var provinceBiomes = map.Output.Provinces
+        //    .Skip(1)
+        //    .Where(n => !n.IsWater && n.Cells.Any())
+        //    .Select(n =>
+        //    {
+        //        var primaryBiome = n.Cells.Select(m => m.biome).Max();
+        //        var heightDifference = (int)Helper.HeightDifference(n);
+        //        return new
+        //        {
+        //            Province = n,
+        //            Biome = Helper.GetProvinceBiomeName(primaryBiome, heightDifference)
+        //        };
+        //    }).ToArray();
 
      
 
-        //// drylands
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "drylands"), map, "drylands_01_mask"),
-        // taiga
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is var b && (b == "taiga" || b == "drylands" && Helper.IsCellLowMountains(n.height) || b == "drylands" && Helper.IsCellMountains(n.height))), map, "forest_pine_01_mask");
-        // plains
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "plains"), map, "plains_01_mask");
-        // farmlands
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "farmlands"), map, "farmland_01_mask");
-        // Desert
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "desert" && !Helper.IsCellMountains(n.height) && !Helper.IsCellHighMountains(n.height)), map, "desert_01_mask");
-        // desert_mountains
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "desert" && Helper.IsCellMountains(n.height)), map, "mountain_02_desert_mask");
-        // oasis
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "oasis"), map, "oasis_mask");
-        // hills
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.IsCellHills(n.biome, n.height)), map, "hills_01_mask");
-        // low mountains
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellLowMountains(n.height)), map, "mountain_02_mask");
-        // mountains
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellMountains(n.height) || Helper.IsCellHighMountains(n.height)), map, "mountain_02_snow_mask");
-        // HighMountains
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellHighMountains(n.height)), map, "mountain_02_c_snow_mask");
-        // jungle
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "jungle"), map, "forest_jungle_01_mask");
-        // forest
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "forest"), map, "forest_leaf_01_mask");
-        // wetlands
-        await WriteMask(provinceBiomes.Where(n => n.Biome == "wetlands").SelectMany(n => n.Province.Cells).Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask");
-        // steppe
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "steppe"), map, "wetlands_02_mask");
-        // floodplains
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask");
+        //// taiga
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is var b && (b == "taiga" || b == "drylands" && Helper.IsCellLowMountains(n.height) || b == "drylands" && Helper.IsCellMountains(n.height))), map, "forest_pine_01_mask");
+        //// Desert
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "desert" && !Helper.IsCellMountains(n.height) && !Helper.IsCellHighMountains(n.height)), map, "desert_01_mask");
+        //// desert_mountains
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "desert" && Helper.IsCellMountains(n.height)), map, "mountain_02_desert_mask");
+        //// oasis
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "oasis"), map, "oasis_mask");
+        //// hills
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.IsCellHills(n.biome, n.height)), map, "hills_01_mask");
+        //// low mountains
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellLowMountains(n.height)), map, "mountain_02_mask");
+        //// mountains
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellMountains(n.height) || Helper.IsCellHighMountains(n.height)), map, "mountain_02_snow_mask");
+        //// HighMountains
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellHighMountains(n.height)), map, "mountain_02_c_snow_mask");
+        //// wetlands
+        //await WriteMask(provinceBiomes.Where(n => n.Biome == "wetlands").SelectMany(n => n.Province.Cells).Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask");
     }
 
     public static async Task WriteGraphics()

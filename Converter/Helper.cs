@@ -7,6 +7,82 @@ using SixLabors.ImageSharp;
 
 namespace Converter;
 
+public enum AzgaarBiome
+{
+    HotDesert = 1,
+    ColdDesert,
+    Savanna,
+    Grassland,
+    TropicalSeasonalForest,
+    TemperateDeciduousForest,
+    TropicalRainforest,
+    TemperateRainforest,
+    Taiga,
+    Tundra,
+    Glacier,
+    Wetland,
+}
+
+public enum CK3Biome
+{
+    Plains_01 = 0,
+    Plains_01_dry,
+    Plains_01_dry_mud,
+    Plains_01_rough,
+    Plains_01_noisy,
+    Farmland_01,
+    Mud_wet_01,
+    Beach_02,
+    Beach_02_pebbles,
+    Beach_02_mediterranean,
+    Hills_01,
+    Hills_01_rocks,
+    Hills_01_rocks_Medi,
+    Hills_01_rocks_small,
+    Floodplains_01,
+    Wetlands_02 = 15,
+    Wetlands_02_mud,
+    Coastline_cliff_grey,
+    Mountain_02,
+    Mountain_02_b,
+    Mountain_02_d,
+    Mountain_02_d_valleys,
+    Mountain_02_d_snow,
+    Mountain_02_d_desert,
+    Mountain_02_snow,
+    Mountain_02_c,
+    Mountain_02_c_snow,
+    Forest_Leaf_01 = 28,
+    //Forestfloor_02,
+    Forest_jungle_01,
+    Forest_pine_01 = 30,
+    Forestfloor,
+    Desert_01,
+    Desert_02,
+    Desert_cracked,
+    Desert_wavy_01,
+    Desert_wavy_01_larger,
+    Desert_flat_01,
+    Desert_rocky,
+    Mountain_02_desert,
+    Mountain_02_desert_c,
+    Drylands_01,
+    Drylands_01_grassy,
+    Drylands_01_cracked,
+    Oasis,
+    Medi_dry_mud,
+    Medi_grass_01,
+    Medi_lumpy_grass,
+    Medi_noisy_grass,
+    Medi_farmlands,
+    Northern_plains_01 = 50,
+    Steppe_grass,
+    Steppe_rocks,
+    Steppe_bushes,
+    Snow = 54,
+    India_farmlands,
+}
+
 public static class Helper
 {
     // Generates path that works in both Windows and Mac
@@ -54,20 +130,43 @@ public static class Helper
     }
     public static string MapBiome(int biomeId)
     {
+        return MapBiome((AzgaarBiome)biomeId);
+    }
+    public static string MapBiome(AzgaarBiome biomeId)
+    {
         return biomeId switch
         {
-            1 => "desert",// Hot desert > desert
-            2 => "taiga",// Cold desert > taiga
-            3 => "steppe",// Savanna > steppe
-            4 => "plains",// Grassland > plains
-            5 => "farmlands",// Tropical seasonal forest > farmlands
-            6 => "forest",// Temperate deciduous forest > forest
-            7 => "jungle",// Tropical rainforest > jungle
-            8 => "forest",// "Temperate rainforest" > forest
-            9 => "taiga",// Taiga > taiga
-            10 => "taiga",// Tundra > taiga
-            11 => "drylands",// Glacier > floodplains
-            12 => "floodplains",// Wetland > wetlands
+            AzgaarBiome.HotDesert => "desert",// Hot desert > desert
+            AzgaarBiome.ColdDesert => "taiga",// Cold desert > taiga
+            AzgaarBiome.Savanna => "steppe",// Savanna > steppe
+            AzgaarBiome.Grassland => "plains",// Grassland > plains
+            AzgaarBiome.TropicalSeasonalForest => "farmlands",// Tropical seasonal forest > farmlands
+            AzgaarBiome.TemperateDeciduousForest => "forest",// Temperate deciduous forest > forest
+            AzgaarBiome.TropicalRainforest => "jungle",// Tropical rainforest > jungle
+            AzgaarBiome.TemperateRainforest => "forest",// "Temperate rainforest" > forest
+            AzgaarBiome.Taiga => "taiga",// Taiga > taiga
+            AzgaarBiome.Tundra => "taiga",// Tundra > taiga
+            AzgaarBiome.Glacier => "drylands",// Glacier > floodplains
+            AzgaarBiome.Wetland => "floodplains",// Wetland > wetlands
+            _ => throw new ArgumentException("Unrecognized biomeId")
+        };
+    }
+    public static CK3Biome ToCk3Biome(this AzgaarBiome biomeId)
+    {
+        return biomeId switch
+        {
+            AzgaarBiome.HotDesert => CK3Biome.Desert_01,
+            AzgaarBiome.ColdDesert => CK3Biome.Desert_02,
+            AzgaarBiome.Savanna => CK3Biome.Plains_01_dry,
+            AzgaarBiome.Grassland => CK3Biome.Plains_01,
+            AzgaarBiome.TropicalSeasonalForest => CK3Biome.Farmland_01,
+            AzgaarBiome.TemperateDeciduousForest => CK3Biome.Forest_Leaf_01,
+            AzgaarBiome.TropicalRainforest => CK3Biome.Forest_jungle_01,
+            AzgaarBiome.TemperateRainforest => CK3Biome.Forest_pine_01,
+            AzgaarBiome.Taiga => CK3Biome.Forestfloor,
+            AzgaarBiome.Tundra => CK3Biome.Northern_plains_01,
+            AzgaarBiome.Glacier => CK3Biome.Snow,
+            AzgaarBiome.Wetland => CK3Biome.Floodplains_01,
             _ => throw new ArgumentException("Unrecognized biomeId")
         };
     }
@@ -130,6 +229,11 @@ public static class Helper
             };
         }
         return MapBiome(biomeId);
+    }
+
+    public static string ToMaskFilename(this CK3Biome biome)
+    {
+        return biome.ToString().ToLower() + "_mask.png";
     }
 
     public static double Percentile(int[] sequence, double excelPercentile)
