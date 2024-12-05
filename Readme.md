@@ -32,6 +32,7 @@ Discord: https://discord.gg/CqHcpRRH
 - Cultures are mapped to random existing cultures.
 - Religions are mapped to random existing religions.
 - Rivers are not generated.
+- Biomes do not have smooth transition. They are still WIP. [Biome Conversion](https://github.com/pryvyd9/AzgaarToCK3/blob/master/Converter/Helper.cs#L158-L169)
 
 ## Known issues
 - Water provinces are rarely convex. It means that ship routes will look like navigators are all drunk.
