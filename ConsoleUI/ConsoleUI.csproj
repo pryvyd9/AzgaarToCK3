@@ -2,17 +2,21 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Publish</Configurations>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Converter\Converter.csproj" />
-  </ItemGroup>
-
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Publish|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+  
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)'=='Publish' And '$(BuildingInsideVisualStudio)' == 'true'">
     <Exec Command="powershell -ExecutionPolicy Unrestricted $(ProjectDir)afterPublishBuild.ps1 -ProjectDir $(ProjectDir) -OutDir $(OutDir)" />
   </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Converter\Converter.csproj" />
+  </ItemGroup>
 </Project>

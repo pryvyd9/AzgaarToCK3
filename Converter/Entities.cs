@@ -1,6 +1,7 @@
 ﻿using ImageMagick;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Xml;
 
 namespace Converter;
 
@@ -151,28 +152,38 @@ public record NameBaseName(string id, string name);
 public record NameBasePrepared(string name, NameBaseName[] names);
 public class Map
 {
-    public const int MapWidth = 8192;
-    public const int MapHeight = 4096;
+    public class MapInput
+    {
+        public required GeoMap GeoMap { get; init; }
+        public required GeoMapRivers Rivers { get; init; }
+        public required JsonMap JsonMap { get; init; }
+        public required XmlDocument XmlMap { get; init; }
+    }
+    public required MapInput Input { get; init; }
+
+    public class MapOutput
+    {
+        public Province[]? Provinces { get; set; }
+        public Empire[]? Empires { get; set; }
+
+        public List<Character>? Characters { get; set; }
+        public NameBasePrepared? NameBase { get; set; }
+        public Dictionary<int, int>? IdToIndex { get; set; }
+    }
+    public required MapOutput Output { get; init; }
 
 
-    public GeoMap GeoMap { get; set; }
-    public GeoMapRivers Rivers { get; set; }
-    public JsonMap JsonMap { get; set; }
-    public float XOffset => JsonMap.mapCoordinates.lonW;
-    public float YOffset => JsonMap.mapCoordinates.latS;
-    public float XRatio => MapWidth / JsonMap.mapCoordinates.lonT;
-    public float YRatio => MapHeight / JsonMap.mapCoordinates.latT;
+    //public const int MapWidth = 8192;
+    //public const int MapHeight = 4096;
 
-    public Province[] Provinces { get; set; }
-    public Empire[] Empires { get; set; }
+    public float XOffset => Input.JsonMap.mapCoordinates.lonW;
+    public float YOffset => Input.JsonMap.mapCoordinates.latS;
+    public float XRatio => Settings.MapWidth / Input.JsonMap.mapCoordinates.lonT;
+    public float YRatio => Settings.MapHeight / Input.JsonMap.mapCoordinates.latT;
 
-    public double pixelXRatio => (double)MapWidth / JsonMap.info.width;
-    public double pixelYRatio => (double)MapHeight / JsonMap.info.height;
+    public double PixelXRatio => (double)Settings.MapWidth / Input.JsonMap.info.width;
+    public double PixelYRatio => (double)Settings.MapHeight / Input.JsonMap.info.height;
 
-    public Dictionary<int, int> IdToIndex { get; set; }
     public Settings Settings { get; set; }
-
-    public List<Character> Characters { get; set; }
-    public NameBasePrepared NameBase { get; set; }
 }
 

@@ -1,10 +1,13 @@
 ﻿using ImageMagick;
 using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Tga;
 using SixLabors.ImageSharp.Processing;
+using Svg;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Xml;
 
 namespace Converter;
 
@@ -18,48 +21,29 @@ public partial class JsonMapJsonContext : JsonSerializerContext {}
 
 public static class MapManager
 {
-    public static async Task<GeoMap> LoadGeojson()
+    public static async Task<XmlDocument> LoadXml()
     {
         try
         {
-            var file = await File.ReadAllTextAsync(Settings.Instance.InputGeojsonPath);
-            var geomap = JsonSerializer.Deserialize(file, GeoMapJsonContext.Default.GeoMap);
-            return geomap;
-        }
-        catch (Exception e)
-        {
-            Debugger.Break();
-            throw;
-        }
-    }
-    //public static async Task<GeoMapRivers> LoadGeojsonRivers()
-    //{
-    //    try
-    //    {
-    //        var file = await File.ReadAllTextAsync("inputRivers.geojson");
-    //        var geomap = JsonSerializer.Deserialize<GeoMapRivers>(file);
-    //        return geomap;
-    //    }
-    //    catch (Exception e)
-    //    {
-    //        Debugger.Break();
-    //        throw;
-    //    }
-    //}
-    public static async Task<JsonMap> LoadJson()
-    {
-        try
-        {
-            var file = await File.ReadAllTextAsync(Settings.Instance.InputJsonPath);
-            var jsonmap = JsonSerializer.Deserialize(file, JsonMapJsonContext.Default.JsonMap);
-            return jsonmap;
-        }
-        catch (Exception e)
-        {
-            Debugger.Break();
-            throw;
-        }
+            var unescapedFile = File.ReadAllText(Settings.Instance.InputXmlPath);
+            unescapedFile = unescapedFile.Replace("&amp;quot;", "\"");
+            unescapedFile = unescapedFile.Replace("xmlns=\"http://www.w3.org/2000/svg\"", "");
+            unescapedFile = unescapedFile.Replace("xmlns:dc=\"http://purl.org/dc/elements/1.1/\"", "");
+            unescapedFile = unescapedFile.Replace("xmlns:xlink=\"http://www.w3.org/1999/xlink\"", "");
+            unescapedFile = unescapedFile.Replace("xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"", "");
+            unescapedFile = unescapedFile.Replace("xmlns=\"http://www.w3.org/1999/xhtml\"", "");
+            unescapedFile = unescapedFile.Replace("xmlns:svg=\"http://www.w3.org/2000/svg\"", "");
 
+            var file = new XmlDocument();
+            file.LoadXml(unescapedFile);
+
+            return file;
+        }
+        catch (Exception e)
+        {
+            Debugger.Break();
+            throw;
+        }
     }
 
     private static MagickColor GetColor(int i, int maxI)
@@ -170,15 +154,28 @@ public static class MapManager
     }
     private static List<Province> CreateWaterProvinces(Province waterProvince)
     {
+        var logEverySeconds = 30;
+        var timer = new System.Timers.Timer(logEverySeconds * 1000);
+        timer.AutoReset = true;
+        timer.Start();
+
         try
         {
             var cells = waterProvince.Cells;
 
             var largestWaterProvince = cells.MaxBy(n => n.area).area;
-            var areaPerProvince = largestWaterProvince / 2;
+            var cellsBy128 = cells.Count / 128;
+            var areaPerProvince = largestWaterProvince > cellsBy128
+                ? largestWaterProvince / 2
+                : cellsBy128 / 2;
 
             var unprocessedCells = waterProvince.Cells.ToDictionary(n => n.id, n => n);
             var provinces = new List<Province>();
+
+            timer.Elapsed += (s, e) =>
+            {
+                MyConsole.WriteLine($"Water provinces created: {provinces.Count}...");
+            };
 
             do
             {
@@ -221,11 +218,20 @@ public static class MapManager
                 }
             } while (unprocessedCells.Count > 0);
 
+            timer.Stop();
+
+            if (provinces.Count > short.MaxValue)
+            {
+                throw new Exception($"Water province count exceeded max supported value of {short.MaxValue}");
+            }
+
             return provinces;
         }
         catch (Exception ex)
         {
             Debugger.Break();
+            timer.Stop();
+
             throw;
         }
     }
@@ -309,14 +315,28 @@ public static class MapManager
         return finalProvinces;
     }
 
-    public static async Task<Map> ConvertMap(GeoMap geoMap, GeoMapRivers geoMapRivers, JsonMap jsonMap)
+    public static async Task<Map> ConvertMap(XmlDocument xmlMap)
     {
-        var provinces = CreateProvinces(geoMap, jsonMap);
+        XmlNamespaceManager xmlnsManager = new(xmlMap.NameTable);
+        xmlnsManager.AddNamespace("ns", "http://www.w3.org/1999/xhtml");
+
+        XmlNode? GetNode(string attribute) => xmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
+        var geoMapXml = GetNode("@id='geojson'")!.InnerXml;
+        var geoMap = JsonSerializer.Deserialize(geoMapXml, GeoMapJsonContext.Default.GeoMap);
+
+        var jsonMapXml = GetNode("@id='json'")!.InnerXml;
+        var jsonMap = JsonSerializer.Deserialize(jsonMapXml, JsonMapJsonContext.Default.JsonMap);
+
+        var geoMapRivers = new GeoMapRivers([]);
+
+
+
+        var provinces = CreateProvinces(geoMap!, jsonMap!);
 
         var rnd = new Random(1);
-        var nameBase = jsonMap.nameBases[rnd.Next(jsonMap.nameBases.Length)];
+        var nameBase = jsonMap!.nameBases[rnd.Next(jsonMap.nameBases.Length)];
         var nameBaseNames = nameBase.b.Split(',')
-            .Select(n => 
+            .Select(n =>
             {
                 var id = n.Replace("'", "").Replace(' ', '_').ToLowerInvariant();
                 return new NameBaseName(id, n);
@@ -324,16 +344,24 @@ public static class MapManager
 
         var map = new Map
         {
-            GeoMap = geoMap,
-            Rivers = geoMapRivers,
-            JsonMap = jsonMap,
-            Provinces = provinces,
-            IdToIndex = provinces.Select((n, i) => (n, i)).ToDictionary(n => n.n.Id, n => n.i),
-            NameBase = new NameBasePrepared(nameBase.name, nameBaseNames),
+            Input = new()
+            {
+                GeoMap = geoMap!,
+                Rivers = geoMapRivers,
+                JsonMap = jsonMap,
+                XmlMap = xmlMap,
+            },
+            Output = new()
+            {
+                Provinces = provinces,
+                IdToIndex = provinces.Select((n, i) => (n, i)).ToDictionary(n => n.n.Id, n => n.i),
+                NameBase = new NameBasePrepared(nameBase.name, nameBaseNames),
+            }
         };
 
         return map;
     }
+
 
     public static async Task DrawCells(Map map)
     {
@@ -341,13 +369,13 @@ public static class MapManager
         {
             var settings = new MagickReadSettings()
             {
-                Width = Map.MapWidth,
-                Height = Map.MapHeight,
+                Width = (int)map.Settings.MapWidth,
+                Height = (int)map.Settings.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:white", settings);
 
             var drawables = new Drawables();
-            foreach (var feature in map.GeoMap.features)
+            foreach (var feature in map.Input.GeoMap.features)
             {
                 foreach (var cell in feature.geometry.coordinates)
                 {
@@ -376,13 +404,13 @@ public static class MapManager
         {
             var settings = new MagickReadSettings()
             {
-                Width = Map.MapWidth,
-                Height = Map.MapHeight,
+                Width = (int)map.Settings.MapWidth,
+                Height = (int)map.Settings.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:black", settings);
 
             var drawables = new Drawables();
-            foreach (var province in map.Provinces.Skip(1))
+            foreach (var province in map.Output.Provinces.Skip(1))
             {
                 foreach (var cell in province.Cells)
                 {
@@ -390,13 +418,13 @@ public static class MapManager
                         .DisableStrokeAntialias()
                         .StrokeColor(province.Color)
                         .FillColor(province.Color)
-                        .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, Map.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+                        .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, map.Settings.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
                 }
             }
 
             cellsMap.Draw(drawables);
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "provinces.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             await cellsMap.WriteAsync(path);
         }
         catch (Exception ex)
@@ -412,14 +440,14 @@ public static class MapManager
         {
             var settings = new MagickReadSettings()
             {
-                Width = Map.MapWidth,
-                Height = Map.MapHeight,
+                Width = (int)map.Settings.MapWidth,
+                Height = (int)map.Settings.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:#ff0080", settings);
-
+            
             var drawables = new Drawables();
             // Draw land
-            foreach (var province in map.Provinces.Skip(1).Where(n => !n.IsWater))
+            foreach (var province in map.Output.Provinces.Skip(1).Where(n => !n.IsWater))
             {
                 foreach (var cell in province.Cells)
                 {
@@ -431,7 +459,7 @@ public static class MapManager
                 }
             }
 
-            foreach (var river in map.Rivers.features)
+            foreach (var river in map.Input.Rivers.features)
             {
                 drawables
                     .DisableStrokeAntialias()
@@ -442,11 +470,10 @@ public static class MapManager
 
             cellsMap.Draw(drawables);
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "rivers.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
-
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             cellsMap.Settings.SetDefine("png:color-type", "1");
 
-            string[] colormap = new string[] {
+            string[] colormap = [
                "#00FF00",
                "#FF0000",
                "#FFFC00",
@@ -465,10 +492,9 @@ public static class MapManager
                "#18CE00",
                "#FF0080",
                "#FFFFFF",
-            };
+            ];
 
             cellsMap.Map(colormap.Select(n => new MagickColor(n)));
-
             await cellsMap.WriteAsync(path);
         }
         catch (Exception ex)
@@ -479,9 +505,9 @@ public static class MapManager
     }
     public static async Task WriteDefinition(Map map)
     {
-        var lines = map.Provinces.Select((n, i) => $"{i};{n.Color.R};{n.Color.G};{n.Color.B};{n.Name};x;");
+        var lines = map.Output.Provinces.Select((n, i) => $"{i};{n.Color.R};{n.Color.G};{n.Color.B};{n.Name};x;");
         var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "definition.csv");
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        Helper.EnsureDirectoryExists(path);
         await File.WriteAllLinesAsync(path, lines);
     }
 
@@ -489,12 +515,12 @@ public static class MapManager
     {
         var offset = new PointD(0);
 
-        var lines = map.Provinces.Where(n => n.Burg is not null).Select(n =>
+        var lines = map.Output.Provinces.Where(n => n.Burg is not null).Select(n =>
         {
             var p = Helper.PixelToFullPixel(n.Burg.x, n.Burg.y, map);
             var str =
 $@"        {{
-            id = {map.IdToIndex[n.Id]}
+            id = {map.Output.IdToIndex[n.Id]}
             position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
@@ -515,7 +541,7 @@ $@"game_object_locator={{
     }}
 }}";
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "building_locators.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
         }
         catch (Exception e)
@@ -527,13 +553,13 @@ $@"game_object_locator={{
     private static async Task WriteSiegeLocators(Map map)
     {
         var offset = new PointD(10, -5);
-        var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
+        var lines = map.Output.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
             var p = Helper.PixelToFullPixel(n.Burg.x, n.Burg.y, map);
 
             var str =
 $@"        {{
-            id = {map.IdToIndex[n.Id]}
+            id = {map.Output.IdToIndex[n.Id]}
             position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
@@ -554,7 +580,7 @@ $@"game_object_locator={{
     }}
 }}";
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "siege_locators.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
         }
         catch (Exception e)
@@ -566,13 +592,13 @@ $@"game_object_locator={{
     private static async Task WriteCombatLocators(Map map)
     {
         var offset = new PointD(0, 10);
-        var lines = map.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
+        var lines = map.Output.Provinces.Where(n => n.Burg is not null).Select((n, i) =>
         {
             var p = Helper.PixelToFullPixel(n.Burg.x, n.Burg.y, map);
 
             var str =
 $@"        {{
-            id = {map.IdToIndex[n.Id]}
+            id = {map.Output.IdToIndex[n.Id]}
             position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
@@ -593,7 +619,7 @@ $@"game_object_locator={{
     }}
 }}";
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "combat_locators.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
         }
         catch (Exception e)
@@ -605,7 +631,7 @@ $@"game_object_locator={{
     private static async Task WritePlayerStackLocators(Map map)
     {
         var offset = new PointD(-10, -5);
-        var lines = map.Provinces.Skip(1).Select((n, i) =>
+        var lines = map.Output.Provinces.Skip(1).Select((n, i) =>
         {
             var p = new PointD();
             if (n.Burg is null)
@@ -625,7 +651,7 @@ $@"game_object_locator={{
 
             var str =
 $@"        {{
-            id = {map.IdToIndex[n.Id]}
+            id = {map.Output.IdToIndex[n.Id]}
             position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
             rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
             scale ={{ 1.000000 1.000000 1.000000 }}
@@ -646,7 +672,7 @@ $@"game_object_locator={{
     }}
 }}";
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "player_stack_locators.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
         }
         catch (Exception e)
@@ -665,8 +691,8 @@ $@"game_object_locator={{
 
     public static async Task WriteDefault(Map map)
     {
-        var waterProvinces = map.Provinces.Select((n, i) => (n, i)).Where(n => n.n.IsWater).Select(n => n.i);
-        var file = $@"#max_provinces = 1466
+        var waterProvinces = map.Output.Provinces!.Select((n, i) => (n, i)).Where(n => n.n.IsWater).Select(n => n.i).ToArray();
+        var file = $@"#max_provinces = {map.Output.Provinces!.Length - waterProvinces.Length}
 definitions = ""definition.csv""
 provinces = ""provinces.png""
 #positions = ""positions.txt""
@@ -715,16 +741,58 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 ";
 
         var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "default.map");
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        Helper.EnsureDirectoryExists(path);
         await File.WriteAllTextAsync(path, file);
     }
+
+    public static async Task DrawFlatMap(Map map)
+    {
+        try
+        {
+            XmlNode? GetNode(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]");
+
+            void Remove(string attribute)
+            {
+                var node = map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]");
+                node?.ParentNode?.RemoveChild(node);
+            }
+
+            var terrain = GetNode("@id='svgFlatMap'");
+            {
+                // remove all title elements. They break svg.
+                var titleElements = map.Input.XmlMap.SelectNodes("//title");
+                foreach (XmlElement item in titleElements)
+                {
+                    item.ParentNode.RemoveChild(item);
+                }
+            }
+
+            var svg = SvgDocument.FromSvg<SvgDocument>(terrain.OuterXml);
+            var img = svg.ToImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var base64 = img.ToBase64String(SixLabors.ImageSharp.Formats.Png.PngFormat.Instance);
+            var magickImage = MagickImage.FromBase64(base64.Split(',')[1]);
+            //magickImage.Write("terrain.dds", MagickFormat.Dds);
+
+            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "flatmap.dds");
+            Helper.EnsureDirectoryExists(path);
+            magickImage.Write(path, MagickFormat.Dds);
+
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+            throw;
+        }
+
+    }
+
 
     // Town Biomes
     public static async Task WriteTerrain(Map map)
     {
         try
         {
-            var provinceBiomes = map.Provinces
+            var provinceBiomes = map.Output.Provinces
                 .Select((n, i) => (n, i))
                 .Skip(1)
                 .Where(n => !n.n.IsWater && n.n.Cells.Any())
@@ -744,7 +812,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             var file = $@"default=plains
 {string.Join("\n", provinceBiomes)}";
             var path = Helper.GetPath(Settings.OutputDirectory, "common", "province_terrain", "00_province_terrain.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
         }
         catch (Exception ex)
@@ -773,7 +841,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             cellsMap.Draw(drawables);
 
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", $"{filename}.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Helper.EnsureDirectoryExists(path);
             await cellsMap.WriteAsync(path, MagickFormat.Png00);
 
             using var file = await Image.LoadAsync(path);
@@ -786,116 +854,210 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             throw;
         }
     }
+
+    private static async Task WriteMaskFromXml(Map map, XmlDocument detail_index, XmlDocument detail_intensity, AzgaarBiome biomeId)
+    {
+        // create ns manager
+        XmlNamespaceManager xmlnsManager = new(map.Input.XmlMap.NameTable);
+        xmlnsManager.AddNamespace("ns", "http://www.w3.org/2000/svg");
+
+        XmlElement? GetNodeFromDoc(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager) as XmlElement;
+        XmlElement? GetNode(XmlNode xmlElement, string attribute) => xmlElement.SelectSingleNode($"//*[{attribute}]", xmlnsManager) as XmlElement;
+        void RemoveExcept(XmlNode xmlElement, string attribute)
+        {
+            XmlElement? childExcept = GetNode(xmlElement, attribute);
+            List<XmlElement> childrenToRemove = [];
+            foreach (XmlElement c in xmlElement.ChildNodes)
+            {
+                if (c != childExcept)
+                {
+                    childrenToRemove.Add(c);
+                }
+            }
+
+            foreach (var c in childrenToRemove)
+            {
+                c!.ParentNode!.RemoveChild(c);
+            }
+        }
+
+        var doc = new XmlDocument();
+        doc.LoadXml(GetNodeFromDoc("@id='svgbiomes'")!.OuterXml);
+        var biomeAttribute = $"@id='biome{(int)biomeId}'";
+        var biome = GetNode(doc, biomeAttribute);
+        if (biome is null)
+        {
+            return;
+        }
+        biome.SetAttribute("stroke", "white");
+        biome.SetAttribute("fill", "white");
+
+        var biomes = GetNode(doc, "@id='biomes'");
+        //biomes!.SetAttribute("filter", "url(#blur10)");
+
+        RemoveExcept(biomes, biomeAttribute);
+
+        var defs = doc.CreateDocumentFragment();
+        defs.InnerXml = @"<defs><filter id=""blur10""><feGaussianBlur in=""SourceGraphic"" stdDeviation=""10"" /></filter></defs>";
+        doc.DocumentElement.FirstChild.PrependChild(defs);
+
+        var svg = SvgDocument.FromSvg<SvgDocument>(doc.OuterXml);
+        var img = svg.ToGrayscaleImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+
+        var ck3Biome = biomeId.ToCk3Biome();
+
+        var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", ck3Biome.ToMaskFilename());
+        Helper.EnsureDirectoryExists(path);
+        //img.Save($"{filename}.png");
+        await img.SaveAsync(path);
+
+        // Detail Index
+        {
+            var indexColor = $"rgba({(int)ck3Biome},255,255,255)";
+            biome.SetAttribute("stroke", indexColor);
+            biome.SetAttribute("fill", indexColor);
+
+            var detail_index_biome = detail_index.CreateDocumentFragment();
+            detail_index_biome.InnerXml = biome.OuterXml;
+            detail_index.DocumentElement!.AppendChild(detail_index_biome);
+
+            var detail_index_svg = GetNode(detail_index, "@id='detail_index'")!;
+            detail_index_svg.AppendChild(detail_index_biome);
+        }
+        // Detail Intensity
+        {
+            var intensityColor = $"rgba(255,0,0,1)";
+            biome.SetAttribute("stroke", intensityColor);
+            biome.SetAttribute("fill", intensityColor);
+
+            var detail_intensity_biome = detail_intensity.CreateDocumentFragment();
+            detail_intensity_biome.InnerXml = biome.OuterXml;
+            detail_intensity.DocumentElement!.AppendChild(detail_intensity_biome);
+
+            var detail_intensity_svg = GetNode(detail_intensity, "@id='detail_intensity'")!;
+            detail_intensity_svg.AppendChild(detail_intensity_biome);
+        }
+    }
     public static async Task WriteMasks(Map map)
     {
-        var nonWaterProvinceCells = map.Provinces
-            .Skip(1)
-            .Where(n => !n.IsWater && n.Cells.Any())
-            .SelectMany(n => n.Cells)
-            .ToArray();
+        var detail_index = new XmlDocument();
+        {
+            detail_index.LoadXml(@"<svg id=""detail_index"" width=""1704"" height=""927"" version=""1.1"" background-color=""white"" >
+<rect x=""0"" y=""0"" width=""1704"" height=""927"" fill=""white"" />
+</svg>");
+        }
 
-        var provinceBiomes = map.Provinces
-            .Skip(1)
-            .Where(n => !n.IsWater && n.Cells.Any())
-            .Select(n =>
+
+        var detail_intensity = new XmlDocument();
+        {
+            detail_intensity.LoadXml(@"<svg id=""detail_intensity"" width=""1704"" height=""927"" version=""1.1"" background-color=""black"" >
+<rect x=""0"" y=""0"" width=""1704"" height=""927"" fill=""black"" />
+</svg>");
+        }
+
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.HotDesert);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.ColdDesert);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Savanna);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Grassland);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.TropicalSeasonalForest);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.TemperateDeciduousForest);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.TropicalRainforest);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.TemperateRainforest);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Taiga);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Tundra);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Glacier);
+        await WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Wetland);
+
+        // write detail_index
+        {
+            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "detail_index.tga");
+            Helper.EnsureDirectoryExists(path);
+            var svg = SvgDocument.FromSvg<SvgDocument>(detail_index.OuterXml);
+            var img = svg.ToImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var encoder = new TgaEncoder
             {
-                var primaryBiome = n.Cells.Select(m => m.biome).Max();
-                var heightDifference = (int)Helper.HeightDifference(n);
-                return new
-                {
-                    Province = n,
-                    Biome = Helper.GetProvinceBiomeName(primaryBiome, heightDifference)
-                };
-            }).ToArray();
+                BitsPerPixel = TgaBitsPerPixel.Pixel32,
+                Compression = TgaCompression.None,
+            };
+            //await img.SaveAsync("detail_index.tga", encoder);
+            await img.SaveAsync(path, encoder);
+        }
 
-        //var tasks = new[]
-        //{
-        //    //// drylands
-        //    //WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "drylands"), map, "drylands_01_mask"),
-        //    // taiga
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is var b && (b == "taiga" || b == "drylands" && Helper.IsCellLowMountains(n.height) || b == "drylands" && Helper.IsCellMountains(n.height))), map, "forest_pine_01_mask"),
-        //    // plains
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "plains"), map, "plains_01_mask"),
-        //    // farmlands
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "farmlands"), map, "farmland_01_mask"),
-        //    // Desert
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "desert" && !Helper.IsCellMountains(n.height) && !Helper.IsCellHighMountains(n.height)), map, "desert_01_mask"),
-        //    // desert_mountains
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "desert" && Helper.IsCellMountains(n.height)), map, "mountain_02_desert_mask"),
-        //    // oasis
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "oasis"), map, "oasis_mask"),
-        //     // hills
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.IsCellHills(n.biome, n.height)), map, "hills_01_mask"),
-        //    // low mountains
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellLowMountains(n.height)), map, "mountain_02_mask"),
-        //    // mountains
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellMountains(n.height) || Helper.IsCellHighMountains(n.height)), map, "mountain_02_snow_mask"),
-        //    // HighMountains
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellHighMountains(n.height)), map, "mountain_02_c_snow_mask"),
-        //    // jungle
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "jungle"), map, "forest_jungle_01_mask"),
-        //    // forest
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "forest"), map, "forest_leaf_01_mask"),
-        //    // wetlands
-        //    WriteMask(provinceBiomes.Where(n => n.Biome == "wetlands").SelectMany(n => n.Province.Cells).Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask"),
-        //    // steppe
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "steppe"), map, "wetlands_02_mask"),
-        //    // floodplains
-        //    WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask"),
-        //};
+        // write detail_intensity
+        {
+            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "detail_intensity.tga");
+            Helper.EnsureDirectoryExists(path);
+            var svg = SvgDocument.FromSvg<SvgDocument>(detail_intensity.OuterXml);
+            var img = svg.ToImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var encoder = new TgaEncoder
+            {
+                BitsPerPixel = TgaBitsPerPixel.Pixel32,
+                Compression = TgaCompression.None,
+            };
+            //await img.SaveAsync("detail_intensity.tga", encoder);
+            await img.SaveAsync(path, encoder);
+        }
 
-        //await Task.WhenAll(tasks);
+        //var nonWaterProvinceCells = map.Output.Provinces
+        //    .Skip(1)
+        //    .Where(n => !n.IsWater && n.Cells.Any())
+        //    .SelectMany(n => n.Cells)
+        //    .ToArray();
 
-        //// drylands
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "drylands"), map, "drylands_01_mask"),
-        // taiga
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is var b && (b == "taiga" || b == "drylands" && Helper.IsCellLowMountains(n.height) || b == "drylands" && Helper.IsCellMountains(n.height))), map, "forest_pine_01_mask");
-        // plains
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "plains"), map, "plains_01_mask");
-        // farmlands
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "farmlands"), map, "farmland_01_mask");
-        // Desert
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "desert" && !Helper.IsCellMountains(n.height) && !Helper.IsCellHighMountains(n.height)), map, "desert_01_mask");
-        // desert_mountains
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "desert" && Helper.IsCellMountains(n.height)), map, "mountain_02_desert_mask");
-        // oasis
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "oasis"), map, "oasis_mask");
-        // hills
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.IsCellHills(n.biome, n.height)), map, "hills_01_mask");
-        // low mountains
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellLowMountains(n.height)), map, "mountain_02_mask");
-        // mountains
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellMountains(n.height) || Helper.IsCellHighMountains(n.height)), map, "mountain_02_snow_mask");
-        // HighMountains
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellHighMountains(n.height)), map, "mountain_02_c_snow_mask");
-        // jungle
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "jungle"), map, "forest_jungle_01_mask");
-        // forest
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "forest"), map, "forest_leaf_01_mask");
-        // wetlands
-        await WriteMask(provinceBiomes.Where(n => n.Biome == "wetlands").SelectMany(n => n.Province.Cells).Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask");
-        // steppe
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "steppe"), map, "wetlands_02_mask");
-        // floodplains
-        await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask");
+        //var provinceBiomes = map.Output.Provinces
+        //    .Skip(1)
+        //    .Where(n => !n.IsWater && n.Cells.Any())
+        //    .Select(n =>
+        //    {
+        //        var primaryBiome = n.Cells.Select(m => m.biome).Max();
+        //        var heightDifference = (int)Helper.HeightDifference(n);
+        //        return new
+        //        {
+        //            Province = n,
+        //            Biome = Helper.GetProvinceBiomeName(primaryBiome, heightDifference)
+        //        };
+        //    }).ToArray();
+
+     
+
+        //// taiga
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is var b && (b == "taiga" || b == "drylands" && Helper.IsCellLowMountains(n.height) || b == "drylands" && Helper.IsCellMountains(n.height))), map, "forest_pine_01_mask");
+        //// Desert
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "desert" && !Helper.IsCellMountains(n.height) && !Helper.IsCellHighMountains(n.height)), map, "desert_01_mask");
+        //// desert_mountains
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "desert" && Helper.IsCellMountains(n.height)), map, "mountain_02_desert_mask");
+        //// oasis
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "oasis"), map, "oasis_mask");
+        //// hills
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.IsCellHills(n.biome, n.height)), map, "hills_01_mask");
+        //// low mountains
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellLowMountains(n.height)), map, "mountain_02_mask");
+        //// mountains
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellMountains(n.height) || Helper.IsCellHighMountains(n.height)), map, "mountain_02_snow_mask");
+        //// HighMountains
+        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellHighMountains(n.height)), map, "mountain_02_c_snow_mask");
+        //// wetlands
+        //await WriteMask(provinceBiomes.Where(n => n.Biome == "wetlands").SelectMany(n => n.Province.Cells).Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask");
     }
 
     public static async Task WriteGraphics()
     {
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "graphic", "00_graphics.txt");
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        Helper.EnsureDirectoryExists(path);
         File.Copy(Helper.GetPath(SettingsManager.ExecutablePath, "00_graphics.txt"), path, true);
     }
-    public static async Task WriteDefines()
+    public static async Task WriteDefines(Map map)
     {
+        var maxElevation = 51;
+        //var maxElevation = 255;
         var file = $@"NJominiMap = {{
-	WORLD_EXTENTS_X = {Map.MapWidth - 1}
-	WORLD_EXTENTS_Y = 51
-	WORLD_EXTENTS_Z = {Map.MapHeight - 1}
+	WORLD_EXTENTS_X = {map.Settings.MapWidth - 1}
+	WORLD_EXTENTS_Y = {maxElevation}
+	WORLD_EXTENTS_Z = {map.Settings.MapHeight - 1}
 	WATERLEVEL = 3.8
 }}";
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "00_defines.txt");
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        Helper.EnsureDirectoryExists(path);
         await File.WriteAllTextAsync(path, file);
     }
 
@@ -919,14 +1081,14 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     private static async Task<(Dictionary<int, int> baronyCultures, string[] toOriginalCultureName)> GetCultures(Map map)
     {
         var originalCultureNames = GetOriginalCultures();
-        var baronyCultures = map.Empires
+        var baronyCultures = map.Output.Empires
             .SelectMany(n => n.kingdoms)
             .SelectMany(n => n.duchies)
             .SelectMany(n => n.counties)
             .SelectMany(n => n.baronies)
             .ToDictionary(n => n.id, n => n.province.Cells.Select(m => m.culture).Max());
 
-        var totalCultures = map.JsonMap.pack.cultures.Length;
+        var totalCultures = map.Input.JsonMap.pack.cultures.Length;
         if (totalCultures > originalCultureNames.Length)
         {
             // Generated too many cultures.
@@ -961,14 +1123,14 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     private static async Task<(Dictionary<int, int> baronyReligions, string[] toOriginalReligionName)> GetReligions(Map map)
     {
         var originalReligionNames = (await ConfigReader.GetCK3Religions(map.Settings)).SelectMany(n => n.faiths).Select(n => n.name).ToArray();
-        var baronyReligions = map.Empires
+        var baronyReligions = map.Output.Empires
             .SelectMany(n => n.kingdoms)
             .SelectMany(n => n.duchies)
             .SelectMany(n => n.counties)
             .SelectMany(n => n.baronies)
             .ToDictionary(n => n.id, n => n.province.Cells.Select(m => m.religion).Max());
 
-        var totalReligions = map.JsonMap.pack.religions.Length;
+        var totalReligions = map.Input.JsonMap.pack.religions.Length;
         if (totalReligions > originalReligionNames.Length)
         {
             // Generated too many cultures.
@@ -1005,7 +1167,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
         var (baronyCultures, toOriginalCultureName) = await GetCultures(map);
         var (baronyReligions, toOriginalReligionName) = await GetReligions(map);
 
-        foreach (var empire in map.Empires)
+        foreach (var empire in map.Output.Empires)
         {
             foreach (var kingdom in empire.kingdoms)
             {
@@ -1035,7 +1197,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     }
     public static async Task WriteHistoryProvinces(Map map)
     {
-        foreach (var empire in map.Empires)
+        foreach (var empire in map.Output.Empires)
         {
             foreach (var kingdom in empire.kingdoms)
             {
@@ -1044,7 +1206,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     .SelectMany(n => n.baronies)
                     .Select(n =>
                     {
-                        var str = $@"{map.IdToIndex[n.province.Id]} = {{
+                        var str = $@"{map.Output.IdToIndex[n.province.Id]} = {{
     culture = {n.Culture}
     religion = {n.Religion}
     holding = auto
@@ -1055,7 +1217,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
                 var file = string.Join('\n', baronies);
                 var path = Helper.GetPath(Settings.OutputDirectory, "history", "provinces", $"k_{kingdom.id}.txt");
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                Helper.EnsureDirectoryExists(path);
                 await File.WriteAllTextAsync(path, file);
             }
         }
@@ -1094,7 +1256,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             .SelectMany(n => originalFaiths.First(m => m.name == n).holySites.Select(m => (name: m, holySite: originalHolySites[m])))
             .ToArray();
 
-        var counties = map.Empires.SelectMany(n => n.kingdoms).SelectMany(n => n.duchies).SelectMany(n => n.counties).ToArray();
+        var counties = map.Output.Empires.SelectMany(n => n.kingdoms).SelectMany(n => n.duchies).SelectMany(n => n.counties).ToArray();
 
         var rnd = new Random();
         var mappedHolySites = pickedHolySites.Select(n =>
@@ -1120,7 +1282,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
         var file = string.Join('\n', mappedHolySites);
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "religion", "holy_sites", "00_holy_sites.txt");
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        Helper.EnsureDirectoryExists(path);
         await File.WriteAllTextAsync(path, file);
     }
 }

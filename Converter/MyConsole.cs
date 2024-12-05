@@ -1,26 +1,24 @@
-﻿namespace Converter;
+﻿using SixLabors.ImageSharp.Drawing;
+
+namespace Converter;
 
 public static class MyConsole
 {
     private const string _logDirectoryPath = "logs";
     private static readonly string _logFilePath = Helper.GetPath(_logDirectoryPath, $"LOG_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}.txt");
 
+    public static Action<object?> Sink = Console.WriteLine;
+
     public static void WriteLine()
     {
-        Console.WriteLine();
+        Sink(null);
         WriteLineFile("\n");
     }
 
     public static void WriteLine(object? str)
     {
-        Console.WriteLine(str);
+        Sink(str);
         WriteLineFile("\n" + str?.ToString());
-    }
-
-    public static void Write(object? str)
-    {
-        Console.Write(str);
-        WriteLineFile(str?.ToString());
     }
 
     public static void ReadKey()
@@ -39,13 +37,18 @@ public static class MyConsole
 
     public static void Error(object? str)
     {
-        Console.WriteLine(str);
+        Sink(str);
         WriteLineFile("\n[Error] " + str?.ToString());
+    }
+    public static void Error(Exception ex, object? str)
+    {
+        Sink(str);
+        WriteLineFile($"\n[Error] {ex.Message}\n{ex.StackTrace}\n{str}");
     }
 
     public static void Warning(object? str)
     {
-        Console.WriteLine(str);
+        Sink(str);
         WriteLineFile("\n[Warning] " + str?.ToString());
     }
 

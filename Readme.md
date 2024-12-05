@@ -43,12 +43,13 @@ Discord: https://discord.gg/CqHcpRRH
 
 ## Usage
 1. Generate a map via https://pryvyd9.github.io/Fantasy-Map-Generator/ (It is a special version for better conversion)
-2. Export GeoJSON cells and JSON full
-![screenshot](docs/photo_2024-05-08_21-40-06.jpg)
-3. Place these files in the extracted folder
+2. Export Crusader Kings 3
+![screenshot](docs/Screenshot 2024-11-22_190012.png)
+3. Place this file in the extracted folder
 4. Run `ConsoleUI` file
 5. Follow the instructions
 6. Launch the game making sure the newly created mod is added to the playset and enabled
+7. Create your own ruler
 
 ### Optional steps
 Do them if there are issues with holding/unit placement or terrain looks weird. Or it crashes.

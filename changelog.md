@@ -1,3 +1,11 @@
+# 1.5.0
+- improved localization.
+- moved to single file export.
+- draw flatmap.
+- draw lakes on heightmap.
+- draw masks without blur.
+- draw detail_index and detail_intensity.
+
 # 1.4.8
 - added logging system.
 - added all languages support.

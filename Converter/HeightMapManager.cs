@@ -1,9 +1,10 @@
-﻿using ImageMagick;
-using SixLabors.ImageSharp;
+﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using Svg;
 using System.Diagnostics;
 using System.Numerics;
+using System.Text.RegularExpressions;
+using System.Xml;
 
 namespace Converter;
 
@@ -17,13 +18,14 @@ namespace Converter;
 /// </summary>
 public static class HeightMapManager
 {
-    private const int WaterLevelHeight = 30;
+    private const int AzgaarWaterLevel = 50;
+    private const int CK3WaterLevel = 20;
 
     private static readonly int[] detailSize = [33, 17, 9, 5, 3];
     // Width of average sampling for height. For detail size 9 averages of 4x4 squares are taken for every pixel in a tile.
     private static readonly byte[] averageSize = [1, 2, 4, 8, 16];
-    private const int maxColumnN = Map.MapWidth / indirectionProportion;
-    private const int packedWidth = (int)(maxColumnN * 17);
+    private static readonly int maxColumnN = (int)Settings.Instance.MapWidth / indirectionProportion;
+    private static readonly int packedWidth = (int)(maxColumnN * 17);
     private const int indirectionProportion = 32;
 
     private static Vector2[,] Gradient(byte[] values, int width, int height)
@@ -194,21 +196,22 @@ public static class HeightMapManager
         public int RowCount;
     }
 
-    private static async Task<PackedHeightmap> CreatePackedHeightMap()
+    private static async Task<PackedHeightmap> CreatePackedHeightMap(Map map)
     {
         try
         {
             const int samplesPerTile = 32;
 
             var path = $"{Settings.OutputDirectory}/map_data/heightmap.png";
-            using var file = new MagickImageCollection(path);
-            var heightMap = file[0];
 
-            // the values go like this: grayscale, alpha. We only need grayscale.
-            var pixels = heightMap.GetPixels().GetValues().Where((n, i) => i % 2 == 0).ToArray();
+            using var file = Image.Load<L8>(path);
 
-            var firstDerivative = Gradient(pixels, heightMap.Width, heightMap.Height);
-            var secondDerivative = Gradient(firstDerivative, heightMap.Width, heightMap.Height);
+            var pixelCount = file.Width * file.Height;
+            var pixels = new byte[pixelCount];
+            file.CopyPixelDataTo(pixels);
+
+            var firstDerivative = Gradient(pixels, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var secondDerivative = Gradient(firstDerivative, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
 
             List<Vector2[,]> gradientAreas = [];
             List<byte[,]> heightAreas = [];
@@ -231,6 +234,15 @@ public static class HeightMapManager
                 weightedDerivatives.Where(n => n.nonZeroP90 is >= 1 and < 2).ToArray(),
                 weightedDerivatives.Where(n => n.nonZeroP90 < 1).ToArray(),
             };
+            //var detail = new[]
+            //{
+            //    weightedDerivatives.Where(n => n.nonZeroP90 >= 300).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 200 and < 300).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 150 and < 200).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 100 and < 150).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 < 100).ToArray(),
+            //};
+
             //var h = 800;
             //var detail = new[]
             //{
@@ -245,7 +257,7 @@ public static class HeightMapManager
                 d.Select(n =>
                     new Tile
                     {
-                        values = GetPackedArea(pixels, Map.MapHeight - (int)n.coordinates.Y, (int)n.coordinates.X, i, Map.MapHeight, Map.MapWidth),
+                        values = GetPackedArea(pixels, (int)map.Settings.MapHeight - (int)n.coordinates.Y, (int)n.coordinates.X, i, (int)map.Settings.MapHeight, (int)map.Settings.MapWidth),
                         i = (int)n.coordinates.Y / indirectionProportion,
                         j = (int)n.coordinates.X / indirectionProportion,
                     }).ToArray()
@@ -279,7 +291,6 @@ public static class HeightMapManager
                 else
                 {
                     d.Rows = detailSamples[i].Chunk(dPerLine[i]).ToArray();
-
                 }
 
                 packedHeightPixels += d.Rows.Length * detailSize[i];
@@ -295,8 +306,8 @@ public static class HeightMapManager
             {
                 Details = details,
                 PixelHeight = packedHeightPixels,
-                MapWidth = heightMap.Width,
-                MapHeight = heightMap.Height,
+                MapWidth = (int)map.Settings.MapWidth,
+                MapHeight = (int)map.Settings.MapHeight,
                 RowCount = rowCount,
             };
         }
@@ -308,16 +319,10 @@ public static class HeightMapManager
     }
     private static async Task WritePackedHeightMap(PackedHeightmap heightmap)
     {
-        using var packed_heightmap = new MagickImage("xc:black", new MagickReadSettings()
-        {
-            Width = packedWidth,
-            Height = heightmap.PixelHeight,
-        });
-        var phDrawables = new Drawables();
-
         var horizontalTiles = heightmap.MapWidth / indirectionProportion;
         var verticalTiles = heightmap.MapHeight / indirectionProportion;
         Rgba32[] indirection_heightmap_pixels = new Rgba32[horizontalTiles * verticalTiles];
+        byte[] packed_heightmap_pixels = new byte[packedWidth * heightmap.PixelHeight];
 
         int verticalOffset = 0;
         int[] levelOffsets = new int[5];
@@ -348,12 +353,7 @@ public static class HeightMapManager
                         for (int ty = 0; ty < detailSize[di]; ty++)
                         {
                             var c = tile.values[tx, ty];
-                            var phColor = new MagickColor(c, c, c);
-                            phDrawables
-                                .DisableStrokeAntialias()
-                                .StrokeColor(phColor)
-                                .FillColor(phColor)
-                                .Point(ti * detailSize[di] + tx, heightmap.PixelHeight - verticalOffset + ty);
+                            packed_heightmap_pixels[packedWidth * (heightmap.PixelHeight - verticalOffset + ty) + ti * detailSize[di] + tx] = c;
                         }
 
                     byte ihColumnIndex = colI;
@@ -374,12 +374,12 @@ public static class HeightMapManager
             }
         }
 
-        packed_heightmap.Draw(phDrawables);
+        var packed_heightmap = Helper.ToBitmap(packed_heightmap_pixels, packedWidth, heightmap.PixelHeight);
         var phPath = Helper.GetPath(Settings.OutputDirectory, "map_data", "packed_heightmap.png");
         Directory.CreateDirectory(Path.GetDirectoryName(phPath));
-        await packed_heightmap.WriteAsync(phPath);
+        packed_heightmap.Save(phPath);
 
-        using var indirection_heightmap2 = Image.LoadPixelData<Rgba32>(indirection_heightmap_pixels, horizontalTiles, verticalTiles);
+        using var indirection_heightmap2 = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(indirection_heightmap_pixels, horizontalTiles, verticalTiles);
         var ihPath = Helper.GetPath(Settings.OutputDirectory, "map_data", "indirection_heightmap.png");
         Directory.CreateDirectory(Path.GetDirectoryName(ihPath));
         indirection_heightmap2.Save(ihPath);
@@ -401,72 +401,105 @@ empty_tile_offset={{ 255 127 }}
     {
         try
         {
-            var settings = new MagickReadSettings()
-            {
-                Width = Map.MapWidth,
-                Height = Map.MapHeight,
-            };
-            using var cellsMap = new MagickImage("xc:black", settings);
+            // create ns manager
+            XmlNamespaceManager xmlnsManager = new(map.Input.XmlMap.NameTable);
+            xmlnsManager.AddNamespace("ns", "http://www.w3.org/2000/svg");
 
-            var drawables = new Drawables();
+            XmlNode? GetNode(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
 
-            var landPackCells = map.JsonMap.pack.cells.Where(n => n.biome != 0);
-            var landGeoCells = map.GeoMap.features.Select(n => new
+            void Remove(string attribute)
             {
-                Height = n.properties.height,
-                Id = n.properties.id,
-                C = n.geometry.coordinates
-            }).ToDictionary(n => n.Id, n => n);
-            var cells = landPackCells.Select(n =>
-            {
-                var c = landGeoCells[n.i];
-                return new
-                {
-                    Cells = c.C,
-                    c.Height,
-                };
-            }).ToArray();
-            var maxHeight = cells.MaxBy(n => n.Height)!.Height;
-
-            foreach (var cellPack in cells)
-            {
-                foreach (var cell in cellPack.Cells)
-                {
-                    var trimmedHeight = cellPack.Height * (255 - WaterLevelHeight) / maxHeight + WaterLevelHeight;
-                    var culledHeight = (byte)trimmedHeight;
-
-                    var color = new MagickColor(culledHeight, culledHeight, culledHeight);
-                    drawables
-                        .DisableStrokeAntialias()
-                        .StrokeColor(color)
-                        .FillColor(color)
-                        .Polygon(cell.Select(n => Helper.GeoToPixel(n[0], n[1], map)));
-                }
+                var node = map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
+                node?.ParentNode?.RemoveChild(node);
             }
 
-            cellsMap.Draw(drawables);
+            // Remove all blur
+            void removeFilterFromAll(string attribute) { 
+                for (XmlElement? element = GetNode(attribute) as XmlElement; element is not null; element = GetNode(attribute) as XmlElement)
+                {
+                    element.RemoveAttribute("filter");
+                }
+            }
+            removeFilterFromAll("@filter='url(#blur)'");
+            removeFilterFromAll("@filter='url(#blur05)'");
+            removeFilterFromAll("@filter='url(#blur10)'");
+
+            var land = GetNode("@id='svgland'");
+            //(land as XmlElement).RemoveAttribute("filter");
+            var background = map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
+            //var wl = CK3WaterLevel;
+            var wl = 0;
+
+            (background as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+            (background as XmlElement).SetAttribute("x", "0");
+            (background as XmlElement).SetAttribute("y", "0");
+            (background as XmlElement).SetAttribute("width", "100%");
+            (background as XmlElement).SetAttribute("height", "100%");
+            land.PrependChild(background);
+
+            //(land as XmlElement).SetAttribute("filter", "url(#blur10)");
+            (land as XmlElement).SetAttribute("background-color", $"rgb({wl},{wl},{wl})");
+            (land as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+
+            // make only landHeights visible
+            var landHeights = GetNode("@id='landHeights'") as XmlElement;
+            landHeights.SetAttribute("filter", "url(#blur10)");
+            //landHeights.SetAttribute("filter", "url(#blurFilter)");
+
+            var rect = (landHeights.SelectSingleNode("//*[@id='landHeights']/rect") as XmlElement);
+            rect.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+            //rect.ParentNode.RemoveChild(rect);
+
+            var landHeightsBackground = landHeights.FirstChild;
+            (landHeightsBackground as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+
+            var water = GetNode("@id='water'");
+            (water.FirstChild as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+
+            //(GetNode("@id='vignette-mask'").FirstChild as XmlElement).SetAttribute("fill", "black");
+            //(GetNode("@id='fog'").FirstChild as XmlElement).SetAttribute("fill", "black");
+
+
+            // scale heights
+            foreach (XmlElement child in landHeights.ChildNodes)
+            {
+                var originalFill = child.GetAttribute("fill");
+                var originalHeight = int.Parse(new Regex(@"\((\d+)").Match(originalFill).Groups[1].Value);
+                const int maxHeight = 255;
+                var newHeight = originalHeight - AzgaarWaterLevel + CK3WaterLevel;
+
+                child.SetAttribute("fill", $"rgb({newHeight},{newHeight},{newHeight})");
+            }
+
+            // shadows and weird colors
+            Remove("@id='dropShadow'");
+            Remove("@id='dropShadow01'");
+            Remove("@id='dropShadow05'");
+            Remove("@id='landmass'");
+            Remove("@id='sea_island'");
+            Remove("@id='vignette-mask'");
+            Remove("@id='fog'");
+
+            var svg = SvgDocument.FromSvg<SvgDocument>(land.OuterXml);
+            var img = svg.ToGrayscaleImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
-            await cellsMap.WriteAsync(path);
+            Helper.EnsureDirectoryExists(path);
 
-            //using var file = await Image.LoadAsync(path);
-            //file.Mutate(n => n.GaussianBlur(15));
-            //file.Save(path);
-            using var file = await Image.LoadAsync(path);
-            file.Mutate(n => n.GaussianBlur(6));
-            file.Save(path);
-
+            img.Save("landHeights.png");
+            img.Save(path);
         }
         catch (Exception ex)
         {
-
+            MyConsole.Error(ex);
+            throw;
         }
     }
 
     public static async Task WriteHeightMap(Map map)
     {
         await DrawHeightMap(map);
-        var heightmap = await CreatePackedHeightMap();
+        var heightmap = await CreatePackedHeightMap(map);
         await WritePackedHeightMap(heightmap);
     }
 
