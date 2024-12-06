@@ -1,16 +1,14 @@
-﻿using ImageMagick;
-using SixLabors.ImageSharp;
+﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Tga;
-using SixLabors.ImageSharp.Processing;
 using Svg;
-using System.Diagnostics;
 using System.Xml;
 
 namespace Converter;
 
 public static class BiomeConverter
 {
-    private static object _detail_lock = new();
+    private static readonly SemaphoreSlim _detail_index_semaphore = new(1);
+    private static readonly SemaphoreSlim _detail_intensity_semaphore = new(1);
 
     //private static async Task WriteMask(IEnumerable<Cell> cells, Map map, string filename)
     //{
@@ -120,9 +118,15 @@ public static class BiomeConverter
             detail_index.DocumentElement!.AppendChild(detail_index_biome);
 
             var detail_index_svg = GetNode(detail_index, "@id='detail_index'")!;
-            lock (_detail_lock)
+
+            await _detail_index_semaphore.WaitAsync();
+            try
             {
                 detail_index_svg.AppendChild(detail_index_biome);
+            }
+            finally
+            {
+                _detail_index_semaphore.Release();
             }
         }
         // Detail Intensity
@@ -136,9 +140,15 @@ public static class BiomeConverter
             detail_intensity.DocumentElement!.AppendChild(detail_intensity_biome);
 
             var detail_intensity_svg = GetNode(detail_intensity, "@id='detail_intensity'")!;
-            lock (_detail_lock)
+
+            await _detail_intensity_semaphore.WaitAsync();
+            try
             {
                 detail_intensity_svg.AppendChild(detail_intensity_biome);
+            }
+            finally
+            {
+                _detail_intensity_semaphore.Release();
             }
         }
 

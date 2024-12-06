@@ -2,7 +2,7 @@
 
 public static class MyConsole
 {
-    private static readonly object _lock = new();
+    private static readonly SemaphoreSlim _semaphore = new(1);
     private const string _logDirectoryPath = "logs";
     private static readonly string _logFilePath = Helper.GetPath(_logDirectoryPath, $"LOG_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}.txt");
 
@@ -56,11 +56,13 @@ public static class MyConsole
 
     private static void WriteLineFile(string? str)
     {
-        lock (_lock)
+        _semaphore.Wait();
+        try
         {
             Directory.CreateDirectory(_logDirectoryPath);
             File.AppendAllText(_logFilePath, str);
         }
+        finally { _semaphore.Release(); }
     }
 }
 

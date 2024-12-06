@@ -16,7 +16,7 @@ namespace Converter;
 /// Borders between different detail level is visible. 
 /// Need to implement a better algorithm than avgN for border samples (or all).
 /// </summary>
-public static class HeightMapManager
+public static class HeightMapConverter
 {
     private const int AzgaarWaterLevel = 50;
     private const int CK3WaterLevel = 20;
