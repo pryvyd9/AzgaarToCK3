@@ -34,6 +34,7 @@ Do them if there are issues with holding/unit placement or terrain looks weird. 
 - You can delete the `settings.json` to reconfigure everything or edit `settings.json` to suit your needs.
 - Set `onlyCounts` = true to make all characters start as counts.
 - [No Steam or directory not found](https://github.com/pryvyd9/AzgaarToCK3/blob/master/docs/NoSteam.md/)
+- Change MaxThreads value to 1 if you wish to limit CPU and RAM usage. Use default value (= cpu core count) for max performance.
 
 ## Quirks
 - Azgaar only has 2 titles and CK3 has 5:
