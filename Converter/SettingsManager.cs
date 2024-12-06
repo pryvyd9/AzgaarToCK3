@@ -14,8 +14,9 @@ public class Settings
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public bool? ShouldOverride { get; set; } = null;
     public bool OnlyCounts { get; set; } = false;
-    public uint MapWidth { get; set; } = 8192;
-    public uint MapHeight { get; set; } = 4096;
+    public int MapWidth { get; set; } = 8192;
+    public int MapHeight { get; set; } = 4096;
+    public int MaxThreads { get; set; } = Environment.ProcessorCount;
 
     [JsonIgnore]
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.

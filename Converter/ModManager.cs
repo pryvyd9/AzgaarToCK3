@@ -4,6 +4,101 @@ namespace Converter;
 
 public static class ModManager
 {
+    private record Context(Map map, string[] faiths);
+
+    private class StepNode
+    {
+        protected readonly string name;
+        protected readonly Func<Context, Task>? func;
+        protected readonly Func<Context, Task<Context>>? funcMutable;
+        protected readonly StepNode[]? children;
+
+        public StepNode(string name, Func<Context, Task> func) => (this.name, this.func) = (name, func);
+        public StepNode(string name, Func<Context, Task<Context>> funcMutable) => (this.name, this.funcMutable) = (name, funcMutable);
+        public StepNode(string name, StepNode[] children) => (this.name, this.children) = (name, children);
+
+        public virtual async Task<Context> Run(Context context, int outerStepCount = 0, params int[] stepIndexes)
+        {
+            if (func is not null)
+            {
+                await func.Invoke(context);
+            }
+            if (funcMutable is not null)
+            {
+                context = await funcMutable.Invoke(context);
+            }
+            else if (children is not null)
+            {
+                for (int i = 0; i < children.Length; i++)
+                {
+                    context = await children[i].Run(context, children.Length, [.. stepIndexes, i + 1]);
+                }
+            }
+
+            if (stepIndexes?.Length > 0)
+            {
+                MyConsole.Info($"{GetIndexString([.. stepIndexes])}/{outerStepCount}. {name}");
+            }
+            else
+            {
+                MyConsole.Info(name);
+            }
+
+            return context;
+        }
+
+        protected static string GetIndexString(params int[] stepIs)
+        {
+            return string.Join(".", stepIs);
+        }
+    }
+
+    private class StepNodeParallel : StepNode
+    {
+        public StepNodeParallel(string name, Func<Context, Task> func) : base(name, func) { }
+        public StepNodeParallel(string name, StepNode[] children) : base(name, children) { }
+
+        public override async Task<Context> Run(Context context, int outerStepCount = 0, params int[] stepIndexes)
+        {
+            using SemaphoreSlim semaphore = new(Settings.Instance.MaxThreads);
+
+            MyConsole.Info($"{GetIndexString([.. stepIndexes])}/{outerStepCount}: Starting parallel processing...");
+
+            if (children?.Length > 0)
+            {
+                var tasks = Enumerable.Range(0, children.Length).Select(async i =>
+                {
+                    await semaphore.WaitAsync();
+                    try
+                    {
+                        if (Settings.Instance.MaxThreads > 1)
+                        {
+                            await Task.Yield();
+                        }
+                        await children[i].Run(context, children.Length, [.. stepIndexes, i + 1]);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }).ToArray();
+
+                await Task.WhenAll(tasks);
+            }
+
+            if (stepIndexes?.Length > 0)
+            {
+                MyConsole.Info($"{GetIndexString([.. stepIndexes])}/{outerStepCount}. {name}");
+            }
+            else
+            {
+                MyConsole.Info(name);
+            }
+
+            return context;
+        }
+    }
+
     public static async Task CreateMod()
     {
         var outsideDescriptor = CreateDescriptor(true);
@@ -30,7 +125,6 @@ public static class ModManager
 
         return filesToCheck.FirstOrDefault(n => n.EndsWith(".xml"));
     }
-
 
     private static async Task<Map> LoadMap()
     {
@@ -62,153 +156,75 @@ supported_version=""{supportedGameVersion}""";
 #if DEBUG
     public static async Task Run()
     {
-        int i = 1;
-        int totalStageCount = 24;
+        StepNode steps = new("Conversion finished.", [
+            new ("Inputs have been loaded.", async c => c with { map = await LoadMap() }),
+            //new ("Cell map have been drawn.", c => MapManager.DrawCells(c.map)),
+            new ("Provinces created.", c => MapManager.DrawProvinces(c.map)),
+            new StepNodeParallel("Finished order independent steps.", [
+                new ("Heightmap created.", c => HeightMapManager.WriteHeightMap(c.map)),
+                new ("Flat map created.", c => MapManager.DrawFlatMap(c.map)),
+                new ("Graphics file created.", _ => MapManager.WriteGraphics()),
+                new ("Defines file created.", c => MapManager.WriteDefines(c.map)),
+                new ("Rivermap created.", c => MapManager.DrawRivers(c.map)),
+                new ("Masks created.", c => BiomeConverter.WriteMasks(c.map)),
+            ]),
+            new ("Definition created.", c => MapManager.WriteDefinition(c.map)),
+            new ("Locators created.", c => MapManager.WriteLocators(c.map)),
+            new ("Titles created.", async c => c.map.Output.Empires = TitleManager.CreateTitles(c.map)),
+            new ("Landed titles created.", c => TitleManager.WriteLandedTitles(c.map)),
+            new ("Title localization created.", c => TitleManager.WriteTitleLocalization(c.map)),
+            new ("Culture, Religions created.", async c => c with { faiths = await MapManager.ApplyCultureReligion(c.map) }),
+            new ("Characters created.", async c => c.map.Output.Characters = Settings.Instance.OnlyCounts
+                ? await CharacterManager.CreateCharactersCountOnly(c.map)
+                : await CharacterManager.CreateCharacters(c.map)),
+            new ("History characters created.", c => CharacterManager.WriteHistoryCharacters(c.map)),
+            new ("History titles created.", c => CharacterManager.WriteHistoryTitles(c.map)),
+            new ("Dynasties created.", c => CharacterManager.WriteDynasties(c.map)),
+            new ("Dynasty localization created.", c => CharacterManager.WriteDynastyLocalization(c.map)),
+            new ("Original religions copied.", c => MapManager.CopyOriginalReligions(c.map)),
+            new ("Holy sites created.", c => MapManager.WriteHolySites(c.map, c.faiths)),
+            new ("Default file created.", c => MapManager.WriteDefault(c.map)),
+            new ("Terrain created.", c => MapManager.WriteTerrain(c.map)),
+        ]);
 
-        var map = await LoadMap();
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
-
-        //await MapManager.DrawCells(map);
-
-        //await MapManager.DrawProvinces(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
-        //await HeightMapManager.WriteHeightMap(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
-
-        //await MapManager.DrawFlatMap(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Flat map created.");
-
-        //await MapManager.WriteGraphics();
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
-        //await MapManager.WriteDefines(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Defines file created.");
-
-        //await MapManager.DrawRivers(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
-        //await MapManager.WriteDefinition(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Definition created.");
-
-        //await MapManager.WriteLocators(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Locators created.");
-
-        //var titles = TitleManager.CreateTitles(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Titles created.");
-        //map.Output.Empires = titles;
-        //await TitleManager.WriteLandedTitles(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Landed titles created.");
-        //await TitleManager.WriteTitleLocalization(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
-
-        //var faiths = await MapManager.ApplyCultureReligion(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Culture, Religions created.");
-
-        //if (Settings.Instance.OnlyCounts)
-        //{
-        //    map.Output.Characters = await CharacterManager.CreateCharactersCountOnly(map);
-        //}
-        //else
-        //{
-        //    map.Output.Characters = await CharacterManager.CreateCharacters(map);
-        //}
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Characters created.");
-        //await CharacterManager.WriteHistoryCharacters(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. History characters created.");
-        //await CharacterManager.WriteHistoryTitles(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. History titles created.");
-        //await CharacterManager.WriteDynasties(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Dynasties created.");
-        //await CharacterManager.WriteDynastyLocalization(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Dynasty localization created.");
-
-        //await MapManager.WriteHistoryProvinces(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Province history created.");
-        //await MapManager.CopyOriginalReligions(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Original religions copied.");
-        //await MapManager.WriteHolySites(map, faiths);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Holy sites created.");
-
-        //await MapManager.WriteDefault(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Default file created.");
-        //await MapManager.WriteTerrain(map);
-        //MyConsole.WriteLine($"{i++}/{totalStageCount}. Terrain created.");
-        await MapManager.WriteMasks(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Masks created.");
+        await steps.Run(new Context(null!, null!));
     }
 #endif
 #if RELEASE || PUBLISH
     public static async Task Run()
     {
-        int i = 1;
-        int totalStageCount = 24;
+        StepNode steps = new("Conversion finished.", [
+            new ("Inputs have been loaded.", async c => c with { map = await LoadMap() }),
+            //new ("Cell map have been drawn.", c => MapManager.DrawCells(c.map)),
+            new ("Provinces created.", c => MapManager.DrawProvinces(c.map)),
+            new StepNodeParallel("Finished order independent steps.", [
+                new ("Heightmap created.", c => HeightMapManager.WriteHeightMap(c.map)),
+                new ("Flat map created.", c => MapManager.DrawFlatMap(c.map)),
+                new ("Graphics file created.", _ => MapManager.WriteGraphics()),
+                new ("Defines file created.", c => MapManager.WriteDefines(c.map)),
+                new ("Rivermap created.", c => MapManager.DrawRivers(c.map)),
+                new ("Masks created.", c => BiomeConverter.WriteMasks(c.map)),
+            ]),
+            new ("Definition created.", c => MapManager.WriteDefinition(c.map)),
+            new ("Locators created.", c => MapManager.WriteLocators(c.map)),
+            new ("Titles created.", async c => c.map.Output.Empires = TitleManager.CreateTitles(c.map)),
+            new ("Landed titles created.", c => TitleManager.WriteLandedTitles(c.map)),
+            new ("Title localization created.", c => TitleManager.WriteTitleLocalization(c.map)),
+            new ("Culture, Religions created.", async c => c with { faiths = await MapManager.ApplyCultureReligion(c.map) }),
+            new ("Characters created.", async c => c.map.Output.Characters = Settings.Instance.OnlyCounts
+                ? await CharacterManager.CreateCharactersCountOnly(c.map)
+                : await CharacterManager.CreateCharacters(c.map)),
+            new ("History characters created.", c => CharacterManager.WriteHistoryCharacters(c.map)),
+            new ("History titles created.", c => CharacterManager.WriteHistoryTitles(c.map)),
+            new ("Dynasties created.", c => CharacterManager.WriteDynasties(c.map)),
+            new ("Dynasty localization created.", c => CharacterManager.WriteDynastyLocalization(c.map)),
+            new ("Original religions copied.", c => MapManager.CopyOriginalReligions(c.map)),
+            new ("Holy sites created.", c => MapManager.WriteHolySites(c.map, c.faiths)),
+            new ("Default file created.", c => MapManager.WriteDefault(c.map)),
+            new ("Terrain created.", c => MapManager.WriteTerrain(c.map)),
+        ]);
 
-        var map = await LoadMap();
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Inputs have been loaded.");
-
-        //await MapManager.DrawCells(map);
-
-        await MapManager.DrawProvinces(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Provinces created.");
-        await HeightMapManager.WriteHeightMap(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Heightmap created.");
-
-        await MapManager.DrawFlatMap(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Flat map created.");
-
-        await MapManager.WriteGraphics();
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Graphics file created.");
-        await MapManager.WriteDefines(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Defines file created.");
-
-        await MapManager.DrawRivers(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Rivermap created.");
-        await MapManager.WriteDefinition(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Definition created.");
-
-        await MapManager.WriteLocators(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Locators created.");
-
-        var titles = TitleManager.CreateTitles(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Titles created.");
-        map.Output.Empires = titles;
-        await TitleManager.WriteLandedTitles(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Landed titles created.");
-        await TitleManager.WriteTitleLocalization(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Title localization created.");
-
-        var faiths = await MapManager.ApplyCultureReligion(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Culture, Religions created.");
-
-        if (Settings.Instance.OnlyCounts)
-        {
-            map.Output.Characters = await CharacterManager.CreateCharactersCountOnly(map);
-        }
-        else
-        {
-            map.Output.Characters = await CharacterManager.CreateCharacters(map);
-        }
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Characters created.");
-        await CharacterManager.WriteHistoryCharacters(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. History characters created.");
-        await CharacterManager.WriteHistoryTitles(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. History titles created.");
-        await CharacterManager.WriteDynasties(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Dynasties created.");
-        await CharacterManager.WriteDynastyLocalization(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Dynasty localization created.");
-
-        await MapManager.WriteHistoryProvinces(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Province history created.");
-        await MapManager.CopyOriginalReligions(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Original religions copied.");
-        await MapManager.WriteHolySites(map, faiths);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Holy sites created.");
-
-        await MapManager.WriteDefault(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Default file created.");
-        await MapManager.WriteTerrain(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Terrain created.");
-        await MapManager.WriteMasks(map);
-        MyConsole.WriteLine($"{i++}/{totalStageCount}. Masks created.");
+        await steps.Run(new Context(null!, null!));
     }
 #endif
 }

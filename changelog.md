@@ -1,3 +1,6 @@
+# 1.6.0
+- introduced parallel processing.
+
 # 1.5.0
 - improved localization.
 - moved to single file export.

@@ -1,4 +1,5 @@
 ﻿using Converter;
+using System.Diagnostics;
 
 namespace ConsoleUI;
 
@@ -9,23 +10,23 @@ internal class Program
         if (!SettingsManager.TryLoad())
         {
             SettingsManager.CreateDefault();
-            MyConsole.WriteLine("Default Settings file has been created.");
+            MyConsole.Info("Default Settings file has been created.");
         }
 
         // Print settings
-        MyConsole.WriteLine(Settings.Instance);
+        MyConsole.Info(Settings.Instance);
 
         // Configure NumberDecimalSeparator. Writing files will not work otherwise.
         SettingsManager.Configure();
 
-        MyConsole.WriteLine();
-        MyConsole.WriteLine("The app has been configured. Feel free to change the settings in 'settings.json' file.");
-        MyConsole.WriteLine("Check https://github.com/pryvyd9/AzgaarToCK3 for instructions or feedback.");
-        MyConsole.WriteLine();
+        MyConsole.Info();
+        MyConsole.Info("The app has been configured. Feel free to change the settings in 'settings.json' file.");
+        MyConsole.Info("Check https://github.com/pryvyd9/AzgaarToCK3 for instructions or feedback.");
+        MyConsole.Info();
 
         if (string.IsNullOrWhiteSpace(Settings.Instance.ModName))
         {
-            MyConsole.WriteLine("Name your mod: ");
+            MyConsole.Info("Name your mod: ");
             Settings.Instance.ModName = MyConsole.ReadLine()!;
         }
 
@@ -34,12 +35,12 @@ internal class Program
 
         if (!File.Exists(Settings.Instance.InputXmlPath))
         {
-            MyConsole.WriteLine($".xml file has not been found.");
-            MyConsole.WriteLine($"Please, place it in '{Settings.Instance.InputXmlPath}' or change '{nameof(Settings.Instance.InputXmlPath)}' in 'settings.json'.");
+            MyConsole.Info($".xml file has not been found.");
+            MyConsole.Info($"Please, place it in '{Settings.Instance.InputXmlPath}' or change '{nameof(Settings.Instance.InputXmlPath)}' in 'settings.json'.");
             Exit();
         }
 
-        MyConsole.WriteLine("Start conversion?");
+        MyConsole.Info("Start conversion?");
         if (YesNo())
         {
             // Copy sandbox mod files.
@@ -50,9 +51,12 @@ internal class Program
 
             try
             {
+                var stopwatch = Stopwatch.StartNew();
                 await ModManager.Run();
-                MyConsole.WriteLine("Map conversion finished successfully.");
-                MyConsole.WriteLine("Add newly created mod to your playset and enjoy!");
+                stopwatch.Stop();
+                MyConsole.Info("Map conversion finished successfully.");
+                MyConsole.Info("Add newly created mod to your playset and enjoy!");
+                MyConsole.Info($"[Conversion time]: {stopwatch.Elapsed.TotalSeconds}s", true);
             }
             catch (Exception ex)
             {
@@ -89,8 +93,8 @@ internal class Program
         int maxTries = 10;
         for (int i = 0; i < maxTries; i++)
         {
-            MyConsole.WriteLine("1. Yes.");
-            MyConsole.WriteLine("2. No.");
+            MyConsole.Info("1. Yes.");
+            MyConsole.Info("2. No.");
             var response = MyConsole.ReadLine()!;
             if (response == "1")
             {
@@ -101,14 +105,14 @@ internal class Program
                 return false;
             }
         }
-        MyConsole.WriteLine("Failed to read supported response.");
+        MyConsole.Info("Failed to read supported response.");
         Exit();
         return false;
     }
 
     private static void Exit()
     {
-        MyConsole.WriteLine("Press any key to exit.");
+        MyConsole.Info("Press any key to exit.");
         MyConsole.ReadKey();
         SettingsManager.Save();
         Environment.Exit(0);
@@ -123,17 +127,17 @@ internal class Program
                 break;
             }
 
-            MyConsole.WriteLine("Mod already exists. Override?");
+            MyConsole.Info("Mod already exists. Override?");
             Settings.Instance.ShouldOverride = YesNo();
             if (!Settings.Instance.ShouldOverride.Value)
             {
-                MyConsole.WriteLine("ChangeModName?");
+                MyConsole.Info("ChangeModName?");
                 if (!YesNo())
                 {
-                    MyConsole.WriteLine("Exiting... Please, change mod name in 'settings.json' if needed and try again");
+                    MyConsole.Info("Exiting... Please, change mod name in 'settings.json' if needed and try again");
                     Exit();
                 }
-                MyConsole.WriteLine("Name your mod:");
+                MyConsole.Info("Name your mod:");
                 Settings.Instance.ModName = MyConsole.ReadLine()!;
                 break;
             }
@@ -145,7 +149,7 @@ internal class Program
 
         if (Settings.Instance.ShouldOverride ?? false)
         {
-            MyConsole.WriteLine($"Mod will be overriden in all future runs. If you wish to change it change '{nameof(Settings.Instance.ShouldOverride)}' in 'settings.json' file.");
+            MyConsole.Info($"Mod will be overriden in all future runs. If you wish to change it change '{nameof(Settings.Instance.ShouldOverride)}' in 'settings.json' file.");
         }
 
     }
@@ -154,9 +158,9 @@ internal class Program
     {
         if (ModManager.FindLatestInputs() is { } xmlName && xmlName != Settings.Instance.InputXmlPath)
         {
-            MyConsole.WriteLine("Found new input in the directory:");
-            MyConsole.WriteLine(Path.GetFileName(xmlName));
-            MyConsole.WriteLine("Use it as input?");
+            MyConsole.Info("Found new input in the directory:");
+            MyConsole.Info(Path.GetFileName(xmlName));
+            MyConsole.Info("Use it as input?");
 
             if (YesNo())
             {
@@ -166,8 +170,8 @@ internal class Program
             {
                 EnsureInputsExist();
 
-                MyConsole.WriteLine("Previously used input will be used:");
-                MyConsole.WriteLine(Settings.Instance.InputXmlPath);
+                MyConsole.Info("Previously used input will be used:");
+                MyConsole.Info(Settings.Instance.InputXmlPath);
             }
         }
         else
@@ -188,12 +192,12 @@ internal class Program
 
             if (!xmlExists)
             {
-                MyConsole.WriteLine($"-------------------------------------------------");
-                MyConsole.WriteLine($"Put your exported .xml file to this app's folder ({SettingsManager.ExecutablePath}).");
-                MyConsole.WriteLine("Make sure it has the latest 'modification date'.");
-                MyConsole.WriteLine("If the wrong files are found delete other exported .xml files from the folder.");
-                MyConsole.WriteLine("If the files cannot be found open 'settings.json' and modify 'InputXmlPath' value to point to your file.");
-                MyConsole.WriteLine($"-------------------------------------------------");
+                MyConsole.Info($"-------------------------------------------------");
+                MyConsole.Info($"Put your exported .xml file to this app's folder ({SettingsManager.ExecutablePath}).");
+                MyConsole.Info("Make sure it has the latest 'modification date'.");
+                MyConsole.Info("If the wrong files are found delete other exported .xml files from the folder.");
+                MyConsole.Info("If the files cannot be found open 'settings.json' and modify 'InputXmlPath' value to point to your file.");
+                MyConsole.Info($"-------------------------------------------------");
 
                 Exit();
             }

@@ -1,23 +1,25 @@
-﻿using SixLabors.ImageSharp.Drawing;
-
-namespace Converter;
+﻿namespace Converter;
 
 public static class MyConsole
 {
+    private static readonly object _lock = new();
     private const string _logDirectoryPath = "logs";
     private static readonly string _logFilePath = Helper.GetPath(_logDirectoryPath, $"LOG_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}.txt");
 
     public static Action<object?> Sink = Console.WriteLine;
 
-    public static void WriteLine()
+    public static void Info()
     {
         Sink(null);
         WriteLineFile("\n");
     }
 
-    public static void WriteLine(object? str)
+    public static void Info(object? str, bool hidden = false)
     {
-        Sink(str);
+        if (!hidden)
+        {
+            Sink(str);
+        }
         WriteLineFile("\n" + str?.ToString());
     }
 
@@ -54,8 +56,11 @@ public static class MyConsole
 
     private static void WriteLineFile(string? str)
     {
-        Directory.CreateDirectory(_logDirectoryPath);
-        File.AppendAllText(_logFilePath, str);
+        lock (_lock)
+        {
+            Directory.CreateDirectory(_logDirectoryPath);
+            File.AppendAllText(_logFilePath, str);
+        }
     }
 }
 
