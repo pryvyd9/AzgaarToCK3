@@ -19,7 +19,7 @@ namespace Converter;
 public static class HeightMapConverter
 {
     private const int AzgaarWaterLevel = 50;
-    private const int CK3WaterLevel = 20;
+    public const int CK3WaterLevel = 20;
 
     private static readonly int[] detailSize = [33, 17, 9, 5, 3];
     // Width of average sampling for height. For detail size 9 averages of 4x4 squares are taken for every pixel in a tile.
@@ -105,6 +105,7 @@ public static class HeightMapConverter
         var p = Helper.Percentile(nonZero, 0.9);
         return (float)p;
     }
+
     private static byte[,] GetPackedArea(byte[] values, int tileI, int tileJ, int di, int height, int width)
     {
         try
@@ -196,11 +197,35 @@ public static class HeightMapConverter
         public int RowCount;
     }
 
+    private static float Avg(Vector2[,] values)
+    {
+        float[] fvs = new float[values.Length * 2];
+
+        for (int vi = 0; vi < values.GetLength(1); vi++)
+        {
+            for (int hi = 0; hi < values.GetLength(0); hi++)
+            {
+                var pos = vi * values.GetLength(0) * 2 + vi * 2;
+                fvs[pos] = values[hi, vi].X;
+                fvs[pos + 1] = values[hi, vi].Y;
+            }
+        }
+
+        var p = fvs.Average();
+        return (float)p;
+    }
+
+    //private static bool IsWithin(float start, float end, float target)
+    //{
+    //    return start <= target && target < end;
+    //}
+
     private static async Task<PackedHeightmap> CreatePackedHeightMap(Map map)
     {
         try
         {
             const int samplesPerTile = 32;
+            var mapScale = Math.Min(Settings.Instance.MapWidth, Settings.Instance.MapHeight) / 128;
 
             var path = $"{Settings.OutputDirectory}/map_data/heightmap.png";
 
@@ -210,8 +235,8 @@ public static class HeightMapConverter
             var pixels = new byte[pixelCount];
             file.CopyPixelDataTo(pixels);
 
-            var firstDerivative = Gradient(pixels, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
-            var secondDerivative = Gradient(firstDerivative, (int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var firstDerivative = Gradient(pixels, map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var secondDerivative = Gradient(firstDerivative, map.Settings.MapWidth, (int)map.Settings.MapHeight);
 
             List<Vector2[,]> gradientAreas = [];
             List<byte[,]> heightAreas = [];
@@ -225,23 +250,41 @@ public static class HeightMapConverter
                 }
             }
 
-            var weightedDerivatives = gradientAreas.Select((n, i) => (i, nonZeroP90: GetNonZeroP90Value(n), coordinates: areaCoordinates[i])).ToArray();
-            var detail = new[]
-            {
-                weightedDerivatives.Where(n => n.nonZeroP90 >= 4).ToArray(),
-                weightedDerivatives.Where(n => n.nonZeroP90 is >= 3 and < 4).ToArray(),
-                weightedDerivatives.Where(n => n.nonZeroP90 is >= 2 and < 3).ToArray(),
-                weightedDerivatives.Where(n => n.nonZeroP90 is >= 1 and < 2).ToArray(),
-                weightedDerivatives.Where(n => n.nonZeroP90 < 1).ToArray(),
-            };
+            //var weightedDerivatives = gradientAreas.Select((n, i) => (i, nonZeroP90: GetNonZeroP90Value(n), coordinates: areaCoordinates[i])).ToArray();
+            var weightedDerivatives = gradientAreas.Select((n, i) => (i, nonZeroP90: Avg(n), coordinates: areaCoordinates[i])).ToArray();
             //var detail = new[]
             //{
-            //    weightedDerivatives.Where(n => n.nonZeroP90 >= 300).ToArray(),
-            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 200 and < 300).ToArray(),
-            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 150 and < 200).ToArray(),
-            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 100 and < 150).ToArray(),
-            //    weightedDerivatives.Where(n => n.nonZeroP90 < 100).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 >= 4).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 3 and < 4).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 2 and < 3).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 is >= 1 and < 2).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 < 1).ToArray(),
             //};
+            var detail = new[]
+            {
+                weightedDerivatives.Where(n => n.nonZeroP90 >= 0.01f).ToArray(),
+                weightedDerivatives.Where(n => n.nonZeroP90 is >= 0.005f and < 0.01f).ToArray(),
+                weightedDerivatives.Where(n => n.nonZeroP90 is >= 0.001f and < 0.005f).ToArray(),
+                weightedDerivatives.Where(n => n.nonZeroP90 is >= 0.0005f and < 0.001f).ToArray(),
+                weightedDerivatives.Where(n => n.nonZeroP90 < 0.0005f).ToArray(),
+            };
+
+            //float[] detailThreshold = [
+            //    0.1f / mapScale,
+            //    0.05f / mapScale,
+            //    0.025f / mapScale,
+            //    0.00625f / mapScale,
+            //];
+
+            //var detail = new[]
+            //{
+            //    weightedDerivatives.Where(n => n.nonZeroP90 >= detailThreshold[0]).ToArray(),
+            //    weightedDerivatives.Where(n => IsWithin(detailThreshold[1], detailThreshold[0], n.nonZeroP90)).ToArray(),
+            //    weightedDerivatives.Where(n => IsWithin(detailThreshold[2], detailThreshold[1], n.nonZeroP90)).ToArray(),
+            //    weightedDerivatives.Where(n => IsWithin(detailThreshold[3], detailThreshold[2], n.nonZeroP90)).ToArray(),
+            //    weightedDerivatives.Where(n => n.nonZeroP90 < detailThreshold[3]).ToArray(),
+            //};
+
 
             //var h = 800;
             //var detail = new[]
@@ -449,6 +492,9 @@ empty_tile_offset={{ 255 127 }}
             var rect = (landHeights.SelectSingleNode("//*[@id='landHeights']/rect") as XmlElement);
             rect.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
             //rect.ParentNode.RemoveChild(rect);
+
+            var blurElement = GetNode("@id='blur10'") as XmlElement;
+            (blurElement.FirstChild as XmlElement).SetAttribute("stdDeviation", (Math.Min(Settings.Instance.MapWidth, Settings.Instance.MapHeight) / 128).ToString());
 
             var landHeightsBackground = landHeights.FirstChild;
             (landHeightsBackground as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
