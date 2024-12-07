@@ -144,7 +144,7 @@ public static class HeightMapConverter
                     }
                     else if (tileJ == width - indirectionProportion)
                     {
-                        ajTo = ci;
+                        ajTo = cj;
                         denominator /= 2;
                     }
 
