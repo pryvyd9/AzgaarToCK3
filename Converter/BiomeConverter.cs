@@ -155,18 +155,27 @@ public static class BiomeConverter
 
     public static async Task WriteMasks(Map map)
     {
+        // create ns manager
+        XmlNamespaceManager xmlnsManager = new(map.Input.XmlMap.NameTable);
+        xmlnsManager.AddNamespace("ns", "http://www.w3.org/2000/svg");
+
+        XmlElement? GetNodeFromDoc(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager) as XmlElement;
+        var biomes = GetNodeFromDoc("@id='svgbiomes'")!;
+        var width = biomes.GetAttribute("width");
+        var height = biomes.GetAttribute("height");
+
         var detail_index = new XmlDocument();
         {
-            detail_index.LoadXml(@"<svg id=""detail_index"" width=""1704"" height=""927"" version=""1.1"" background-color=""white"" >
-<rect x=""0"" y=""0"" width=""1704"" height=""927"" fill=""white"" />
+            detail_index.LoadXml($@"<svg id=""detail_index"" width=""{width}"" height=""{height}"" version=""1.1"" background-color=""white"" >
+<rect x=""0"" y=""0"" width=""100%"" height=""100%"" fill=""white"" />
 </svg>");
         }
 
 
         var detail_intensity = new XmlDocument();
         {
-            detail_intensity.LoadXml(@"<svg id=""detail_intensity"" width=""1704"" height=""927"" version=""1.1"" background-color=""black"" >
-<rect x=""0"" y=""0"" width=""1704"" height=""927"" fill=""black"" />
+            detail_intensity.LoadXml($@"<svg id=""detail_intensity"" width=""{width}"" height=""{height}"" version=""1.1"" background-color=""black"" >
+<rect x=""0"" y=""0"" width=""100%"" height=""100%"" fill=""black"" />
 </svg>");
         }
 

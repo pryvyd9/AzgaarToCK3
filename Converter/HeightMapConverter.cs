@@ -24,8 +24,8 @@ public static class HeightMapConverter
     private static readonly int[] detailSize = [33, 17, 9, 5, 3];
     // Width of average sampling for height. For detail size 9 averages of 4x4 squares are taken for every pixel in a tile.
     private static readonly byte[] averageSize = [1, 2, 4, 8, 16];
-    private static readonly int maxColumnN = (int)Settings.Instance.MapWidth / indirectionProportion;
-    private static readonly int packedWidth = (int)(maxColumnN * 17);
+    private static readonly int maxColumnN = Settings.Instance.MapWidth / indirectionProportion;
+    private static readonly int packedWidth = maxColumnN * 17;
     private const int indirectionProportion = 32;
 
     private static Vector2[,] Gradient(byte[] values, int width, int height)
@@ -465,7 +465,7 @@ empty_tile_offset={{ 255 127 }}
             {
                 var originalFill = child.GetAttribute("fill");
                 var originalHeight = int.Parse(new Regex(@"\((\d+)").Match(originalFill).Groups[1].Value);
-                const int maxHeight = 255;
+                //const int maxHeight = 255;
                 var newHeight = originalHeight - AzgaarWaterLevel + CK3WaterLevel;
 
                 child.SetAttribute("fill", $"rgb({newHeight},{newHeight},{newHeight})");
@@ -481,12 +481,12 @@ empty_tile_offset={{ 255 127 }}
             Remove("@id='fog'");
 
             var svg = SvgDocument.FromSvg<SvgDocument>(land.OuterXml);
-            var img = svg.ToGrayscaleImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var img = svg.ToGrayscaleImage(map.Settings.MapWidth, map.Settings.MapHeight);
 
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
             Helper.EnsureDirectoryExists(path);
 
-            img.Save("landHeights.png");
+            //img.Save("landHeights.png");
             img.Save(path);
         }
         catch (Exception ex)
