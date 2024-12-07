@@ -35,6 +35,7 @@ Do them if there are issues with holding/unit placement or terrain looks weird. 
 - Set `onlyCounts` = true to make all characters start as counts.
 - [No Steam or directory not found](https://github.com/pryvyd9/AzgaarToCK3/blob/master/docs/NoSteam.md/)
 - Change MaxThreads value to 1 if you wish to limit CPU and RAM usage. Use default value (= cpu core count) for max performance.
+- You can change map size with `MapWidth` and `MapHeight`. But make sure they are divisible by 32.
 
 ## Quirks
 - Azgaar only has 2 titles and CK3 has 5:
@@ -54,6 +55,7 @@ Do them if there are issues with holding/unit placement or terrain looks weird. 
 - Religions are mapped to random existing religions.
 - Rivers are not generated.
 - Biomes do not have smooth transition. They are still WIP. [Biome Conversion](https://github.com/pryvyd9/AzgaarToCK3/blob/master/Converter/Helper.cs#L158-L169)
+- Map ratios are not preserved. If you create a square map in Azgaar you will get it streched. To fix it change `MapWidth` and `MapHeight` to match your ratios but make sure they are divisible by 32.
 
 ## Known issues
 - Map painting is not perfect.

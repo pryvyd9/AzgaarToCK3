@@ -98,9 +98,7 @@ public static class BiomeConverter
         doc.DocumentElement.FirstChild.PrependChild(defs);
 
         var svg = SvgDocument.FromSvg<SvgDocument>(doc.OuterXml);
-        var img = svg.ToGrayscaleImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
-
-        //var ck3Biome = biomeId.ToCk3Biome();
+        var img = svg.ToGrayscaleImage(map.Settings.MapWidth, map.Settings.MapHeight);
 
         var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", ck3Biome.ToMaskFilename());
         Helper.EnsureDirectoryExists(path);

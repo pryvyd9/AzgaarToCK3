@@ -1,5 +1,6 @@
 # 1.6.0
 - introduced parallel processing.
+- added custom resolution
 
 # 1.5.0
 - improved localization.
