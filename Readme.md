@@ -9,11 +9,11 @@ Discord: https://discord.gg/CqHcpRRH
 
 ## Generation requirements
 - use `Provinces ratio` = 100.
-- do not use high `Points number` option. Heightmap will be smoothed down and the borders will not match terrain.
 
 ## Generation recommendations
 - Set `Cultures number` > `Religions number`.
 - Use high `States number`, `Towns number`
+- Do not use high `Points number` option. Heightmap will be smoothed down and the borders will not match terrain.
 
 ## Usage
 1. Generate a map via https://pryvyd9.github.io/Fantasy-Map-Generator/ (It is a special version for conversion). You can load your existing Azgaar map there and then export it.
