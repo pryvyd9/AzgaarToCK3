@@ -59,6 +59,7 @@ Do them if there are issues with holding/unit placement or terrain looks weird. 
 
 ## Known issues
 - Map painting is not perfect.
+- Zoomed out map can be drawn under the cloth or not at the center of the table.
 
 ## Multiplayer
 - use [[UMMS]Ultimate Modded Multiplayer Solver:null checksum](https://steamcommunity.com/sharedfiles/filedetails/?id=3227254722) mod
