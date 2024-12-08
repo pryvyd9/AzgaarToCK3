@@ -1,3 +1,6 @@
+# 1.6.1
+- fixed culture, religion not being applied.
+
 # 1.6.0
 - introduced parallel processing.
 - added custom resolution

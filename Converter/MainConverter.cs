@@ -914,7 +914,16 @@ NCamera = {{
             .SelectMany(n => n.counties)
             .SelectMany(n => n.baronies)
             .ToDictionary(n => n.id, n => n.province.Cells.GetDominant(m => m.culture));
-        
+
+        //string[] baronyNames = ["Montura", "Rociagamia", "Pianti", "Menturno", "Monziodolon", "Rocciamigna", "Arbogiomia", "Selcivero", "Pogna", "Brocasia", "Arnole"];
+        //var baronies = map.Output.Empires
+        //   .SelectMany(n => n.kingdoms)
+        //   .SelectMany(n => n.duchies)
+        //   .SelectMany(n => n.counties)
+        //   .SelectMany(n => n.baronies);
+        //var islandBaronies = baronies.Where(n => baronyNames.Contains(n.name, StringComparer.OrdinalIgnoreCase)).ToArray();
+        //var islandBaroniesCultures = islandBaronies.ToDictionary(n => n.id, n => n.province.Cells.GetDominant(m => m.culture));
+
         var totalCultures = map.Input.JsonMap.pack.cultures.Length;
         if (totalCultures > originalCultureNames.Length)
         {
@@ -928,7 +937,7 @@ NCamera = {{
         //    // cultureId starts from 1
         //    for (int i = 0; i < totalCultures + 1; i++)
         //    {
-        //        ToOriginalCultureName[i] = originalCultureNames[i];
+        //        toOriginalCultureName[i] = originalCultureNames[i];
         //    }
         //}
         // Randomized cultures
@@ -1055,7 +1064,7 @@ NCamera = {{
         var provincesPath = Helper.GetPath(Settings.OutputDirectory, "history", "provinces");
         foreach (var p in Directory.EnumerateFiles(originalProvincesPath))
         {
-            File.WriteAllText(provincesPath + Path.GetFileName(p), "");
+            File.WriteAllText(Helper.GetPath(provincesPath , Path.GetFileName(p)), "");
         }
     }
     public static async Task CopyOriginalReligions(Map map)

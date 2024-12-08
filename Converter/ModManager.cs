@@ -175,6 +175,7 @@ supported_version=""{supportedGameVersion}""";
             new ("Landed titles created.", c => TitleManager.WriteLandedTitles(c.map)),
             new ("Title localization created.", c => TitleManager.WriteTitleLocalization(c.map)),
             new ("Culture, Religions created.", async c => c with { faiths = await MainConverter.ApplyCultureReligion(c.map) }),
+            new ("History provinces created.", c => MainConverter.WriteHistoryProvinces(c.map)),
             new ("Characters created.", async c => c.map.Output.Characters = Settings.Instance.OnlyCounts
                 ? await CharacterManager.CreateCharactersCountOnly(c.map)
                 : await CharacterManager.CreateCharacters(c.map)),
@@ -213,6 +214,7 @@ supported_version=""{supportedGameVersion}""";
             new ("Landed titles created.", c => TitleManager.WriteLandedTitles(c.map)),
             new ("Title localization created.", c => TitleManager.WriteTitleLocalization(c.map)),
             new ("Culture, Religions created.", async c => c with { faiths = await MainConverter.ApplyCultureReligion(c.map) }),
+            new ("History provinces created.", c => MainConverter.WriteHistoryProvinces(c.map)),
             new ("Characters created.", async c => c.map.Output.Characters = Settings.Instance.OnlyCounts
                 ? await CharacterManager.CreateCharactersCountOnly(c.map)
                 : await CharacterManager.CreateCharacters(c.map)),
