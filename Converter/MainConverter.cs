@@ -18,7 +18,7 @@ public partial class GeoMapJsonContext : JsonSerializerContext {}
 [JsonSerializable(typeof(JsonMap))]
 public partial class JsonMapJsonContext : JsonSerializerContext {}
 
-public static class MapManager
+public static class MainConverter
 {
     public static async Task<XmlDocument> LoadXml()
     {
@@ -875,9 +875,7 @@ NCamera = {{
     }
     public static async Task WriteDefines(Map map)
     {
-        //var maxElevation = 51;
         var maxElevation = Settings.Instance.MaxElevation;
-        //var waterLevel = 3.8;
         var waterLevel = ((float)Settings.Instance.MaxElevation / 255) * HeightMapConverter.CK3WaterLevel;
         var file = $@"NJominiMap = {{
 	WORLD_EXTENTS_X = {map.Settings.MapWidth - 1}
@@ -915,8 +913,8 @@ NCamera = {{
             .SelectMany(n => n.duchies)
             .SelectMany(n => n.counties)
             .SelectMany(n => n.baronies)
-            .ToDictionary(n => n.id, n => n.province.Cells.Select(m => m.culture).Max());
-
+            .ToDictionary(n => n.id, n => n.province.Cells.GetDominant(m => m.culture));
+        
         var totalCultures = map.Input.JsonMap.pack.cultures.Length;
         if (totalCultures > originalCultureNames.Length)
         {

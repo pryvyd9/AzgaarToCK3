@@ -475,4 +475,9 @@ public static class Helper
         return img;
     }
 
+    public static int GetDominant(this IEnumerable<Cell> cells, Func<Cell, int> selector) =>
+        cells.GroupBy(selector)
+            .ToDictionary(n => n.Key, n => n.Count())
+            .MaxBy(n => n.Value)
+            .Key;
 }

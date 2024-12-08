@@ -128,8 +128,8 @@ public static class ModManager
 
     private static async Task<Map> LoadMap()
     {
-        var xmlMap = await MapManager.LoadXml();
-        var map = await MapManager.ConvertMap(xmlMap);
+        var xmlMap = await MainConverter.LoadXml();
+        var map = await MainConverter.ConvertMap(xmlMap);
         map.Settings = Settings.Instance;
         return map;
     }
@@ -159,22 +159,22 @@ supported_version=""{supportedGameVersion}""";
         StepNode steps = new("Conversion finished.", [
             new ("Inputs have been loaded.", async c => c with { map = await LoadMap() }),
             //new ("Cell map have been drawn.", c => MapManager.DrawCells(c.map)),
-            //new ("Provinces created.", c => MapManager.DrawProvinces(c.map)),
+            new ("Provinces created.", c => MainConverter.DrawProvinces(c.map)),
             new StepNodeParallel("Finished order independent steps.", [
                 new ("Heightmap created.", c => HeightMapConverter.WriteHeightMap(c.map)),
-                //new ("Flat map created.", c => MapManager.DrawFlatMap(c.map)),
-                //new ("Graphics file created.", _ => MapManager.WriteGraphics()),
-                //new ("Defines file created.", c => MapManager.WriteDefines(c.map)),
-                //new ("Rivermap created.", c => MapManager.DrawRivers(c.map)),
-                //new ("Masks created.", c => BiomeConverter.WriteMasks(c.map)),
-                //new ("Pdxterrain created.", c => MapManager.WritePdxterrain()),
+                new ("Flat map created.", c => MainConverter.DrawFlatMap(c.map)),
+                new ("Graphics file created.", _ => MainConverter.WriteGraphics()),
+                new ("Defines file created.", c => MainConverter.WriteDefines(c.map)),
+                new ("Rivermap created.", c => MainConverter.DrawRivers(c.map)),
+                new ("Masks created.", c => BiomeConverter.WriteMasks(c.map)),
+                new ("Pdxterrain created.", c => MainConverter.WritePdxterrain()),
             ]),
-            new ("Definition created.", c => MapManager.WriteDefinition(c.map)),
-            new ("Locators created.", c => MapManager.WriteLocators(c.map)),
+            new ("Definition created.", c => MainConverter.WriteDefinition(c.map)),
+            new ("Locators created.", c => MainConverter.WriteLocators(c.map)),
             new ("Titles created.", async c => c.map.Output.Empires = TitleManager.CreateTitles(c.map)),
             new ("Landed titles created.", c => TitleManager.WriteLandedTitles(c.map)),
             new ("Title localization created.", c => TitleManager.WriteTitleLocalization(c.map)),
-            new ("Culture, Religions created.", async c => c with { faiths = await MapManager.ApplyCultureReligion(c.map) }),
+            new ("Culture, Religions created.", async c => c with { faiths = await MainConverter.ApplyCultureReligion(c.map) }),
             new ("Characters created.", async c => c.map.Output.Characters = Settings.Instance.OnlyCounts
                 ? await CharacterManager.CreateCharactersCountOnly(c.map)
                 : await CharacterManager.CreateCharacters(c.map)),
@@ -182,10 +182,10 @@ supported_version=""{supportedGameVersion}""";
             new ("History titles created.", c => CharacterManager.WriteHistoryTitles(c.map)),
             new ("Dynasties created.", c => CharacterManager.WriteDynasties(c.map)),
             new ("Dynasty localization created.", c => CharacterManager.WriteDynastyLocalization(c.map)),
-            new ("Original religions copied.", c => MapManager.CopyOriginalReligions(c.map)),
-            new ("Holy sites created.", c => MapManager.WriteHolySites(c.map, c.faiths)),
-            new ("Default file created.", c => MapManager.WriteDefault(c.map)),
-            new ("Terrain created.", c => MapManager.WriteTerrain(c.map)),
+            new ("Original religions copied.", c => MainConverter.CopyOriginalReligions(c.map)),
+            new ("Holy sites created.", c => MainConverter.WriteHolySites(c.map, c.faiths)),
+            new ("Default file created.", c => MainConverter.WriteDefault(c.map)),
+            new ("Terrain created.", c => MainConverter.WriteTerrain(c.map)),
         ]);
 
         await steps.Run(new Context(null!, null!));
@@ -196,23 +196,23 @@ supported_version=""{supportedGameVersion}""";
     {
         StepNode steps = new("Conversion finished.", [
             new ("Inputs have been loaded.", async c => c with { map = await LoadMap() }),
-            //new ("Cell map have been drawn.", c => MapManager.DrawCells(c.map)),
-            new ("Provinces created.", c => MapManager.DrawProvinces(c.map)),
+            //new ("Cell map have been drawn.", c => MainConverter.DrawCells(c.map)),
+            new ("Provinces created.", c => MainConverter.DrawProvinces(c.map)),
             new StepNodeParallel("Finished order independent steps.", [
                 new ("Heightmap created.", c => HeightMapConverter.WriteHeightMap(c.map)),
-                new ("Flat map created.", c => MapManager.DrawFlatMap(c.map)),
-                new ("Graphics file created.", _ => MapManager.WriteGraphics()),
-                new ("Defines file created.", c => MapManager.WriteDefines(c.map)),
-                new ("Rivermap created.", c => MapManager.DrawRivers(c.map)),
+                new ("Flat map created.", c => MainConverter.DrawFlatMap(c.map)),
+                new ("Graphics file created.", _ => MainConverter.WriteGraphics()),
+                new ("Defines file created.", c => MainConverter.WriteDefines(c.map)),
+                new ("Rivermap created.", c => MainConverter.DrawRivers(c.map)),
                 new ("Masks created.", c => BiomeConverter.WriteMasks(c.map)),
-                new ("Pdxterrain created.", c => MapManager.WritePdxterrain()),
+                new ("Pdxterrain created.", c => MainConverter.WritePdxterrain()),
             ]),
-            new ("Definition created.", c => MapManager.WriteDefinition(c.map)),
-            new ("Locators created.", c => MapManager.WriteLocators(c.map)),
+            new ("Definition created.", c => MainConverter.WriteDefinition(c.map)),
+            new ("Locators created.", c => MainConverter.WriteLocators(c.map)),
             new ("Titles created.", async c => c.map.Output.Empires = TitleManager.CreateTitles(c.map)),
             new ("Landed titles created.", c => TitleManager.WriteLandedTitles(c.map)),
             new ("Title localization created.", c => TitleManager.WriteTitleLocalization(c.map)),
-            new ("Culture, Religions created.", async c => c with { faiths = await MapManager.ApplyCultureReligion(c.map) }),
+            new ("Culture, Religions created.", async c => c with { faiths = await MainConverter.ApplyCultureReligion(c.map) }),
             new ("Characters created.", async c => c.map.Output.Characters = Settings.Instance.OnlyCounts
                 ? await CharacterManager.CreateCharactersCountOnly(c.map)
                 : await CharacterManager.CreateCharacters(c.map)),
@@ -220,10 +220,10 @@ supported_version=""{supportedGameVersion}""";
             new ("History titles created.", c => CharacterManager.WriteHistoryTitles(c.map)),
             new ("Dynasties created.", c => CharacterManager.WriteDynasties(c.map)),
             new ("Dynasty localization created.", c => CharacterManager.WriteDynastyLocalization(c.map)),
-            new ("Original religions copied.", c => MapManager.CopyOriginalReligions(c.map)),
-            new ("Holy sites created.", c => MapManager.WriteHolySites(c.map, c.faiths)),
-            new ("Default file created.", c => MapManager.WriteDefault(c.map)),
-            new ("Terrain created.", c => MapManager.WriteTerrain(c.map)),
+            new ("Original religions copied.", c => MainConverter.CopyOriginalReligions(c.map)),
+            new ("Holy sites created.", c => MainConverter.WriteHolySites(c.map, c.faiths)),
+            new ("Default file created.", c => MainConverter.WriteDefault(c.map)),
+            new ("Terrain created.", c => MainConverter.WriteTerrain(c.map)),
         ]);
 
         await steps.Run(new Context(null!, null!));
