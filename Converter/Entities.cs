@@ -2,12 +2,314 @@
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Xml;
+using static Converter.Input.MapDeserializer;
 
 namespace Converter;
 
 
+public static class Input
+{
+    public static class MapDeserializer
+    {
+        public class MapInputReader
+        {
+            private readonly Queue<string> parameters;
 
-//public record CK3Religion()
+            public MapInputReader(string filename)
+            {
+                var file = File.ReadAllText(filename);
+                parameters = new Queue<string>(file.Split("\r\n"));
+            }
+
+            public string? Read() => parameters.TryDequeue(out var val) ? val : null;
+        }
+
+        public static T Instantiate<T>(string[] args, Func<string[], string[]>? selector = null)
+        {
+            var constructors = typeof(T).GetConstructors();
+            if (constructors.Length > 1)
+            {
+                throw new Exception("Type must have only 1 constructor");
+            }
+
+            var constructor = constructors[0];
+            var parameters = constructor.GetParameters();
+
+            var selectedArgs = selector?.Invoke(args) ?? args;
+            if (selectedArgs.Length != parameters.Length)
+            {
+                throw new Exception("Parameter count must equal constructor argument count");
+            }
+
+            var paramArray = parameters.Zip(selectedArgs).Select(n => Convert.ChangeType(n.Second, n.First.ParameterType)).ToArray();
+            return (T)Activator.CreateInstance(typeof(T), paramArray)!;
+        }
+
+        //public static T Instantiate<T>(object[] args, Func<object[], object[]>? selector = null)
+        //{
+        //    var constructors = typeof(T).GetConstructors();
+        //    if (constructors.Length > 1)
+        //    {
+        //        throw new Exception("Type must have only 1 constructor");
+        //    }
+
+        //    var constructor = constructors[0];
+        //    var parameters = constructor.GetParameters();
+
+        //    var selectedArgs = selector?.Invoke(args) ?? args;
+        //    if (selectedArgs.Length != parameters.Length)
+        //    {
+        //        throw new Exception("Parameter count must equal constructor argument count");
+        //    }
+
+        //    var paramArray = parameters.Zip(selectedArgs).Select(n => Convert.ChangeType(n.Second, n.First.ParameterType)).ToArray();
+        //    return (T)Activator.CreateInstance(typeof(T), paramArray)!;
+        //}
+
+        public static MapInputReader CreateReader(string filename) => new MapInputReader(filename);
+
+        //public static T Deserialize<T>(MapInputReader reader) where T : IMapDeserializable<T> => T.Deserialize(reader);
+        //public static T DefaultDeserialize<T>(MapInputReader reader) where T : IMapDeserializable<T>
+        //{
+        //    var constructors = typeof(T).GetConstructors();
+        //    if (constructors.Length > 1)
+        //    {
+        //        throw new Exception("Type must have only 1 constructor");
+        //    }
+
+        //    var constructor = constructors[0];
+        //    var parameters = constructor.GetParameters();
+
+        //    var args = parameters.Select(p =>
+        //    {
+        //        if (p.ParameterType.GetInterfaces().FirstOrDefault(n => n.IsGenericType && n.GetGenericTypeDefinition() == typeof(IMapDeserializable<>)) is { } @interface)
+        //        {
+        //            var deserializeMethod = @interface.GetMethod(nameof(Deserialize), BindingFlags.Static | BindingFlags.Public, [typeof(MapInputReader)]);
+        //            try
+        //            {
+        //                return deserializeMethod!.Invoke(null, [reader]);
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Debugger.Break();
+        //                throw new Exception($"Could not instantiate {p.ParameterType.FullName}. Override Deserialize method.", ex);
+        //            }
+
+        //            //return deserializeMethod!.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).Invoke(null, [reader])!;
+        //        }
+        //        if (p.ParameterType.GetInterface(nameof(IConvertible)) is not null)
+        //        {
+        //            return Convert.ChangeType(reader.Read()!, p.ParameterType)!;
+        //        }
+
+        //        throw new Exception($"Could not instantiate {typeof(T).FullName}. Unsupported argument type: {p.ParameterType.FullName}");
+        //    }).ToArray();
+
+        //    return Instantiate<T>(args!);
+        //}
+
+
+
+
+        //public static object Deserialize(Type type, MapInputReader reader) => T.Deserialize(reader);
+    }
+
+    public interface IMapDeserializable<T>
+    {
+        static abstract T Deserialize(MapInputReader reader);
+
+        //public static virtual T DefaultDeserialize(MapInputReader reader)
+        //{
+        //    var constructors = typeof(T).GetConstructors();
+        //    if (constructors.Length > 1)
+        //    {
+        //        throw new Exception("Type must have only 1 constructor");
+        //    }
+
+        //    var constructor = constructors[0];
+        //    var parameters = constructor.GetParameters();
+
+        //    var args = parameters.Select(p =>
+        //    {
+        //        if (p.ParameterType.GetInterfaces().FirstOrDefault(n => n.IsGenericType && n.GetGenericTypeDefinition() == typeof(IMapDeserializable<>)) is { } @interface)
+        //        {
+        //            var deserializeMethod = @interface.GetMethod(nameof(Deserialize), BindingFlags.Static | BindingFlags.Public, [typeof(MapInputReader)]);
+        //            try
+        //            {
+        //                return deserializeMethod!.Invoke(null, [reader]);
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Debugger.Break();
+        //                throw new Exception($"Could not instantiate {p.ParameterType.FullName}. Override Deserialize method.");
+        //            }
+
+        //            //return deserializeMethod!.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).Invoke(null, [reader])!;
+        //        }
+        //        if (p.ParameterType.GetInterface(nameof(IConvertible)) is not null)
+        //        {
+        //            return Convert.ChangeType(reader.Read()!, p.ParameterType)!;
+        //        }
+
+        //        throw new Exception($"Could not instantiate {typeof(T).FullName}. Unsupported argument type: {p.ParameterType.FullName}");
+        //    }).ToArray();
+
+        //    return Instantiate<T>(args!);
+        //}
+    }
+
+    public record Params(string version, string license, string dateString, string seed, int graphWidth, int graphHeight, long mapId) : IMapDeserializable<Params>
+    {
+        public static Params Deserialize(MapInputReader reader) => Instantiate<Params>(reader.Read()!.Split('|'));
+    };
+    public record Settings(
+        string distanceUnitInput,
+        string distanceScaleInput,
+        string areaUnit,
+        string heightUnit,
+        string heightExponentUnit,
+        string temperatureScale,
+        string populationRate,
+        string urbanization,
+        string mapSizeOutput,
+        string latitudeOutput,
+        string precOutput,
+        string options, // json
+        string mapName,
+        string hideLabels,
+        string stylePreset,
+        string rescaleLabels,
+        string urbanDensity) : IMapDeserializable<Settings>
+    {
+        public static Settings Deserialize(MapInputReader reader)
+        {
+            var parameters = reader.Read()!;
+            return Instantiate<Settings>(parameters.Split('|'), args => [.. args[..6], .. args[12..16], .. args[18..]]);
+        }
+    }
+    public record Biomes(string color, string habitability, string name) : IMapDeserializable<Biomes>
+    {
+        public static Biomes Deserialize(MapInputReader reader) => Instantiate<Biomes>(reader.Read()!.Split('|'));
+    }
+    public record GridCell(int h, int prec, int f, int t, int temp);
+    public record Grid(string general, GridCell[] cells) : IMapDeserializable<Grid>
+    {
+        public static Grid Deserialize(MapInputReader reader)
+        {
+            var general = reader.Read()!;
+            var h = ReadArray();
+            var prec = ReadArray();
+            var f = ReadArray();
+            var t = ReadArray();
+            var temp = ReadArray();
+            var cells = Enumerable.Range(0, h.Length).Select(i => Instantiate<GridCell>([h[i], prec[i], f[i], t[i], temp[i]])).ToArray();
+
+            return new Grid(general, cells);
+
+            string[] ReadArray() => reader.Read()!.Split(',');
+        }
+    }
+    public record PackCell(int biome, int burg, string conf, int culture, int fl,
+        float pop, int r, int road, int s, int state, int religion, int province, int crossroad);
+    public record Pack(PackCell[] cells) : IMapDeserializable<Pack>
+    {
+        public static Pack Deserialize(MapInputReader reader)
+        {
+            var biome = ReadArray();
+            var burg = ReadArray();
+            var conf = ReadArray();
+            var culture = ReadArray();
+            var fl = ReadArray();
+            var pop = ReadArray();
+            var r = ReadArray();
+            var road = ReadArray();
+            var s = ReadArray();
+            var state = ReadArray();
+            var religion = ReadArray();
+            var province = ReadArray();
+            var crossroad = ReadArray();
+            var cells = Enumerable.Range(0, biome.Length).Select(i => Instantiate<PackCell>(
+                [biome[i], burg[i], conf[i], culture[i], fl[i], pop[i], r[i], road[i], s[i], state[i], religion[i], province[i], crossroad[i]]
+                )).ToArray();
+
+            return new Pack(cells);
+
+            string[] ReadArray() => reader.Read()!.Split(',');
+        }
+    }
+    //public record Coords(float latT, float latN, float latS, float lonT, float LonW, float lonE);
+    public record Map(
+        Params @params,
+        Settings settings,
+        string coords, // json
+        Biomes biomes,
+        string notesDate, // json
+        XmlDocument svg,
+        Grid grid,
+        string packFeatures, // json
+        string cultures, // json
+        string states, // json
+        string burgs, // json
+        Pack pack,
+        string religions,
+        string provinces,
+        string namesData,
+        string rivers,
+        string rulersString,
+        string fonts,
+        string markers
+        ) : IMapDeserializable<Map>
+    {
+
+        public static Map Deserialize(MapInputReader reader)
+        {
+            var @params = Params.Deserialize(reader);
+            var settings = Settings.Deserialize(reader);
+            var coords = reader.Read()!;
+            var biomes = Biomes.Deserialize(reader);
+            var notesDate = reader.Read()!;
+
+            var svgStr = reader.Read()!;
+            var svg = new XmlDocument();
+            svg.LoadXml(svgStr);
+
+            var grid = Grid.Deserialize(reader);
+            var packFeatures = reader.Read()!;
+            var cultures = reader.Read()!;
+            var states = reader.Read()!;
+            var burgs = reader.Read()!;
+            var pack = Pack.Deserialize(reader);
+            var religions = reader.Read()!;
+            var provinces = reader.Read()!;
+            var namesData = reader.Read()!;
+            var rivers = reader.Read()!;
+            var rulersString = reader.Read()!;
+            var fonts = reader.Read()!;
+            var markers = reader.Read()!;
+
+            return new Map(
+                @params,
+                settings,
+                coords,
+                biomes,
+                notesDate,
+                svg,
+                grid,
+                packFeatures,
+                cultures,
+                states,
+                burgs,
+                pack,
+                religions,
+                provinces,
+                namesData,
+                rivers,
+                rulersString,
+                fonts,
+                markers);
+        }
+    }
+}
 
 public record GeometryRivers(string type, float[][] coordinates);
 public record FeatureRivers(GeometryRivers geometry);

@@ -128,6 +128,7 @@ public static class ModManager
 
     private static async Task<Map> LoadMap()
     {
+        await MainConverter.LoadMap();
         var xmlMap = await MainConverter.LoadXml();
         var map = await MainConverter.ConvertMap(xmlMap);
         map.Settings = Settings.Instance;

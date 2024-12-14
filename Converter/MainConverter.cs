@@ -1,12 +1,12 @@
 ﻿using ImageMagick;
 using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 using Svg;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml;
+using static Converter.Input;
 
 namespace Converter;
 
@@ -44,6 +44,22 @@ public static class MainConverter
             throw;
         }
     }
+    public static async Task<Input.Map> LoadMap()
+    {
+        try
+        {
+            var map = Input.Map.Deserialize(MapDeserializer.CreateReader("input.map"));
+
+            var h = map.grid.cells.GroupBy(n => n.h);
+            return map;
+        }
+        catch (Exception e)
+        {
+            Debugger.Break();
+            throw;
+        }
+    }
+
 
     private static MagickColor GetColor(int i, int maxI)
     {
@@ -1103,7 +1119,7 @@ NCamera = {{
             var baronyStr = barony > 0 ? $"barony = b_{barony}" : null;
             var isActiveStr = n.holySite?.is_active == "no" ? $"is_active = no" : null;
             var flagStr = string.IsNullOrEmpty(n.holySite?.flag) ? null : $"flag = {n.holySite.flag}";
-            var characterModifierStr = string.Join("\n", n.holySite?.character_modifier?.Select(n => $"     {n.Key} = {n.Value}") ?? new string[0]);
+            var characterModifierStr = string.Join("\n", n.holySite?.character_modifier?.Select(n => $"     {n.Key} = {n.Value}") ?? []);
 
             return $@"{n.name} = {{
     county = c_{county.id}
