@@ -2,117 +2,78 @@
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Xml;
-using static Converter.Input.MapDeserializer;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Converter;
+
+[JsonSerializable(typeof(Input.GridFeature[]))]
+public partial class GridFeatureArrayJsonContext : JsonSerializerContext { }
+
+[JsonSerializable(typeof(Input.GridFeature))]
+[JsonSerializable(typeof(Input.GridGeneral))]
+public partial class GridGeneralJsonContext : JsonSerializerContext { }
 
 
 public static class Input
 {
-    public static class MapDeserializer
+    // Needed for objects for which there are 0 instead of empty object in input file
+    public abstract class AbstractJsonConverter<T> : JsonConverter<T>
     {
-        public class MapInputReader
+        protected abstract JsonTypeInfo<T> JsonTypeInfo { get; }
+
+        public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            private readonly Queue<string> parameters;
+            using var jsonDocument = JsonDocument.ParseValue(ref reader);
+            var str = jsonDocument.RootElement.GetRawText();
 
-            public MapInputReader(string filename)
-            {
-                var file = File.ReadAllText(filename);
-                parameters = new Queue<string>(file.Split("\r\n"));
-            }
+            // replace 0 with empty object.
+            var escapedStr = string.Concat(str.AsSpan(0, 1), "{}", str.AsSpan(2));
 
-            public string? Read() => parameters.TryDequeue(out var val) ? val : null;
+            var objects = JsonSerializer.Deserialize(escapedStr, JsonTypeInfo);
+            return objects;
         }
 
-        public static T Instantiate<T>(string[] args, Func<string[], string[]>? selector = null)
+        public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
         {
-            var constructors = typeof(T).GetConstructors();
-            if (constructors.Length > 1)
-            {
-                throw new Exception("Type must have only 1 constructor");
-            }
-
-            var constructor = constructors[0];
-            var parameters = constructor.GetParameters();
-
-            var selectedArgs = selector?.Invoke(args) ?? args;
-            if (selectedArgs.Length != parameters.Length)
-            {
-                throw new Exception("Parameter count must equal constructor argument count");
-            }
-
-            var paramArray = parameters.Zip(selectedArgs).Select(n => Convert.ChangeType(n.Second, n.First.ParameterType)).ToArray();
-            return (T)Activator.CreateInstance(typeof(T), paramArray)!;
+            throw new NotImplementedException();
         }
-
-        //public static T Instantiate<T>(object[] args, Func<object[], object[]>? selector = null)
-        //{
-        //    var constructors = typeof(T).GetConstructors();
-        //    if (constructors.Length > 1)
-        //    {
-        //        throw new Exception("Type must have only 1 constructor");
-        //    }
-
-        //    var constructor = constructors[0];
-        //    var parameters = constructor.GetParameters();
-
-        //    var selectedArgs = selector?.Invoke(args) ?? args;
-        //    if (selectedArgs.Length != parameters.Length)
-        //    {
-        //        throw new Exception("Parameter count must equal constructor argument count");
-        //    }
-
-        //    var paramArray = parameters.Zip(selectedArgs).Select(n => Convert.ChangeType(n.Second, n.First.ParameterType)).ToArray();
-        //    return (T)Activator.CreateInstance(typeof(T), paramArray)!;
-        //}
-
-        public static MapInputReader CreateReader(string filename) => new MapInputReader(filename);
-
-        //public static T Deserialize<T>(MapInputReader reader) where T : IMapDeserializable<T> => T.Deserialize(reader);
-        //public static T DefaultDeserialize<T>(MapInputReader reader) where T : IMapDeserializable<T>
-        //{
-        //    var constructors = typeof(T).GetConstructors();
-        //    if (constructors.Length > 1)
-        //    {
-        //        throw new Exception("Type must have only 1 constructor");
-        //    }
-
-        //    var constructor = constructors[0];
-        //    var parameters = constructor.GetParameters();
-
-        //    var args = parameters.Select(p =>
-        //    {
-        //        if (p.ParameterType.GetInterfaces().FirstOrDefault(n => n.IsGenericType && n.GetGenericTypeDefinition() == typeof(IMapDeserializable<>)) is { } @interface)
-        //        {
-        //            var deserializeMethod = @interface.GetMethod(nameof(Deserialize), BindingFlags.Static | BindingFlags.Public, [typeof(MapInputReader)]);
-        //            try
-        //            {
-        //                return deserializeMethod!.Invoke(null, [reader]);
-        //            }
-        //            catch (Exception ex)
-        //            {
-        //                Debugger.Break();
-        //                throw new Exception($"Could not instantiate {p.ParameterType.FullName}. Override Deserialize method.", ex);
-        //            }
-
-        //            //return deserializeMethod!.GetGenericMethodDefinition().MakeGenericMethod(typeof(T)).Invoke(null, [reader])!;
-        //        }
-        //        if (p.ParameterType.GetInterface(nameof(IConvertible)) is not null)
-        //        {
-        //            return Convert.ChangeType(reader.Read()!, p.ParameterType)!;
-        //        }
-
-        //        throw new Exception($"Could not instantiate {typeof(T).FullName}. Unsupported argument type: {p.ParameterType.FullName}");
-        //    }).ToArray();
-
-        //    return Instantiate<T>(args!);
-        //}
-
-
-
-
-        //public static object Deserialize(Type type, MapInputReader reader) => T.Deserialize(reader);
     }
+
+
+    public class MapInputReader
+    {
+        private readonly Queue<string> parameters;
+
+        public MapInputReader(string filename)
+        {
+            var file = File.ReadAllText(filename);
+            parameters = new Queue<string>(file.Split("\r\n"));
+        }
+
+        public string? Read() => parameters.TryDequeue(out var val) ? val : null;
+    }
+
+    private static T Instantiate<T>(string[] args, Func<string[], string[]>? selector = null)
+    {
+        var constructors = typeof(T).GetConstructors();
+        if (constructors.Length > 1)
+        {
+            throw new Exception("Type must have only 1 constructor");
+        }
+
+        var constructor = constructors[0];
+        var parameters = constructor.GetParameters();
+
+        var selectedArgs = selector?.Invoke(args) ?? args;
+        if (selectedArgs.Length != parameters.Length)
+        {
+            throw new Exception("Parameter count must equal constructor argument count");
+        }
+
+        var paramArray = parameters.Zip(selectedArgs).Select(n => Convert.ChangeType(n.Second, n.First.ParameterType)).ToArray();
+        return (T)Activator.CreateInstance(typeof(T), paramArray)!;
+    }
+    public static MapInputReader CreateReader(string filename) => new MapInputReader(filename);
 
     public interface IMapDeserializable<T>
     {
@@ -191,12 +152,29 @@ public static class Input
     {
         public static Biomes Deserialize(MapInputReader reader) => Instantiate<Biomes>(reader.Read()!.Split('|'));
     }
+
+
+    public record GridFeature(int i, bool land, bool border, string type);
+    public class GridFeatureJsonConverter : AbstractJsonConverter<GridFeature[]>
+    {
+        protected override JsonTypeInfo<GridFeature[]> JsonTypeInfo => GridFeatureArrayJsonContext.Default.GridFeatureArray;
+    }
+
+
+    public record GridGeneral(
+        float spacing,
+        int cellsX,
+        int cellsY,
+        int[][] boundary,
+        float[][] points,
+        [property: JsonConverter(typeof(GridFeatureJsonConverter))] GridFeature[] features,
+        int cellsDesired);
     public record GridCell(int h, int prec, int f, int t, int temp);
-    public record Grid(string general, GridCell[] cells) : IMapDeserializable<Grid>
+    public record Grid(GridGeneral general, GridCell[] cells) : IMapDeserializable<Grid>
     {
         public static Grid Deserialize(MapInputReader reader)
         {
-            var general = reader.Read()!;
+            var general = JsonSerializer.Deserialize<GridGeneral>(reader.Read()!)!;
             var h = ReadArray();
             var prec = ReadArray();
             var f = ReadArray();
@@ -211,10 +189,21 @@ public static class Input
     }
     public record PackCell(int biome, int burg, string conf, int culture, int fl,
         float pop, int r, int road, int s, int state, int religion, int province, int crossroad);
-    public record Pack(PackCell[] cells) : IMapDeserializable<Pack>
+    public record Pack(string packFeatures, // json
+        string cultures, // json
+        string states, // json
+        string burgs, // json
+        PackCell[] cells,
+        string religions,
+        string provinces) : IMapDeserializable<Pack>
     {
         public static Pack Deserialize(MapInputReader reader)
         {
+            var packFeatures = reader.Read()!;
+            var cultures = reader.Read()!;
+            var states = reader.Read()!;
+            var burgs = reader.Read()!;
+
             var biome = ReadArray();
             var burg = ReadArray();
             var conf = ReadArray();
@@ -232,7 +221,10 @@ public static class Input
                 [biome[i], burg[i], conf[i], culture[i], fl[i], pop[i], r[i], road[i], s[i], state[i], religion[i], province[i], crossroad[i]]
                 )).ToArray();
 
-            return new Pack(cells);
+            string religions = reader.Read()!;
+            string provinces = reader.Read()!;
+
+            return new Pack(packFeatures, cultures, states, burgs, cells, religions, provinces);
 
             string[] ReadArray() => reader.Read()!.Split(',');
         }
@@ -246,13 +238,13 @@ public static class Input
         string notesDate, // json
         XmlDocument svg,
         Grid grid,
-        string packFeatures, // json
-        string cultures, // json
-        string states, // json
-        string burgs, // json
+        //string packFeatures, // json
+        //string cultures, // json
+        //string states, // json
+        //string burgs, // json
         Pack pack,
-        string religions,
-        string provinces,
+        //string religions,
+        //string provinces,
         string namesData,
         string rivers,
         string rulersString,
@@ -274,13 +266,13 @@ public static class Input
             svg.LoadXml(svgStr);
 
             var grid = Grid.Deserialize(reader);
-            var packFeatures = reader.Read()!;
-            var cultures = reader.Read()!;
-            var states = reader.Read()!;
-            var burgs = reader.Read()!;
+            //var packFeatures = reader.Read()!;
+            //var cultures = reader.Read()!;
+            //var states = reader.Read()!;
+            //var burgs = reader.Read()!;
             var pack = Pack.Deserialize(reader);
-            var religions = reader.Read()!;
-            var provinces = reader.Read()!;
+            //var religions = reader.Read()!;
+            //var provinces = reader.Read()!;
             var namesData = reader.Read()!;
             var rivers = reader.Read()!;
             var rulersString = reader.Read()!;
@@ -295,13 +287,7 @@ public static class Input
                 notesDate,
                 svg,
                 grid,
-                packFeatures,
-                cultures,
-                states,
-                burgs,
                 pack,
-                religions,
-                provinces,
                 namesData,
                 rivers,
                 rulersString,
@@ -460,6 +446,7 @@ public class Map
         public required GeoMapRivers Rivers { get; init; }
         public required JsonMap JsonMap { get; init; }
         public required XmlDocument XmlMap { get; init; }
+        public required Input.Map InputMap { get; init; }
     }
     public required MapInput Input { get; init; }
 

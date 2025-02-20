@@ -48,9 +48,7 @@ public static class MainConverter
     {
         try
         {
-            var map = Input.Map.Deserialize(MapDeserializer.CreateReader("input.map"));
-
-            var h = map.grid.cells.GroupBy(n => n.h);
+            var map = Input.Map.Deserialize(Input.CreateReader("input.map"));
             return map;
         }
         catch (Exception e)
@@ -330,7 +328,7 @@ public static class MainConverter
         return finalProvinces;
     }
 
-    public static async Task<Map> ConvertMap(XmlDocument xmlMap)
+    public static async Task<Map> ConvertMap(XmlDocument xmlMap, Input.Map inputMap)
     {
         XmlNamespaceManager xmlnsManager = new(xmlMap.NameTable);
         xmlnsManager.AddNamespace("ns", "http://www.w3.org/1999/xhtml");
@@ -365,6 +363,7 @@ public static class MainConverter
                 Rivers = geoMapRivers,
                 JsonMap = jsonMap,
                 XmlMap = xmlMap,
+                InputMap = inputMap,
             },
             Output = new()
             {

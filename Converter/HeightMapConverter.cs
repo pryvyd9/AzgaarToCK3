@@ -1,4 +1,6 @@
-﻿using SixLabors.ImageSharp;
+﻿using DelaunatorSharp;
+using SharpVoronoiLib;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Svg;
 using System.Diagnostics;
@@ -440,10 +442,131 @@ empty_tile_offset={{ 255 127 }}
         Directory.CreateDirectory(Path.GetDirectoryName(hhPath));
         await File.WriteAllTextAsync(hhPath, heightmap_heightmap);
     }
+    //private static async Task DrawHeightMap(Map map)
+    //{
+    //    try
+    //    {
+    //        // create ns manager
+    //        XmlNamespaceManager xmlnsManager = new(map.Input.XmlMap.NameTable);
+    //        xmlnsManager.AddNamespace("ns", "http://www.w3.org/2000/svg");
+
+    //        XmlNode? GetNode(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
+
+    //        void Remove(string attribute)
+    //        {
+    //            var node = map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
+    //            node?.ParentNode?.RemoveChild(node);
+    //        }
+
+    //        // Remove all blur
+    //        void removeFilterFromAll(string attribute) { 
+    //            for (XmlElement? element = GetNode(attribute) as XmlElement; element is not null; element = GetNode(attribute) as XmlElement)
+    //            {
+    //                element.RemoveAttribute("filter");
+    //            }
+    //        }
+    //        removeFilterFromAll("@filter='url(#blur)'");
+    //        removeFilterFromAll("@filter='url(#blur05)'");
+    //        removeFilterFromAll("@filter='url(#blur10)'");
+
+    //        var land = GetNode("@id='svgland'");
+    //        //(land as XmlElement).RemoveAttribute("filter");
+    //        var background = map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
+    //        //var wl = CK3WaterLevel;
+    //        var wl = 0;
+
+    //        (background as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+    //        (background as XmlElement).SetAttribute("x", "0");
+    //        (background as XmlElement).SetAttribute("y", "0");
+    //        (background as XmlElement).SetAttribute("width", "100%");
+    //        (background as XmlElement).SetAttribute("height", "100%");
+    //        land.PrependChild(background);
+
+    //        //(land as XmlElement).SetAttribute("filter", "url(#blur10)");
+    //        (land as XmlElement).SetAttribute("background-color", $"rgb({wl},{wl},{wl})");
+    //        (land as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+
+    //        // make only landHeights visible
+    //        var landHeights = GetNode("@id='landHeights'") as XmlElement;
+    //        landHeights.SetAttribute("filter", "url(#blur10)");
+    //        //landHeights.SetAttribute("filter", "url(#blurFilter)");
+
+    //        var rect = (landHeights.SelectSingleNode("//*[@id='landHeights']/rect") as XmlElement);
+    //        rect.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+    //        //rect.ParentNode.RemoveChild(rect);
+
+    //        var blurElement = GetNode("@id='blur10'") as XmlElement;
+    //        (blurElement.FirstChild as XmlElement).SetAttribute("stdDeviation", (Math.Min(Settings.Instance.MapWidth, Settings.Instance.MapHeight) / 128).ToString());
+
+    //        var landHeightsBackground = landHeights.FirstChild;
+    //        (landHeightsBackground as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+
+    //        var water = GetNode("@id='water'");
+    //        (water.FirstChild as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+
+    //        //(GetNode("@id='vignette-mask'").FirstChild as XmlElement).SetAttribute("fill", "black");
+    //        //(GetNode("@id='fog'").FirstChild as XmlElement).SetAttribute("fill", "black");
+
+
+    //        // scale heights
+    //        foreach (XmlElement child in landHeights.ChildNodes)
+    //        {
+    //            var originalFill = child.GetAttribute("fill");
+    //            var originalHeight = int.Parse(new Regex(@"\((\d+)").Match(originalFill).Groups[1].Value);
+    //            //const int maxHeight = 255;
+    //            var newHeight = originalHeight - AzgaarWaterLevel + CK3WaterLevel;
+
+    //            child.SetAttribute("fill", $"rgb({newHeight},{newHeight},{newHeight})");
+    //        }
+
+    //        // shadows and weird colors
+    //        Remove("@id='dropShadow'");
+    //        Remove("@id='dropShadow01'");
+    //        Remove("@id='dropShadow05'");
+    //        Remove("@id='landmass'");
+    //        Remove("@id='sea_island'");
+    //        Remove("@id='vignette-mask'");
+    //        Remove("@id='fog'");
+
+    //        var svg = SvgDocument.FromSvg<SvgDocument>(land.OuterXml);
+    //        var img = svg.ToGrayscaleImage(map.Settings.MapWidth, map.Settings.MapHeight);
+
+    //        var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
+    //        Helper.EnsureDirectoryExists(path);
+
+    //        //img.Save("landHeights.png");
+    //        img.Save(path);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        MyConsole.Error(ex);
+    //        throw;
+    //    }
+    //}
+
     private static async Task DrawHeightMap(Map map)
     {
         try
         {
+            var xmlHeightmap = new XmlDocument();
+
+            //var points = map.Input.InputMap.grid.general.points;
+            //var delaunayPoints = points.Select(n => new DelaunatorSharp.Point(n[0], n[1]) as IPoint).ToArray();
+
+            //var delaunator = new Delaunator(delaunayPoints);
+
+
+            var voronoiSites = map.Input.InputMap.grid.general.points.Select(n => new VoronoiSite(n[0], n[1])).ToList();
+            //var gridBoundary = map.Input.InputMap.grid.general.boundary;
+            //var sites = VoronoiPlane.TessellateOnce(voronoiSites, gridBoundary[0][0], gridBoundary[0][1], gridBoundary[1][0], gridBoundary[1][1]);
+            var @params = map.Input.InputMap.@params;
+            //VoronoiPlane.
+            var sites = VoronoiPlane.TessellateOnce(voronoiSites, 0, 0, @params.graphWidth, @params.graphHeight);
+
+            new VoronoiSite(0,0).ClockwisePoints.Select(n =>n.x)
+
+            var heights = map.Input.InputMap.grid.general.points;
+
             // create ns manager
             XmlNamespaceManager xmlnsManager = new(map.Input.XmlMap.NameTable);
             xmlnsManager.AddNamespace("ns", "http://www.w3.org/2000/svg");
@@ -457,7 +580,8 @@ empty_tile_offset={{ 255 127 }}
             }
 
             // Remove all blur
-            void removeFilterFromAll(string attribute) { 
+            void removeFilterFromAll(string attribute)
+            {
                 for (XmlElement? element = GetNode(attribute) as XmlElement; element is not null; element = GetNode(attribute) as XmlElement)
                 {
                     element.RemoveAttribute("filter");
@@ -541,6 +665,7 @@ empty_tile_offset={{ 255 127 }}
             throw;
         }
     }
+
 
     public static async Task WriteHeightMap(Map map)
     {
