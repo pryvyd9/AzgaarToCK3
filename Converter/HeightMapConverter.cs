@@ -262,11 +262,11 @@ public static class HeightMapConverter
             //};
             var detail = new[]
             {
-                weightedDerivatives.Where(n => n.nonZeroP90 >= 0.01f).ToArray(),
-                weightedDerivatives.Where(n => n.nonZeroP90 is >= 0.005f and < 0.01f).ToArray(),
+                weightedDerivatives.Where(n => n.nonZeroP90 >= 0.005f).ToArray(),
                 weightedDerivatives.Where(n => n.nonZeroP90 is >= 0.001f and < 0.005f).ToArray(),
                 weightedDerivatives.Where(n => n.nonZeroP90 is >= 0.0005f and < 0.001f).ToArray(),
-                weightedDerivatives.Where(n => n.nonZeroP90 < 0.0005f).ToArray(),
+                weightedDerivatives.Where(n => n.nonZeroP90 is >= 0.0001f and < 0.0005f).ToArray(),
+                weightedDerivatives.Where(n => n.nonZeroP90 < 0.0001f).ToArray(),
             };
 
             //float[] detailThreshold = [
@@ -489,18 +489,22 @@ empty_tile_offset={{ 255 127 }}
             landHeights.SetAttribute("filter", "url(#blur10)");
             //landHeights.SetAttribute("filter", "url(#blurFilter)");
 
+
+            var oldRect = (landHeights.SelectSingleNode("//*[@id='landHeights']/rect") as XmlElement);
+            oldRect.GetAttribute("width");
+            var width = int.Parse(oldRect.GetAttribute("width"));
+            var height = int.Parse(oldRect.GetAttribute("height"));
+
+            (land as XmlElement).SetAttribute("viewBox", $"0 0 {width} {height}");
+
             void removeAllElements(string filter, XmlElement parent)
             {
                 for (XmlElement? element = parent.SelectSingleNode(filter) as XmlElement; element is not null; element = parent.SelectSingleNode(filter) as XmlElement)
                 {
-
                     parent.RemoveChild(element);
                 }
             }
 
-
-            var oldRect = (landHeights.SelectSingleNode("//*[@id='landHeights']/rect") as XmlElement);
-            oldRect.GetAttribute("width");
             removeAllElements("//*[@id='landHeights']/rect", landHeights);
             var rect = map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
             (rect as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");

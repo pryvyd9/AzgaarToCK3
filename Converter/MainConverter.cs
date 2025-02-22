@@ -101,6 +101,12 @@ public static class MainConverter
             // Reassign it to the neighbor province.
             foreach (var province in nonWaterProvinces)
             {
+                // Skip deleted provinces
+                if (province is null)
+                {
+                    continue;
+                }
+
                 var cells = province.Cells;
                 var cellsToRemove = new List<Cell>();
                 foreach (var cell in cells)
@@ -109,7 +115,7 @@ public static class MainConverter
                     {
                         var nonWaterNeighborProvince = nonWaterProvinces.FirstOrDefault(p =>
                         {
-                            return p.Cells.Any(c => cell.neighbors.Contains(c.id));
+                            return p != null && p.Cells.Any(c => cell.neighbors.Contains(c.id));
                         });
 
                         if (nonWaterNeighborProvince is null)
@@ -251,13 +257,29 @@ public static class MainConverter
             var neighborCellIds = new Dictionary<int, int[]>();
             for (int i = 1; i < provinceCells.Count; i++)
             {
+                // If the province was deleted then skip it
+                if (!provinceCells.ContainsKey(i))
+                {
+                    continue;
+                }
+
                 var color = GetColor(i, provinces.Length);
                 var province = provinces[i] = provinceCells[i];
 
-                province.Color = color;
-                province.Name = jsonmap.pack.provinces[i].name;
-                province.Id = jsonmap.pack.provinces[i].i;
-                province.Burg = jsonmap.pack.burgs[jsonmap.pack.provinces[i].burg];
+                try
+                {
+                    province.Color = color;
+                    province.Name = jsonmap.pack.provinces[i].name;
+                    province.Id = jsonmap.pack.provinces[i].i;
+
+                    // If the burg was deleted then skip it.
+                    province.Burg = jsonmap.pack.burgs.FirstOrDefault(n => n.i == jsonmap.pack.provinces[i].burg);
+                }
+                catch (Exception ex)
+                {
+                    Debugger.Break();
+                    throw;
+                }
 
                 var cellIds = province.Cells.Select(n => n.id).ToHashSet();
                 neighborCellIds[i] = province.Cells.SelectMany(n => n.neighbors.Where(m => !cellIds.Contains(m))).ToArray();
@@ -285,7 +307,8 @@ public static class MainConverter
                     {
                         if (processedNeighbors.Contains(cid)) continue;
 
-                        foreach (var p in provinces.Where(n => n.Id != 0 && !n.IsWater && n.StateId == provinces[i].StateId && n.Cells.Any(m => m.id == cid)))
+                        // Skip deleted provinces
+                        foreach (var p in provinces.Where(n => n != null && n.Id != 0 && !n.IsWater && n.StateId == provinces[i].StateId && n.Cells.Any(m => m.id == cid)))
                         {
                             neighbors.Add(p);
                         }
@@ -367,8 +390,8 @@ public static class MainConverter
             },
             Output = new()
             {
-                Provinces = provinces,
-                IdToIndex = provinces.Select((n, i) => (n, i)).ToDictionary(n => n.n.Id, n => n.i),
+                Provinces = provinces.Where(n => n is not null).ToArray(),
+                IdToIndex = provinces.Where(n => n is not null).Select((n, i) => (n, i)).ToDictionary(n => n.n.Id, n => n.i),
                 NameBase = new NameBasePrepared(nameBase.name, nameBaseNames),
             }
         };
@@ -383,8 +406,8 @@ public static class MainConverter
         {
             var settings = new MagickReadSettings()
             {
-                Width = (int)map.Settings.MapWidth,
-                Height = (int)map.Settings.MapHeight,
+                Width = map.Settings.MapWidth,
+                Height = map.Settings.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:white", settings);
 
@@ -418,8 +441,8 @@ public static class MainConverter
         {
             var settings = new MagickReadSettings()
             {
-                Width = (int)map.Settings.MapWidth,
-                Height = (int)map.Settings.MapHeight,
+                Width = map.Settings.MapWidth,
+                Height = map.Settings.MapHeight,
             };
             using var cellsMap = new MagickImage("xc:black", settings);
 
@@ -780,6 +803,9 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
                     item.ParentNode.RemoveChild(item);
                 }
             }
+
+            var fog = map.Input.XmlMap.SelectSingleNode($"//*[@id='fog']/rect") as XmlElement;
+            (terrain as XmlElement).SetAttribute("viewBox", $"0 0 {fog.GetAttribute("width")} {fog.GetAttribute("height")}");
 
             var svg = SvgDocument.FromSvg<SvgDocument>(terrain.OuterXml);
             var img = svg.ToImage(map.Settings.MapWidth, map.Settings.MapHeight);

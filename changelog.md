@@ -1,5 +1,7 @@
-# 1.6.2
+# 1.7.0
 - fixed suggested latest input not being the latest.
+- fixed heightmap and flatmap being zoomed out.
+- added support for removing provinces and burgs.
 
 # 1.6.1
 - fixed culture, religion not being applied.

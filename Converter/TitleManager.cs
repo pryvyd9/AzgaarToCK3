@@ -16,7 +16,7 @@ public static class TitleManager
             var ci = 1;
             var di = 1;
 
-            foreach (var state in map.Input.JsonMap.pack.states.Where(n => n.provinces.Any()))
+            foreach (var state in map.Input.JsonMap.pack.states.Where(n => n.provinces?.Any() ?? false))
             {
                 // Some of the provinces were deleted since they were empty or too small.
                 // Skip those deleted provinces.
