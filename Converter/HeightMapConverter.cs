@@ -489,9 +489,26 @@ empty_tile_offset={{ 255 127 }}
             landHeights.SetAttribute("filter", "url(#blur10)");
             //landHeights.SetAttribute("filter", "url(#blurFilter)");
 
-            var rect = (landHeights.SelectSingleNode("//*[@id='landHeights']/rect") as XmlElement);
-            rect.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
-            //rect.ParentNode.RemoveChild(rect);
+            void removeAllElements(string filter, XmlElement parent)
+            {
+                for (XmlElement? element = parent.SelectSingleNode(filter) as XmlElement; element is not null; element = parent.SelectSingleNode(filter) as XmlElement)
+                {
+
+                    parent.RemoveChild(element);
+                }
+            }
+
+
+            var oldRect = (landHeights.SelectSingleNode("//*[@id='landHeights']/rect") as XmlElement);
+            oldRect.GetAttribute("width");
+            removeAllElements("//*[@id='landHeights']/rect", landHeights);
+            var rect = map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
+            (rect as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+            (rect as XmlElement).SetAttribute("x", "0");
+            (rect as XmlElement).SetAttribute("y", "0");
+            (rect as XmlElement).SetAttribute("width", oldRect.GetAttribute("width"));
+            (rect as XmlElement).SetAttribute("height", oldRect.GetAttribute("height"));
+            landHeights.PrependChild(rect);
 
             var blurElement = GetNode("@id='blur10'") as XmlElement;
             (blurElement.FirstChild as XmlElement).SetAttribute("stdDeviation", (Math.Min(Settings.Instance.MapWidth, Settings.Instance.MapHeight) / 128).ToString());
@@ -502,10 +519,6 @@ empty_tile_offset={{ 255 127 }}
             var water = GetNode("@id='water'");
             (water.FirstChild as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
 
-            //(GetNode("@id='vignette-mask'").FirstChild as XmlElement).SetAttribute("fill", "black");
-            //(GetNode("@id='fog'").FirstChild as XmlElement).SetAttribute("fill", "black");
-
-
             // scale heights
             foreach (XmlElement child in landHeights.ChildNodes)
             {
@@ -513,7 +526,6 @@ empty_tile_offset={{ 255 127 }}
                 var originalHeight = int.Parse(new Regex(@"\((\d+)").Match(originalFill).Groups[1].Value);
                 //const int maxHeight = 255;
                 var newHeight = originalHeight - AzgaarWaterLevel + CK3WaterLevel;
-
                 child.SetAttribute("fill", $"rgb({newHeight},{newHeight},{newHeight})");
             }
 

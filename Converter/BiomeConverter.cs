@@ -203,7 +203,7 @@ public static class BiomeConverter
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "detail_index.tga");
             Helper.EnsureDirectoryExists(path);
             var svg = SvgDocument.FromSvg<SvgDocument>(detail_index.OuterXml);
-            var img = svg.ToImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var img = svg.ToImage(map.Settings.MapWidth, map.Settings.MapHeight);
             var encoder = new TgaEncoder
             {
                 BitsPerPixel = TgaBitsPerPixel.Pixel32,
@@ -218,7 +218,7 @@ public static class BiomeConverter
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "detail_intensity.tga");
             Helper.EnsureDirectoryExists(path);
             var svg = SvgDocument.FromSvg<SvgDocument>(detail_intensity.OuterXml);
-            var img = svg.ToImage((int)map.Settings.MapWidth, (int)map.Settings.MapHeight);
+            var img = svg.ToImage(map.Settings.MapWidth, map.Settings.MapHeight);
             var encoder = new TgaEncoder
             {
                 BitsPerPixel = TgaBitsPerPixel.Pixel32,

@@ -2,6 +2,8 @@
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Xml;
+using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace Converter;
 
@@ -28,12 +30,23 @@ public class PackProvinceJsonConverter : JsonConverter<PackProvince[]>
         using var jsonDocument = JsonDocument.ParseValue(ref reader);
         var str = jsonDocument.RootElement.GetRawText();
 
-        // replace 0 with empty province.
-        var escapedStr = string.Concat(str.AsSpan(0, 1), "{}", str.AsSpan(2));
+        string escapedStr = str;
+        // replace 0 with empty object.
+        if (str[1] == '0')
+        {
+            escapedStr = string.Concat(str.AsSpan(0, 1), "{}", str.AsSpan(2));
+        }
 
-        var provinces = JsonSerializer.Deserialize(escapedStr, PackProinvceArrayJsonContext.Default.PackProvinceArray);
-
-        return provinces;
+        try
+        {
+            var provinces = JsonSerializer.Deserialize(escapedStr, PackProinvceArrayJsonContext.Default.PackProvinceArray);
+            return provinces;
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+            throw;
+        }
     }
 
     public override void Write(Utf8JsonWriter writer, PackProvince[] value, JsonSerializerOptions options)
@@ -41,6 +54,47 @@ public class PackProvinceJsonConverter : JsonConverter<PackProvince[]>
         throw new NotImplementedException();
     }
 }
+
+[JsonSerializable(typeof(Burg[]))]
+public partial class PackBurgArrayJsonContext : JsonSerializerContext { }
+
+// For some reason the first element in the array isn't an object but a number.
+// Need custom converter to skip the number and parse all other provinces.
+public class PackBurgJsonConverter : JsonConverter<Burg[]>
+{
+    public override Burg[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using var jsonDocument = JsonDocument.ParseValue(ref reader);
+        var str = jsonDocument.RootElement.GetRawText();
+
+        //string escapedStr = str;
+        // replace 0 with empty object.
+
+        // replace 0s
+        var escapedStr = new Regex(@",\s*0").Replace(str, ",{}");
+        escapedStr = new Regex(@"\[\s*0").Replace(escapedStr, "[{}");
+
+        // empty burgs with no cell. (Probably deleted burgs)
+        escapedStr = new Regex(@"{[^}]*cell""\s*:\s*null.*}").Replace(escapedStr, "{}");
+
+        try
+        {
+            var burgs = JsonSerializer.Deserialize(escapedStr, PackBurgArrayJsonContext.Default.BurgArray);
+            return burgs;
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+            throw;
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, Burg[] value, JsonSerializerOptions options)
+    {
+        throw new NotImplementedException();
+    }
+}
+
 public record Burg(/*townId*/int i, /*cellId*/int cell, /*townName*/string name, int feature, float x, float y);
 public record State(int i, string name, int[] provinces);
 public record Culture(int i, string name);
@@ -51,6 +105,7 @@ public class Pack
 {
     [JsonConverter(typeof(PackProvinceJsonConverter))]
     public PackProvince[] provinces { get; set; }
+    [JsonConverter(typeof(PackBurgJsonConverter))]
     public Burg[] burgs { get; set; }
     public State[] states { get; set; }
     public Culture[] cultures { get; set; }

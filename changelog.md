@@ -1,3 +1,6 @@
+# 1.6.2
+- fixed suggested latest input not being the latest.
+
 # 1.6.1
 - fixed culture, religion not being applied.
 

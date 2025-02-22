@@ -1,11 +1,11 @@
 ﻿using ImageMagick;
 using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 using Svg;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Xml;
 
 namespace Converter;
@@ -25,14 +25,11 @@ public static class MainConverter
         try
         {
             var unescapedFile = File.ReadAllText(Settings.Instance.InputXmlPath);
-            unescapedFile = unescapedFile.Replace("&amp;quot;", "\"");
-            unescapedFile = unescapedFile.Replace("xmlns=\"http://www.w3.org/2000/svg\"", "");
-            unescapedFile = unescapedFile.Replace("xmlns:dc=\"http://purl.org/dc/elements/1.1/\"", "");
-            unescapedFile = unescapedFile.Replace("xmlns:xlink=\"http://www.w3.org/1999/xlink\"", "");
-            unescapedFile = unescapedFile.Replace("xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"", "");
-            unescapedFile = unescapedFile.Replace("xmlns=\"http://www.w3.org/1999/xhtml\"", "");
-            unescapedFile = unescapedFile.Replace("xmlns:svg=\"http://www.w3.org/2000/svg\"", "");
 
+
+            unescapedFile = unescapedFile.Replace("&amp;quot;", "\"");
+            unescapedFile = new Regex(@"xmlns[^\s]+""").Replace(unescapedFile, "");
+          
             var file = new XmlDocument();
             file.LoadXml(unescapedFile);
 
@@ -321,10 +318,28 @@ public static class MainConverter
 
         XmlNode? GetNode(string attribute) => xmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
         var geoMapXml = GetNode("@id='geojson'")!.InnerXml;
-        var geoMap = JsonSerializer.Deserialize(geoMapXml, GeoMapJsonContext.Default.GeoMap);
+        GeoMap? geoMap = null;
+        try
+        {
+            geoMap = JsonSerializer.Deserialize(geoMapXml, GeoMapJsonContext.Default.GeoMap);
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+            throw;
+        }
 
         var jsonMapXml = GetNode("@id='json'")!.InnerXml;
-        var jsonMap = JsonSerializer.Deserialize(jsonMapXml, JsonMapJsonContext.Default.JsonMap);
+        JsonMap? jsonMap = null;
+        try
+        {
+            jsonMap = JsonSerializer.Deserialize(jsonMapXml, JsonMapJsonContext.Default.JsonMap);
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+            throw;
+        }
 
         var geoMapRivers = new GeoMapRivers([]);
 

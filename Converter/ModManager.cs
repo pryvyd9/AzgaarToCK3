@@ -121,9 +121,15 @@ public static class ModManager
             .EnumerateFiles()
             .OrderByDescending(n => n.CreationTime)
             .Select(n => n.Name)
-            .Where(n => Settings.Instance.InputXmlPath != n);
+            .Where(n => n.EndsWith(".xml"))
+            .FirstOrDefault();
 
-        return filesToCheck.FirstOrDefault(n => n.EndsWith(".xml"));
+        if (filesToCheck != null && Settings.Instance.InputXmlPath != filesToCheck)
+        {
+            return filesToCheck;
+        }
+
+        return null;
     }
 
     private static async Task<Map> LoadMap()
