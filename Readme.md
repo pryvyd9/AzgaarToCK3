@@ -36,6 +36,7 @@ Do them if there are issues with holding/unit placement or terrain looks weird. 
 - [No Steam or directory not found](https://github.com/pryvyd9/AzgaarToCK3/blob/master/docs/NoSteam.md/)
 - Change MaxThreads value to 1 if you wish to limit CPU and RAM usage. Use default value (= cpu core count) for max performance.
 - You can change map size with `MapWidth` and `MapHeight`. But make sure they are divisible by 32.
+- If the cells were edited in Azgaar then it should be loaded with `machine (Compatibility)` button. It will preserve Azgaar's water province optimization so if the map contains remote islands those may be separated by impassable waters.
 
 ## Quirks
 - Azgaar only has 2 titles and CK3 has 5:
