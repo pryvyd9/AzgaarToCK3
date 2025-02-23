@@ -1,3 +1,8 @@
+# 1.7.1
+- improved support for removing provinces.
+- added great plains biome.
+- fixed xlink namespace prefix breaking parsing.
+
 # 1.7.0
 - fixed suggested latest input not being the latest.
 - fixed heightmap and flatmap being zoomed out.

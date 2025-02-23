@@ -21,6 +21,7 @@ public enum AzgaarBiome
     Tundra,
     Glacier,
     Wetland,
+    GreatPlains = 14,
 }
 
 public enum CK3Biome
@@ -148,7 +149,8 @@ public static class Helper
             AzgaarBiome.Tundra => "taiga",// Tundra > taiga
             AzgaarBiome.Glacier => "drylands",// Glacier > floodplains
             AzgaarBiome.Wetland => "floodplains",// Wetland > wetlands
-            _ => throw new ArgumentException("Unrecognized biomeId")
+            AzgaarBiome.GreatPlains => "plains", // GreatPlains > plains
+            _ => throw new ArgumentException($"Unrecognized biomeId: {biomeId}")
         };
     }
     public static CK3Biome ToCk3Biome(this AzgaarBiome biomeId)
@@ -167,7 +169,7 @@ public static class Helper
             AzgaarBiome.Tundra => CK3Biome.northern_plains_01,
             AzgaarBiome.Glacier => CK3Biome.snow,
             AzgaarBiome.Wetland => CK3Biome.floodplains_01,
-            _ => throw new ArgumentException("Unrecognized biomeId")
+            _ => throw new ArgumentException($"Unrecognized biomeId: {biomeId}")
         };
     }
     public static string? GetProvinceBiomeName(int biomeId, int heightDifference)
@@ -211,7 +213,7 @@ public static class Helper
                 5 or 6 or 7 or 8 => "taiga",
                 9 or 10 or 11 => "mountains",
                 12 => "farmlands",
-                _ => throw new ArgumentException("Unrecognized biomeId")
+                _ => throw new ArgumentException($"Unrecognized biomeId: {biomeId}")
             };
         }
         else if (IsHills(biomeId, heightDifference))
@@ -225,7 +227,7 @@ public static class Helper
                 5 or 6 or 7 or 8 => "taiga",
                 9 or 10 or 11 => "drylands",
                 12 => "wetlands",
-                _ => throw new ArgumentException("Unrecognized biomeId")
+                _ => throw new ArgumentException($"Unrecognized biomeId: {biomeId}")
             };
         }
         return MapBiome(biomeId);

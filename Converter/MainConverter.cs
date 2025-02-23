@@ -25,15 +25,22 @@ public static class MainConverter
         try
         {
             var unescapedFile = File.ReadAllText(Settings.Instance.InputXmlPath);
-
-
             unescapedFile = unescapedFile.Replace("&amp;quot;", "\"");
             unescapedFile = new Regex(@"xmlns[^\s]+""").Replace(unescapedFile, "");
-          
-            var file = new XmlDocument();
-            file.LoadXml(unescapedFile);
+            // remove xlink namespace prefixes
+            unescapedFile = new Regex(@"xlink:").Replace(unescapedFile, "");
 
-            return file;
+            try
+            {
+                var file = new XmlDocument();
+                file.LoadXml(unescapedFile);
+                return file;
+            }
+            catch (Exception ex)
+            {
+                Debugger.Break();
+                throw;
+            }
         }
         catch (Exception e)
         {
@@ -241,7 +248,11 @@ public static class MainConverter
     {
         var provinceCells = GetProvinceCells(geomap, jsonmap);
         var waterProvinces = CreateWaterProvinces(provinceCells[0]);
-        var provinces = new Province[provinceCells.Count + waterProvinces.Count];
+        var provinces = new Province[jsonmap.pack.provinces.Length + waterProvinces.Count];
+
+        // If provinces are deleted we should preserve their index in the array.
+        // Deleted provinces will not take part in title or other generation.
+        var maxProvinceId = jsonmap.pack.provinces.Max(n => n.i);
 
         // pId == 0 is not an ocean.
         // It's some system thing that needs to exist in order for all indices to start from 1.
@@ -255,25 +266,19 @@ public static class MainConverter
         try
         {
             var neighborCellIds = new Dictionary<int, int[]>();
-            for (int i = 1; i < provinceCells.Count; i++)
+            foreach (var (id, province) in provinceCells.Skip(1))
             {
-                // If the province was deleted then skip it
-                if (!provinceCells.ContainsKey(i))
-                {
-                    continue;
-                }
-
-                var color = GetColor(i, provinces.Length);
-                var province = provinces[i] = provinceCells[i];
+                var color = GetColor(id, provinces.Length);
+                provinces[id] = province;
 
                 try
                 {
                     province.Color = color;
-                    province.Name = jsonmap.pack.provinces[i].name;
-                    province.Id = jsonmap.pack.provinces[i].i;
+                    province.Name = jsonmap.pack.provinces[id].name;
+                    province.Id = jsonmap.pack.provinces[id].i;
 
                     // If the burg was deleted then skip it.
-                    province.Burg = jsonmap.pack.burgs.FirstOrDefault(n => n.i == jsonmap.pack.provinces[i].burg);
+                    province.Burg = jsonmap.pack.burgs.FirstOrDefault(n => n.i == jsonmap.pack.provinces[id].burg, null);
                 }
                 catch (Exception ex)
                 {
@@ -282,21 +287,21 @@ public static class MainConverter
                 }
 
                 var cellIds = province.Cells.Select(n => n.id).ToHashSet();
-                neighborCellIds[i] = province.Cells.SelectMany(n => n.neighbors.Where(m => !cellIds.Contains(m))).ToArray();
+                neighborCellIds[id] = province.Cells.SelectMany(n => n.neighbors.Where(m => !cellIds.Contains(m))).ToArray();
             }
 
             // Create sea provinces
             for (int i = 0; i < waterProvinces.Count; i++)
             {
-                var province = provinces[provinceCells.Count + i] = waterProvinces[i];
-                province.Color = GetColor(provinceCells.Count + i, provinces.Length);
+                var province = provinces[maxProvinceId + i] = waterProvinces[i];
+                province.Color = GetColor(maxProvinceId + i, provinces.Length);
                 province.Name = "sea";
-                province.Id = provinceCells.Count + i;
+                province.Id = maxProvinceId + i;
                 province.IsWater = true;
             }
 
             // Populate neighbors
-            for (int i = 0; i < provinceCells.Count; i++)
+            for (int i = 0; i < maxProvinceId; i++)
             {
                 var neighbors = new HashSet<Province>();
 
