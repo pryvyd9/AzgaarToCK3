@@ -1,3 +1,6 @@
+# 1.7.2
+- added HeightMapBlurStdDeviation setting.
+
 # 1.7.1
 - improved support for removing provinces.
 - added great plains biome.

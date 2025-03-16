@@ -448,7 +448,8 @@ empty_tile_offset={{ 255 127 }}
             XmlNamespaceManager xmlnsManager = new(map.Input.XmlMap.NameTable);
             xmlnsManager.AddNamespace("ns", "http://www.w3.org/2000/svg");
 
-            XmlNode? GetNode(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
+            var svgland = map.Input.XmlMap.SelectSingleNode($"//*[@id='svgland']", xmlnsManager)!;
+            XmlElement? GetNode(string attribute) => svgland.SelectSingleNode($"//*[{attribute}]", xmlnsManager) as XmlElement;
 
             void Remove(string attribute)
             {
@@ -467,35 +468,35 @@ empty_tile_offset={{ 255 127 }}
             removeFilterFromAll("@filter='url(#blur05)'");
             removeFilterFromAll("@filter='url(#blur10)'");
 
-            var land = GetNode("@id='svgland'");
-            //(land as XmlElement).RemoveAttribute("filter");
-            var background = map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
+            var land = GetNode("@id='svgland'")!;
+            var background = (XmlElement)map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
             //var wl = CK3WaterLevel;
             var wl = 0;
 
-            (background as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
-            (background as XmlElement).SetAttribute("x", "0");
-            (background as XmlElement).SetAttribute("y", "0");
-            (background as XmlElement).SetAttribute("width", "100%");
-            (background as XmlElement).SetAttribute("height", "100%");
+            background.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+            background.SetAttribute("x", "0");
+            background.SetAttribute("y", "0");
+            background.SetAttribute("width", "100%");
+            background.SetAttribute("height", "100%");
             land.PrependChild(background);
 
-            //(land as XmlElement).SetAttribute("filter", "url(#blur10)");
-            (land as XmlElement).SetAttribute("background-color", $"rgb({wl},{wl},{wl})");
-            (land as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+            land.SetAttribute("background-color", $"rgb({wl},{wl},{wl})");
+            land.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
 
             // make only landHeights visible
-            var landHeights = GetNode("@id='landHeights'") as XmlElement;
-            landHeights.SetAttribute("filter", "url(#blur10)");
-            //landHeights.SetAttribute("filter", "url(#blurFilter)");
+            var landHeights = GetNode("@id='landHeights'")!;
+            landHeights.SetAttribute("filter", "url(#blurFilter)");
 
+            // Set blur from settings
+            var feGaussianBlur = (XmlElement)svgland.SelectSingleNode("//*[@id='blurFilter']/feGaussianBlur")!;
+            feGaussianBlur.SetAttribute("stdDeviation", Settings.Instance.HeightMapBlurStdDeviation.ToString());
 
-            var oldRect = (landHeights.SelectSingleNode("//*[@id='landHeights']/rect") as XmlElement);
+            var oldRect = (XmlElement)landHeights.SelectSingleNode("//*[@id='landHeights']/rect")!;
             oldRect.GetAttribute("width");
             var width = int.Parse(oldRect.GetAttribute("width"));
             var height = int.Parse(oldRect.GetAttribute("height"));
 
-            (land as XmlElement).SetAttribute("viewBox", $"0 0 {width} {height}");
+            land.SetAttribute("viewBox", $"0 0 {width} {height}");
 
             void removeAllElements(string filter, XmlElement parent)
             {
@@ -506,22 +507,19 @@ empty_tile_offset={{ 255 127 }}
             }
 
             removeAllElements("//*[@id='landHeights']/rect", landHeights);
-            var rect = map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
-            (rect as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
-            (rect as XmlElement).SetAttribute("x", "0");
-            (rect as XmlElement).SetAttribute("y", "0");
-            (rect as XmlElement).SetAttribute("width", oldRect.GetAttribute("width"));
-            (rect as XmlElement).SetAttribute("height", oldRect.GetAttribute("height"));
+            var rect = (XmlElement)map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
+            rect.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+            rect.SetAttribute("x", "0");
+            rect.SetAttribute("y", "0");
+            rect.SetAttribute("width", oldRect.GetAttribute("width"));
+            rect.SetAttribute("height", oldRect.GetAttribute("height"));
             landHeights.PrependChild(rect);
 
-            var blurElement = GetNode("@id='blur10'") as XmlElement;
-            (blurElement.FirstChild as XmlElement).SetAttribute("stdDeviation", (Math.Min(Settings.Instance.MapWidth, Settings.Instance.MapHeight) / 128).ToString());
-
             var landHeightsBackground = landHeights.FirstChild;
-            (landHeightsBackground as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+            ((XmlElement)landHeightsBackground!).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
 
-            var water = GetNode("@id='water'");
-            (water.FirstChild as XmlElement).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
+            var water = GetNode("@id='water'")!;
+            ((XmlElement)water.FirstChild!).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
 
             // scale heights
             foreach (XmlElement child in landHeights.ChildNodes)

@@ -11,7 +11,8 @@ Create a file named `settings.json` and put this inside:
   "OnlyCounts": false,
   "MapWidth": 8192,
   "MapHeight": 4096,
-  "MaxThreads": 16
+  "MaxThreads": 16,
+  "HeightMapBlurStdDeviation": 15,
 }
 ```
 
