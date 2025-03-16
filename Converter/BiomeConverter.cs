@@ -10,39 +10,6 @@ public static class BiomeConverter
     private static readonly SemaphoreSlim _detail_index_semaphore = new(1);
     private static readonly SemaphoreSlim _detail_intensity_semaphore = new(1);
 
-    //private static async Task WriteMask(IEnumerable<Cell> cells, Map map, string filename)
-    //{
-    //    try
-    //    {
-    //        using var cellsMap = new MagickImage(Helper.GetPath(SettingsManager.ExecutablePath, "template_mask.png"));
-
-    //        var drawables = new Drawables();
-    //        foreach (var cell in cells.Select(n => n.cells))
-    //        {
-    //            drawables
-    //                .DisableStrokeAntialias()
-    //                .StrokeColor(MagickColors.White)
-    //                .FillColor(MagickColors.White)
-    //                .Polygon(cell.Select(n => Helper.GeoToPixel(n[0], n[1], map)));
-    //        }
-
-    //        cellsMap.Draw(drawables);
-
-    //        var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", $"{filename}.png");
-    //        Helper.EnsureDirectoryExists(path);
-    //        await cellsMap.WriteAsync(path, MagickFormat.Png00);
-
-    //        using var file = await Image.LoadAsync(path);
-    //        file.Mutate(n => n.GaussianBlur(15));
-    //        file.Save(path);
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Debugger.Break();
-    //        throw;
-    //    }
-    //}
-
     private static async Task WriteMaskFromXml(Map map, XmlDocument detail_index, XmlDocument detail_intensity, AzgaarBiome biomeId)
     {
         if (Settings.Instance.MaxThreads > 1)

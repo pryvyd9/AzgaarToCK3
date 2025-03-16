@@ -1,5 +1,6 @@
 # 1.7.2
 - added HeightMapBlurStdDeviation setting.
+- removed template_mask.
 
 # 1.7.1
 - improved support for removing provinces.
