@@ -66,3 +66,6 @@ Do them if there are issues with holding/unit placement or terrain looks weird. 
 ## Multiplayer
 - use [[UMMS]Ultimate Modded Multiplayer Solver:null checksum](https://steamcommunity.com/sharedfiles/filedetails/?id=3227254722) mod
 - use [IronyModManager](https://bcssov.github.io/IronyModManager/) to export the playset with the custom mod and friends should import the exported file
+
+## Helpful links
+- DeepWiki: https://deepwiki.com/pryvyd9/AzgaarToCK3
