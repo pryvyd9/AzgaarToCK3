@@ -1,3 +1,6 @@
+# 1.7.3
+- added support for negative numbers and empty objects in ck3 files.
+
 # 1.7.2
 - added HeightMapBlurStdDeviation setting.
 - removed template_mask.

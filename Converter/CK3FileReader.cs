@@ -118,6 +118,9 @@ public static class CK3FileReader
                                 ChangePreviousTokenType(TokenType.value);
                                 AddIncompleteToken(TokenType.objectEnd, null);
                             }
+                            // Empty object
+                            else if (previousToken is TokenType.objectStart)
+                                AddIncompleteToken(TokenType.objectEnd, null);
                             else
                                 throw new ArgumentException($"Unexpected token '{token}' encountered in {new string(leftContent.Take(100).ToArray())}");
                             break;
@@ -171,6 +174,7 @@ public static class CK3FileReader
                             break;
                         }
                     case var tokenBeginning when char.IsDigit(tokenBeginning):
+                    case '-':
                         {
                             if (previousToken is TokenType.objectStart or TokenType.value or TokenType.assignment)
                                 AddIncompleteToken(TokenType.value, tokenTrim);
