@@ -87,7 +87,7 @@ public static class CK3FileSystem
 
     public static string GetTotalConversionSandboxDirectory()
     {
-        return GetModDirectory("3337607192");
+        return GetModDirectory("3595862458");
     }
 
     public static void ConfigureNumberDecimalSeparator()

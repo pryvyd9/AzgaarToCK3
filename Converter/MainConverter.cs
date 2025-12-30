@@ -3,6 +3,7 @@ using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
 using Svg;
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -560,28 +561,30 @@ public static class MainConverter
         var lines = map.Output.Provinces.Where(n => n.Burg is not null).Select(n =>
         {
             var p = Helper.PixelToFullPixel(n.Burg.x, n.Burg.y, map);
-            var str =
-$@"        {{
-            id = {map.Output.IdToIndex[n.Id]}
-            position ={{ {p.X + offset.X:0.000000} {0f:0.000000} {p.Y + offset.Y:0.000000} }}
-            rotation ={{ 0.000000 0.000000 0.000000 1.000000 }}
-            scale ={{ 1.000000 1.000000 1.000000 }}
-        }}";
+            var str = $$"""
+                {
+                    id={{map.Output.IdToIndex[n.Id]}}
+                    position={ {{p.X + offset.X:0.000000}} 0.000000 {{p.Y + offset.Y:0.000000}} }
+                    rotation={ 0.000000 0.000000 0.000000 1.000000 }
+                    scale={ 1.000000 1.000000 1.000000 }
+                }
+                """;
             return str;
         });
         try
         {
-            var file =
-$@"game_object_locator={{
-	name=""buildings""
-	clamp_to_water_level=yes
-	render_under_water=no
-	generated_content=no
-	layer=""building_layer""
-	instances={{
-{string.Join("\n", lines)}
-    }}
-}}";
+            var file = $$"""
+                game_object_locator={
+                    name="buildings"
+                    clamp_to_water_level=yes
+                    render_under_water=no
+                    generated_content=no
+                    layer="building_layer"
+                    instances={
+                        {{string.Join("\n", lines)}}
+                    }
+                }
+                """;
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "building_locators.txt");
             Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
@@ -610,17 +613,18 @@ $@"        {{
         });
         try
         {
-            var file =
-$@"game_object_locator={{
-	name=""siege""
-	clamp_to_water_level=no
-	render_under_water=no
-	generated_content=no
-	layer=""unit_layer""
-	instances={{
-{string.Join("\n", lines)}
-    }}
-}}";
+            var file = $$"""
+                game_object_locator={
+                    name="siege"
+                    clamp_to_water_level=yes
+                    render_under_water=no
+                    generated_content=no
+                    layer="unit_layer"
+                    instances={
+                        {{string.Join("\n", lines)}}
+                    }
+                }
+                """;
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "siege_locators.txt");
             Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
@@ -649,17 +653,18 @@ $@"        {{
         });
         try
         {
-            var file =
-$@"game_object_locator={{
-	name=""combat""
-	clamp_to_water_level=yes
-	render_under_water=no
-	generated_content=no
-	layer=""unit_layer""
-	instances={{
-{string.Join("\n", lines)}
-    }}
-}}";
+            var file = $$"""
+                game_object_locator={
+                    name="combat"
+                    clamp_to_water_level=yes
+                    render_under_water=no
+                    generated_content=no
+                    layer="unit_layer"
+                    instances={
+                        {{string.Join("\n", lines)}}
+                    }
+                }
+                """;
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "combat_locators.txt");
             Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
@@ -702,17 +707,18 @@ $@"        {{
         });
         try
         {
-            var file =
-$@"game_object_locator={{
-	name=""unit_stack_player_owned""
-	clamp_to_water_level=yes
-	render_under_water=no
-	generated_content=no
-	layer=""unit_layer""
-	instances={{
-{string.Join("\n", lines)}
-    }}
-}}";
+            var file = $$"""
+                game_object_locator={
+                    name="unit_stack_player_owned"
+                    clamp_to_water_level=yes
+                    render_under_water=no
+                    generated_content=no
+                    layer="unit_layer"
+                    instances={
+                        {{string.Join("\n", lines)}}
+                    }
+                }
+                """;
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "player_stack_locators.txt");
             Helper.EnsureDirectoryExists(path);
             await File.WriteAllTextAsync(path, file);
@@ -723,12 +729,205 @@ $@"game_object_locator={{
             throw;
         }
     }
-    public static async Task WriteLocators(Map map)
+    private static async Task WriteMapTableCe1Locators(Map map)
     {
-        await WriteBuildingLocators(map);
-        await WriteSiegeLocators(map);
-        await WriteCombatLocators(map);
-        await WritePlayerStackLocators(map);
+        var file = """
+            object={
+            	name="ce1_tabletop"
+            	clamp_to_water_level=yes
+            	render_pass=MapUnderTerrain
+            	generated_content=no
+            	layer="map_table_layer_ce1"
+            	entity="ce1_tabletop_entity"
+            	count=1
+            	transform="3100 -20 2048 0 0 0 0 5 5 5"
+
+            }
+            object={
+            	name="ce1_tabletop_cloth"
+            	clamp_to_water_level=yes
+            	render_pass=MapUnderTerrain
+            	generated_content=no
+            	layer="map_table_layer_ce1"
+            	entity="ce1_tabletop_tablecloth_entity"
+            	count=1
+            	transform="3100 -20 2048 0 0 0 0 5 5 5"
+
+            }
+            object={
+            	name="ce1_tabletop_props_01"
+            	clamp_to_water_level=yes
+            	render_pass=MapUnderTerrain
+            	generated_content=no
+            	layer="map_table_layer_ce1"
+            	entity="ce1_tabletop_props_entity"
+            	count=1
+            	transform="3100 1 2048 0 0 0 0 5 5 5"
+
+            }
+            object={
+            	name="ce1_tabletop_ground_props_01"
+            	clamp_to_water_level=yes
+            	render_pass=MapUnderTerrain
+            	generated_content=no
+            	layer="map_table_layer_ce1"
+            	entity="ce1_tabletop_groundprops_entity"
+            	count=1
+            	transform="3100 1 2048 0 0 0 0 5 5 5"
+
+            }
+            object={
+            	name="ce1_tabletop_floor_01"
+            	clamp_to_water_level=yes
+            	render_pass=MapUnderTerrain
+            	generated_content=no
+            	layer="map_table_layer_ce1"
+            	entity="ce1_tabletop_floor_entity"
+            	count=1
+            	transform="3100 1 2048 0 0 0 0 5 5 5"
+
+            }
+            object={
+            	name="ce1_tabletop_candles_01"
+            	clamp_to_water_level=yes
+            	render_pass=MapUnderTerrain
+            	generated_content=no
+            	layer="map_table_layer_ce1"
+            	entity="ce1_tabletop_candles_entity"
+            	count=1
+            	transform="3100 1 2048 0 0 0 0 5 5 5"
+            }
+            """;
+        File.WriteAllText(Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "map_table_ce1.txt"), file, new UTF8Encoding(true));
+    }
+    private static async Task WriteMapTableTgpLocators(Map map)
+    {
+        var file = """
+            object={
+            	name="tgp_tabletop"
+            	render_pass=MapUnderTerrain
+            	clamp_to_water_level=yes
+            	generated_content=no
+            	layer="map_table_layer_tgp"
+            	entity="tgp_tabletop_01_a_entity"
+            	count=1
+            	transform="4450.000000 -12.000000 2450.000000 0.000000 0.000000 0.000000 0.000000 1.000000 1.000000 1.000000
+            "}
+            object={
+            	name="tgp_tabletop_floor"
+            	render_pass=MapUnderTerrain
+            	clamp_to_water_level=yes
+            	generated_content=no
+            	layer="map_table_layer_tgp"
+            	entity="tgp_tabletop_floor_01_a_entity"
+            	count=1
+            	transform="4200.000000 1.000000 2700.000000 0.000000 0.000000 0.000000 0.000000 1.000000 1.000000 1.000000
+            "}
+            
+            """;
+        File.WriteAllText(Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "map_table_tgp.txt"), file, new UTF8Encoding(true));
+    }
+    private static async Task WriteMapTableWesternLocators(Map map)
+    {
+        var file = """
+            object={
+            	name="western_tabletop"
+            	clamp_to_water_level=yes
+            	render_pass=MapUnderTerrain
+            	generated_content=no
+            	layer="map_table_layer_western"
+            	entity="tabletop_west_basic_entity"
+            	count=1
+            	transform="3100 -20 2048 0 0 0 0 5 5 5"
+
+            }
+            object={
+            	name="western_tabletop_cloth"
+            	clamp_to_water_level=yes
+            	render_pass=MapUnderTerrain
+            	generated_content=no
+            	layer="map_table_layer_western"
+            	entity="tabletop_west_basic_tablecloth_entity"
+            	count=1
+            	transform="3100 -20 2048 0 0 0 0 5 5 5"
+
+            }
+            object={
+            	name="western_tabletop_candles_01"
+            	clamp_to_water_level=yes
+            	render_pass=MapUnderTerrain
+            	generated_content=no
+            	layer="map_table_layer_western"
+            	entity="tabletop_west_basic_candles_entity"
+            	count=1
+            	transform="3100 1 2048 0 0 0 0 5 5 5"
+
+            }
+            object={
+            	name="western_tabletop_props_01"
+            	clamp_to_water_level=yes
+            	render_pass=MapUnderTerrain
+            	generated_content=no
+            	layer="map_table_layer_western"
+            	entity="tabletop_west_basic_props_entity"
+            	count=1
+            	transform="3100 1 2048 0 0 0 0 5 5 5"
+
+            }
+            """;
+        File.WriteAllText(Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "map_table_western.txt"), file, new UTF8Encoding(true));
+    }
+    private static async Task WriteMapTableEp3Locators(Map map)
+    {
+        var file = """
+            object={
+            	name="ep3_tabletop"
+            	render_pass=MapUnderTerrain
+            	clamp_to_water_level=yes
+            	generated_content=no
+            	layer="map_table_layer_ep3"
+            	entity="ep3_tabletop_entity"
+            	count=1
+            	transform="3100.000000 -20.000000 2048.000000 0.000000 0.000000 0.000000 0.000000 5.000000 5.000000 5.000000
+            "}
+            object={
+            	name="ep3_tabletop_floor"
+            	render_pass=MapUnderTerrain
+            	clamp_to_water_level=yes
+            	generated_content=no
+            	layer="map_table_layer_ep3"
+            	entity="ep3_tabletop_floor_entity"
+            	count=1
+            	transform="3100.000000 -20.000000 2048.000000 0.000000 0.000000 0.000000 0.000000 5.000000 5.000000 5.000000
+            "}
+            object={
+            	name="tabletop_props"
+            	render_pass=MapUnderTerrain
+            	clamp_to_water_level=yes
+            	generated_content=no
+            	layer="map_table_layer_ep3"
+            	entity="tabletop_props_entity"
+            	count=1
+            	transform="3100.000000 1.000000 2048.000000 0.000000 0.000000 0.000000 0.000000 5.000000 5.000000 5.000000
+            "}
+            """;
+        File.WriteAllText(Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "map_object_data", "map_table_ep3.txt"), file, new UTF8Encoding(true));
+    }
+
+    public static Task WriteLocators(Map map)
+    {
+        return Task.WhenAll([
+            WriteBuildingLocators(map),
+            WriteSiegeLocators(map),
+            WriteCombatLocators(map),
+            WritePlayerStackLocators(map),
+
+            // Move the table props to not obstruct the map
+            WriteMapTableCe1Locators(map),
+            WriteMapTableTgpLocators(map),
+            WriteMapTableWesternLocators(map),
+            WriteMapTableEp3Locators(map),
+        ]);
     }
 
     public static async Task WriteDefault(Map map)
@@ -818,9 +1017,11 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             var magickImage = MagickImage.FromBase64(base64.Split(',')[1]);
             //magickImage.Write("terrain.dds", MagickFormat.Dds);
 
-            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "flatmap.dds");
+            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "flat_maps", "flatmap.dds");
             Helper.EnsureDirectoryExists(path);
             magickImage.Write(path, MagickFormat.Dds);
+
+            File.Copy(path, Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "flat_maps", "flatmap_tgp.dds"), true);
         }
         catch (Exception ex)
         {
@@ -833,7 +1034,867 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
     public static async Task WritePdxterrain()
     {
         var offset = 10;
-        var file = $"Includes = {{\r\n\t\"cw/pdxterrain.fxh\"\r\n\t\"cw/heightmap.fxh\"\r\n\t\"cw/shadow.fxh\"\r\n\t\"cw/utility.fxh\"\r\n\t\"cw/camera.fxh\"\r\n\t\"jomini/jomini_fog.fxh\"\r\n\t\"jomini/jomini_lighting.fxh\"\r\n\t\"jomini/jomini_fog_of_war.fxh\"\r\n\t\"jomini/jomini_water.fxh\"\r\n\t\"standardfuncsgfx.fxh\"\r\n\t\"bordercolor.fxh\"\r\n\t\"lowspec.fxh\"\r\n\t\"legend.fxh\"\r\n\t\"cw/lighting.fxh\"\r\n\t\"dynamic_masks.fxh\"\r\n\t\"disease.fxh\"\r\n}}\r\n\r\nVertexStruct VS_OUTPUT_PDX_TERRAIN\r\n{{\r\n\tfloat4 Position\t\t\t: PDX_POSITION;\r\n\tfloat3 WorldSpacePos\t: TEXCOORD1;\r\n\tfloat4 ShadowProj\t\t: TEXCOORD2;\r\n}};\r\n\r\nVertexStruct VS_OUTPUT_PDX_TERRAIN_LOW_SPEC\r\n{{\r\n\tfloat4 Position\t\t\t: PDX_POSITION;\r\n\tfloat3 WorldSpacePos\t: TEXCOORD1;\r\n\tfloat4 ShadowProj\t\t: TEXCOORD2;\r\n\tfloat3 DetailDiffuse\t: TEXCOORD3;\r\n\tfloat4 DetailMaterial\t: TEXCOORD4;\r\n\tfloat3 ColorMap\t\t\t: TEXCOORD5;\t\t\r\n\tfloat3 FlatMap\t\t\t: TEXCOORD6;\r\n\tfloat3 Normal\t\t\t: TEXCOORD7;\r\n}};\r\n\r\n# Limited JominiEnvironment data to get nicer transitions between the Flatmap lighting and Terrain lighting\r\n# Only used in terrain shader while lerping between flatmap and terrain.\r\nConstantBuffer( FlatMapLerpEnvironment )\r\n{{\r\n\tfloat\tFlatMapLerpCubemapIntensity;\r\n\tfloat3\tFlatMapLerpSunDiffuse;\r\n\tfloat\tFlatMapLerpSunIntensity;\r\n\tfloat4x4 FlatMapLerpCubemapYRotation;\r\n}};\r\n\r\nVertexShader =\r\n{{\r\n\tTextureSampler DetailTextures\r\n\t{{\r\n\t\tRef = PdxTerrainTextures0\r\n\t\tMagFilter = \"Linear\"\r\n\t\tMinFilter = \"Linear\"\r\n\t\tMipFilter = \"Linear\"\r\n\t\tSampleModeU = \"Wrap\"\r\n\t\tSampleModeV = \"Wrap\"\r\n\t\ttype = \"2darray\"\r\n\t}}\r\n\tTextureSampler NormalTextures\r\n\t{{\r\n\t\tRef = PdxTerrainTextures1\r\n\t\tMagFilter = \"Linear\"\r\n\t\tMinFilter = \"Linear\"\r\n\t\tMipFilter = \"Linear\"\r\n\t\tSampleModeU = \"Wrap\"\r\n\t\tSampleModeV = \"Wrap\"\r\n\t\ttype = \"2darray\"\r\n\t}}\r\n\tTextureSampler MaterialTextures\r\n\t{{\r\n\t\tRef = PdxTerrainTextures2\r\n\t\tMagFilter = \"Linear\"\r\n\t\tMinFilter = \"Linear\"\r\n\t\tMipFilter = \"Linear\"\r\n\t\tSampleModeU = \"Wrap\"\r\n\t\tSampleModeV = \"Wrap\"\r\n\t\ttype = \"2darray\"\r\n\t}}\r\n\tTextureSampler DetailIndexTexture\r\n\t{{\r\n\t\tRef = PdxTerrainTextures3\r\n\t\tMagFilter = \"Point\"\r\n\t\tMinFilter = \"Point\"\r\n\t\tMipFilter = \"Point\"\r\n\t\tSampleModeU = \"Clamp\"\r\n\t\tSampleModeV = \"Clamp\"\r\n\t}}\r\n\tTextureSampler DetailMaskTexture\r\n\t{{\r\n\t\tRef = PdxTerrainTextures4\r\n\t\tMagFilter = \"Point\"\r\n\t\tMinFilter = \"Point\"\r\n\t\tMipFilter = \"Point\"\r\n\t\tSampleModeU = \"Clamp\"\r\n\t\tSampleModeV = \"Clamp\"\r\n\t}}\r\n\tTextureSampler ColorTexture\r\n\t{{\r\n\t\tRef = PdxTerrainColorMap\r\n\t\tMagFilter = \"Linear\"\r\n\t\tMinFilter = \"Linear\"\r\n\t\tMipFilter = \"Linear\"\r\n\t\tSampleModeU = \"Clamp\"\r\n\t\tSampleModeV = \"Clamp\"\r\n\t}}\r\n\tTextureSampler FlatMapTexture\r\n\t{{\r\n\t\tRef = TerrainFlatMap\r\n\t\tMagFilter = \"Linear\"\r\n\t\tMinFilter = \"Linear\"\r\n\t\tMipFilter = \"Linear\"\r\n\t\tSampleModeU = \"Clamp\"\r\n\t\tSampleModeV = \"Clamp\"\r\n\t}}\r\n\t\r\n\tCode\r\n\t[[\r\n\t\tVS_OUTPUT_PDX_TERRAIN TerrainVertex( float2 WithinNodePos, float2 NodeOffset, float NodeScale, float2 LodDirection, float LodLerpFactor )\r\n\t\t{{\r\n\t\t\tSTerrainVertex Vertex = CalcTerrainVertex( WithinNodePos, NodeOffset, NodeScale, LodDirection, LodLerpFactor );\r\n\r\n\t\t\t#ifdef TERRAIN_FLAT_MAP_LERP\r\n\t\t\t\tVertex.WorldSpacePos.y = lerp( Vertex.WorldSpacePos.y, FlatMapHeight + {offset}, FlatMapLerp );\r\n\t\t\t#endif\r\n\t\t\t#ifdef TERRAIN_FLAT_MAP\r\n\t\t\t\tVertex.WorldSpacePos.y = FlatMapHeight + {offset};\r\n\t\t\t#endif\r\n\r\n\t\t\tVS_OUTPUT_PDX_TERRAIN Out;\r\n\t\t\tOut.WorldSpacePos = Vertex.WorldSpacePos;\r\n\r\n\t\t\tOut.Position = FixProjectionAndMul( ViewProjectionMatrix, float4( Vertex.WorldSpacePos, 1.0 ) );\r\n\t\t\tOut.ShadowProj = mul( ShadowMapTextureMatrix, float4( Vertex.WorldSpacePos, 1.0 ) );\r\n\r\n\t\t\treturn Out;\r\n\t\t}}\r\n\t\t\r\n\t\t// Copies of the pixels shader CalcHeightBlendFactors and CalcDetailUV functions\r\n\t\tfloat4 CalcHeightBlendFactors( float4 MaterialHeights, float4 MaterialFactors, float BlendRange )\r\n\t\t{{\r\n\t\t\tfloat4 Mat = MaterialHeights + MaterialFactors;\r\n\t\t\tfloat BlendStart = max( max( Mat.x, Mat.y ), max( Mat.z, Mat.w ) ) - BlendRange;\r\n\t\t\t\r\n\t\t\tfloat4 MatBlend = max( Mat - vec4( BlendStart ), vec4( 0.0 ) );\r\n\t\t\t\r\n\t\t\tfloat Epsilon = 0.00001;\r\n\t\t\treturn float4( MatBlend ) / ( dot( MatBlend, vec4( 1.0 ) ) + Epsilon );\r\n\t\t}}\r\n\t\t\r\n\t\tfloat2 CalcDetailUV( float2 WorldSpacePosXZ )\r\n\t\t{{\r\n\t\t\treturn WorldSpacePosXZ * DetailTileFactor;\r\n\t\t}}\r\n\t\t\r\n\t\t// A low spec vertex buffer version of CalculateDetails\r\n\t\tvoid CalculateDetailsLowSpec( float2 WorldSpacePosXZ, out float3 DetailDiffuse, out float4 DetailMaterial )\r\n\t\t{{\r\n\t\t\tfloat2 DetailCoordinates = WorldSpacePosXZ * WorldSpaceToDetail;\r\n\t\t\tfloat2 DetailCoordinatesScaled = DetailCoordinates * DetailTextureSize;\r\n\t\t\tfloat2 DetailCoordinatesScaledFloored = floor( DetailCoordinatesScaled );\r\n\t\t\tfloat2 DetailCoordinatesFrac = DetailCoordinatesScaled - DetailCoordinatesScaledFloored;\r\n\t\t\tDetailCoordinates = DetailCoordinatesScaledFloored * DetailTexelSize + DetailTexelSize * 0.5;\r\n\t\t\t\r\n\t\t\tfloat4 Factors = float4(\r\n\t\t\t\t(1.0 - DetailCoordinatesFrac.x) * (1.0 - DetailCoordinatesFrac.y),\r\n\t\t\t\tDetailCoordinatesFrac.x * (1.0 - DetailCoordinatesFrac.y),\r\n\t\t\t\t(1.0 - DetailCoordinatesFrac.x) * DetailCoordinatesFrac.y,\r\n\t\t\t\tDetailCoordinatesFrac.x * DetailCoordinatesFrac.y\r\n\t\t\t);\r\n\t\t\t\r\n\t\t\tfloat4 DetailIndex = PdxTex2DLod0( DetailIndexTexture, DetailCoordinates ) * 255.0;\r\n\t\t\tfloat4 DetailMask = PdxTex2DLod0( DetailMaskTexture, DetailCoordinates ) * Factors[0];\r\n\t\t\t\r\n\t\t\tfloat2 Offsets[3];\r\n\t\t\tOffsets[0] = float2( DetailTexelSize.x, 0.0 );\r\n\t\t\tOffsets[1] = float2( 0.0, DetailTexelSize.y );\r\n\t\t\tOffsets[2] = float2( DetailTexelSize.x, DetailTexelSize.y );\r\n\t\t\t\r\n\t\t\tfor ( int k = 0; k < 3; ++k )\r\n\t\t\t{{\r\n\t\t\t\tfloat2 DetailCoordinates2 = DetailCoordinates + Offsets[k];\r\n\t\t\t\t\r\n\t\t\t\tfloat4 DetailIndices = PdxTex2DLod0( DetailIndexTexture, DetailCoordinates2 ) * 255.0;\r\n\t\t\t\tfloat4 DetailMasks = PdxTex2DLod0( DetailMaskTexture, DetailCoordinates2 ) * Factors[k+1];\r\n\t\t\t\t\r\n\t\t\t\tfor ( int i = 0; i < 4; ++i )\r\n\t\t\t\t{{\r\n\t\t\t\t\tfor ( int j = 0; j < 4; ++j )\r\n\t\t\t\t\t{{\r\n\t\t\t\t\t\tif ( DetailIndex[j] == DetailIndices[i] )\r\n\t\t\t\t\t\t{{\r\n\t\t\t\t\t\t\tDetailMask[j] += DetailMasks[i];\r\n\t\t\t\t\t\t}}\r\n\t\t\t\t\t}}\r\n\t\t\t\t}}\r\n\t\t\t}}\r\n\r\n\t\t\tfloat2 DetailUV = CalcDetailUV( WorldSpacePosXZ );\r\n\t\t\t\r\n\t\t\tfloat4 DiffuseTexture0 = PdxTex2DLod0( DetailTextures, float3( DetailUV, DetailIndex[0] ) ) * smoothstep( 0.0, 0.1, DetailMask[0] );\r\n\t\t\tfloat4 DiffuseTexture1 = PdxTex2DLod0( DetailTextures, float3( DetailUV, DetailIndex[1] ) ) * smoothstep( 0.0, 0.1, DetailMask[1] );\r\n\t\t\tfloat4 DiffuseTexture2 = PdxTex2DLod0( DetailTextures, float3( DetailUV, DetailIndex[2] ) ) * smoothstep( 0.0, 0.1, DetailMask[2] );\r\n\t\t\tfloat4 DiffuseTexture3 = PdxTex2DLod0( DetailTextures, float3( DetailUV, DetailIndex[3] ) ) * smoothstep( 0.0, 0.1, DetailMask[3] );\r\n\t\t\t\r\n\t\t\tfloat4 BlendFactors = CalcHeightBlendFactors( float4( DiffuseTexture0.a, DiffuseTexture1.a, DiffuseTexture2.a, DiffuseTexture3.a ), DetailMask, DetailBlendRange );\r\n\t\t\t//BlendFactors = DetailMask;\r\n\t\t\t\r\n\t\t\tDetailDiffuse = DiffuseTexture0.rgb * BlendFactors.x + \r\n\t\t\t\t\t\t\tDiffuseTexture1.rgb * BlendFactors.y + \r\n\t\t\t\t\t\t\tDiffuseTexture2.rgb * BlendFactors.z + \r\n\t\t\t\t\t\t\tDiffuseTexture3.rgb * BlendFactors.w;\r\n\t\t\t\r\n\t\t\tDetailMaterial = vec4( 0.0 );\r\n\t\t\t\r\n\t\t\tfor ( int i = 0; i < 4; ++i )\r\n\t\t\t{{\r\n\t\t\t\tfloat BlendFactor = BlendFactors[i];\r\n\t\t\t\tif ( BlendFactor > 0.0 )\r\n\t\t\t\t{{\r\n\t\t\t\t\tfloat3 ArrayUV = float3( DetailUV, DetailIndex[i] );\r\n\t\t\t\t\tfloat4 NormalTexture = PdxTex2DLod0( NormalTextures, ArrayUV );\r\n\t\t\t\t\tfloat4 MaterialTexture = PdxTex2DLod0( MaterialTextures, ArrayUV );\r\n\r\n\t\t\t\t\tDetailMaterial += MaterialTexture * BlendFactor;\r\n\t\t\t\t}}\r\n\t\t\t}}\r\n\t\t}}\r\n\t\r\n\t\tVS_OUTPUT_PDX_TERRAIN_LOW_SPEC TerrainVertexLowSpec( float2 WithinNodePos, float2 NodeOffset, float NodeScale, float2 LodDirection, float LodLerpFactor )\r\n\t\t{{\r\n\t\t\tSTerrainVertex Vertex = CalcTerrainVertex( WithinNodePos, NodeOffset, NodeScale, LodDirection, LodLerpFactor );\r\n\r\n\t\t\t#ifdef TERRAIN_FLAT_MAP_LERP\r\n\t\t\t\tVertex.WorldSpacePos.y = lerp( Vertex.WorldSpacePos.y, FlatMapHeight, FlatMapLerp );\r\n\t\t\t#endif\r\n\t\t\t#ifdef TERRAIN_FLAT_MAP\r\n\t\t\t\tVertex.WorldSpacePos.y = FlatMapHeight;\r\n\t\t\t#endif\r\n\r\n\t\t\tVS_OUTPUT_PDX_TERRAIN_LOW_SPEC Out;\r\n\t\t\tOut.WorldSpacePos = Vertex.WorldSpacePos;\r\n\r\n\t\t\tOut.Position = FixProjectionAndMul( ViewProjectionMatrix, float4( Vertex.WorldSpacePos, 1.0 ) );\r\n\t\t\tOut.ShadowProj = mul( ShadowMapTextureMatrix, float4( Vertex.WorldSpacePos, 1.0 ) );\r\n\t\t\t\r\n\t\t\tCalculateDetailsLowSpec( Vertex.WorldSpacePos.xz, Out.DetailDiffuse, Out.DetailMaterial );\r\n\t\t\t\r\n\t\t\tfloat2 ColorMapCoords = Vertex.WorldSpacePos.xz * WorldSpaceToTerrain0To1;\r\n\r\n#if defined( PDX_OSX ) && defined( PDX_OPENGL )\r\n\t\t\t// We're limited to the amount of samplers we can bind at any given time on Mac, so instead\r\n\t\t\t// we disable the usage of ColorTexture (since its effects are very subtle) and assign a\r\n\t\t\t// default value here instead.\r\n\t\t\tOut.ColorMap = float3( vec3( 0.5 ) );\r\n#else\r\n\t\t\tOut.ColorMap = PdxTex2DLod0( ColorTexture, float2( ColorMapCoords.x, 1.0 - ColorMapCoords.y ) ).rgb;\r\n#endif\r\n\r\n\t\t\tOut.FlatMap = float3( vec3( 0.5f ) ); // neutral overlay\r\n\t\t\t#ifdef TERRAIN_FLAT_MAP_LERP\r\n\t\t\t\tOut.FlatMap = lerp( Out.FlatMap, PdxTex2DLod0( FlatMapTexture, float2( ColorMapCoords.x, 1.0 - ColorMapCoords.y ) ).rgb, FlatMapLerp );\r\n\t\t\t#endif\r\n\r\n\t\t\tOut.Normal = CalculateNormal( Vertex.WorldSpacePos.xz );\r\n\r\n\t\t\treturn Out;\r\n\t\t}}\r\n\t]]\r\n\t\r\n\tMainCode VertexShader\r\n\t{{\r\n\t\tInput = \"VS_INPUT_PDX_TERRAIN\"\r\n\t\tOutput = \"VS_OUTPUT_PDX_TERRAIN\"\r\n\t\tCode\r\n\t\t[[\r\n\t\t\tPDX_MAIN\r\n\t\t\t{{\r\n\t\t\t\treturn TerrainVertex( Input.UV, Input.NodeOffset_Scale_Lerp.xy, Input.NodeOffset_Scale_Lerp.z, Input.LodDirection, Input.NodeOffset_Scale_Lerp.w );\r\n\t\t\t}}\r\n\t\t]]\r\n\t}}\r\n\r\n\tMainCode VertexShaderSkirt\r\n\t{{\r\n\t\tInput = \"VS_INPUT_PDX_TERRAIN_SKIRT\"\r\n\t\tOutput = \"VS_OUTPUT_PDX_TERRAIN\"\r\n\t\tCode\r\n\t\t[[\r\n\t\t\tPDX_MAIN\r\n\t\t\t{{\r\n\t\t\t\tVS_OUTPUT_PDX_TERRAIN Out = TerrainVertex( Input.UV, Input.NodeOffset_Scale_Lerp.xy, Input.NodeOffset_Scale_Lerp.z, Input.LodDirection, Input.NodeOffset_Scale_Lerp.w );\r\n\r\n\t\t\t\tfloat3 Position = FixPositionForSkirt( Out.WorldSpacePos, Input.VertexID );\r\n\t\t\t\tOut.Position = FixProjectionAndMul( ViewProjectionMatrix, float4( Position, 1.0 ) );\r\n\r\n\t\t\t\treturn Out;\r\n\t\t\t}}\r\n\t\t]]\r\n\t}}\r\n\t\r\n\tMainCode VertexShaderLowSpec\r\n\t{{\r\n\t\tInput = \"VS_INPUT_PDX_TERRAIN\"\r\n\t\tOutput = \"VS_OUTPUT_PDX_TERRAIN_LOW_SPEC\"\r\n\t\tCode\r\n\t\t[[\r\n\t\t\tPDX_MAIN\r\n\t\t\t{{\r\n\t\t\t\treturn TerrainVertexLowSpec( Input.UV, Input.NodeOffset_Scale_Lerp.xy, Input.NodeOffset_Scale_Lerp.z, Input.LodDirection, Input.NodeOffset_Scale_Lerp.w );\r\n\t\t\t}}\r\n\t\t]]\r\n\t}}\r\n\r\n\tMainCode VertexShaderLowSpecSkirt\r\n\t{{\r\n\t\tInput = \"VS_INPUT_PDX_TERRAIN_SKIRT\"\r\n\t\tOutput = \"VS_OUTPUT_PDX_TERRAIN_LOW_SPEC\"\r\n\t\tCode\r\n\t\t[[\r\n\t\t\tPDX_MAIN\r\n\t\t\t{{\r\n\t\t\t\tVS_OUTPUT_PDX_TERRAIN_LOW_SPEC Out = TerrainVertexLowSpec( Input.UV, Input.NodeOffset_Scale_Lerp.xy, Input.NodeOffset_Scale_Lerp.z, Input.LodDirection, Input.NodeOffset_Scale_Lerp.w );\r\n\r\n\t\t\t\tfloat3 Position = FixPositionForSkirt( Out.WorldSpacePos, Input.VertexID );\r\n\t\t\t\tOut.Position = FixProjectionAndMul( ViewProjectionMatrix, float4( Position, 1.0 ) );\r\n\r\n\t\t\t\treturn Out;\r\n\t\t\t}}\r\n\t\t]]\r\n\t}}\r\n}}\r\n\r\n\r\nPixelShader =\r\n{{\r\n\t# PdxTerrain uses texture index 0 - 6\r\n\r\n\t# Jomini specific\r\n\tTextureSampler ShadowMap\r\n\t{{\r\n\t\tRef = PdxShadowmap\r\n\t\tMagFilter = \"Linear\"\r\n\t\tMinFilter = \"Linear\"\r\n\t\tMipFilter = \"Linear\"\r\n\t\tSampleModeU = \"Wrap\"\r\n\t\tSampleModeV = \"Wrap\"\r\n\t\tCompareFunction = less_equal\r\n\t\tSamplerType = \"Compare\"\r\n\t}}\r\n\r\n\t# Game specific\r\n\tTextureSampler FogOfWarAlpha\r\n\t{{\r\n\t\tRef = JominiFogOfWar\r\n\t\tMagFilter = \"Linear\"\r\n\t\tMinFilter = \"Linear\"\r\n\t\tMipFilter = \"Linear\"\r\n\t\tSampleModeU = \"Wrap\"\r\n\t\tSampleModeV = \"Wrap\"\r\n\t}}\r\n\tTextureSampler FlatMapTexture\r\n\t{{\r\n\t\tRef = TerrainFlatMap\r\n\t\tMagFilter = \"Linear\"\r\n\t\tMinFilter = \"Linear\"\r\n\t\tMipFilter = \"Linear\"\r\n\t\tSampleModeU = \"Clamp\"\r\n\t\tSampleModeV = \"Clamp\"\r\n\t}}\r\n\tTextureSampler EnvironmentMap\r\n\t{{\r\n\t\tRef = JominiEnvironmentMap\r\n\t\tMagFilter = \"Linear\"\r\n\t\tMinFilter = \"Linear\"\r\n\t\tMipFilter = \"Linear\"\r\n\t\tSampleModeU = \"Clamp\"\r\n\t\tSampleModeV = \"Clamp\"\r\n\t\tType = \"Cube\"\r\n\t}}\r\n\tTextureSampler FlatMapEnvironmentMap\r\n\t{{\r\n\t\tRef = FlatMapEnvironmentMap\r\n\t\tMagFilter = \"Linear\"\r\n\t\tMinFilter = \"Linear\"\r\n\t\tMipFilter = \"Linear\"\r\n\t\tSampleModeU = \"Clamp\"\r\n\t\tSampleModeV = \"Clamp\"\r\n\t\tType = \"Cube\"\r\n\t}}\r\n\tTextureSampler SurroundFlatMapMask\r\n\t{{\r\n\t\tRef = SurroundFlatMapMask\r\n\t\tMagFilter = \"Linear\"\r\n\t\tMinFilter = \"Linear\"\r\n\t\tMipFilter = \"Linear\"\r\n\t\tSampleModeU = \"Border\"\r\n\t\tSampleModeV = \"Border\"\r\n\t\tBorder_Color = {{ 1 1 1 1 }}\r\n\t\tFile = \"gfx/map/surround_map/surround_mask.dds\"\r\n\t}}\r\n\r\n\tCode\r\n\t[[\r\n\t\tSLightingProperties GetFlatMapLerpSunLightingProperties( float3 WorldSpacePos, float ShadowTerm )\r\n\t\t{{\r\n\t\t\tSLightingProperties LightingProps;\r\n\t\t\tLightingProps._ToCameraDir = normalize( CameraPosition - WorldSpacePos );\r\n\t\t\tLightingProps._ToLightDir = ToSunDir;\r\n\t\t\tLightingProps._LightIntensity = FlatMapLerpSunDiffuse * 5;\r\n\t\t\tLightingProps._ShadowTerm = ShadowTerm;\r\n\t\t\tLightingProps._CubemapIntensity = FlatMapLerpCubemapIntensity;\r\n\t\t\tLightingProps._CubemapYRotation = FlatMapLerpCubemapYRotation;\r\n\r\n\t\t\treturn LightingProps;\r\n\t\t}}\r\n\t]]\r\n\r\n\tMainCode PixelShader\r\n\t{{\r\n\t\tInput = \"VS_OUTPUT_PDX_TERRAIN\"\r\n\t\tOutput = \"PDX_COLOR\"\r\n\t\tCode\r\n\t\t[[\r\n\t\t\tPDX_MAIN\r\n\t\t\t{{\r\n\t\t\t\tclip( vec2(1.0) - Input.WorldSpacePos.xz * WorldSpaceToTerrain0To1 );\r\n\r\n\t\t\t\tfloat4 DetailDiffuse;\r\n\t\t\t\tfloat3 DetailNormal;\r\n\t\t\t\tfloat4 DetailMaterial;\r\n\t\t\t\tCalculateDetails( Input.WorldSpacePos.xz, DetailDiffuse, DetailNormal, DetailMaterial );\r\n\r\n\t\t\t\tfloat2 ColorMapCoords = Input.WorldSpacePos.xz * WorldSpaceToTerrain0To1;\r\n#if defined( PDX_OSX ) && defined( PDX_OPENGL )\r\n\t\t\t\t// We're limited to the amount of samplers we can bind at any given time on Mac, so instead\r\n\t\t\t\t// we disable the usage of ColorTexture (since its effects are very subtle) and assign a\r\n\t\t\t\t// default value here instead.\r\n\t\t\t\tfloat3 ColorMap = float3( vec3( 0.5 ) );\r\n#else\r\n\t\t\t\tfloat3 ColorMap = PdxTex2D( ColorTexture, float2( ColorMapCoords.x, 1.0 - ColorMapCoords.y ) ).rgb;\r\n#endif\r\n\t\t\t\t\r\n\t\t\t\tfloat3 FlatMap = float3( vec3( 0.5f ) ); // neutral overlay\r\n\t\t\t\t#ifdef TERRAIN_FLAT_MAP_LERP\r\n\t\t\t\t\tFlatMap = lerp( FlatMap, PdxTex2D( FlatMapTexture, float2( ColorMapCoords.x, 1.0 - ColorMapCoords.y ) ).rgb, FlatMapLerp );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\tfloat3 Normal = CalculateNormal( Input.WorldSpacePos.xz );\r\n\r\n\t\t\t\tfloat3 ReorientedNormal = ReorientNormal( Normal, DetailNormal );\r\n\r\n\t\t\t\tfloat SnowHighlight = 0.0f;\r\n\t\t\t\t#ifndef UNDERWATER\r\n\t\t\t\t\tDetailDiffuse.rgb = ApplyDynamicMasksDiffuse( DetailDiffuse.rgb, ReorientedNormal, ColorMapCoords );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\tfloat3 Diffuse = GetOverlay( DetailDiffuse.rgb, ColorMap, ( 1 - DetailMaterial.r ) * COLORMAP_OVERLAY_STRENGTH );\r\n\r\n\r\n\t\t\t\t#ifdef TERRAIN_COLOR_OVERLAY\r\n\t\t\t\t\tfloat3 BorderColor;\r\n\t\t\t\t\tfloat BorderPreLightingBlend;\r\n\t\t\t\t\tfloat BorderPostLightingBlend;\r\n\t\t\t\t\tGetBorderColorAndBlendGame( Input.WorldSpacePos.xz, FlatMap, BorderColor, BorderPreLightingBlend, BorderPostLightingBlend );\r\n\r\n\t\t\t\t\tDiffuse = lerp( Diffuse, BorderColor, BorderPreLightingBlend );\r\n\r\n\t\t\t\t\t#ifdef TERRAIN_FLAT_MAP_LERP\r\n\t\t\t\t\t\tfloat3 FlatColor;\r\n\t\t\t\t\t\tGetBorderColorAndBlendGameLerp( Input.WorldSpacePos.xz, FlatMap, FlatColor, BorderPreLightingBlend, BorderPostLightingBlend, FlatMapLerp );\r\n\t\t\t\t\t\t\r\n\t\t\t\t\t\tFlatMap = lerp( FlatMap, FlatColor, saturate( BorderPreLightingBlend + BorderPostLightingBlend ) );\r\n\t\t\t\t\t#endif\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t#ifdef TERRAIN_COLOR_OVERLAY\r\n\t\t\t\t\tApplyHighlightColor( Diffuse, ColorMapCoords );\r\n\t\t\t\t\tCompensateWhiteHighlightColor( Diffuse, ColorMapCoords, SnowHighlight );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\tfloat ShadowTerm = CalculateShadow( Input.ShadowProj, ShadowMap );\r\n\r\n\t\t\t\t#ifdef TERRAIN_FLAT_MAP_LERP\r\n\t\t\t\tif ( HasFlatMapLightingEnabled == 1 )\r\n\t\t\t\t{{\r\n \t\t\t\t\tSMaterialProperties FlatMapMaterialProps = GetMaterialProperties( FlatMap, float3( 0.0, 1.0, 0.0 ), 1.0, 0.0, 0.0 );\r\n \t\t\t\t\tSLightingProperties FlatMapLightingProps = GetFlatMapLerpSunLightingProperties( Input.WorldSpacePos, ShadowTerm );\r\n \t\t\t\t\tFlatMap = CalculateSunLighting( FlatMapMaterialProps, FlatMapLightingProps, FlatMapEnvironmentMap );\r\n\t\t\t\t}}\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\tSMaterialProperties MaterialProps = GetMaterialProperties( Diffuse, ReorientedNormal, DetailMaterial.a, DetailMaterial.g, DetailMaterial.b );\r\n\t\t\t\tSLightingProperties LightingProps = GetSunLightingProperties( Input.WorldSpacePos, ShadowTerm );\r\n\r\n\t\t\t\tfloat3 FinalColor = CalculateSunLighting( MaterialProps, LightingProps, EnvironmentMap );\r\n\r\n\t\t\t\t#ifdef TERRAIN_COLOR_OVERLAY\r\n\t\t\t\t\tFinalColor.rgb = lerp( FinalColor.rgb, BorderColor, BorderPostLightingBlend );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t#ifdef TERRAIN_COLOR_OVERLAY\r\n\t\t\t\t\tApplyHighlightColor( FinalColor.rgb, ColorMapCoords, 0.25 );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t#ifdef TERRAIN_COLOR_OVERLAY\r\n\t\t\t\t\tApplyDiseaseDiffuse( FinalColor, ColorMapCoords );\r\n\t\t\t\t\tApplyLegendDiffuse( FinalColor, ColorMapCoords );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t#ifndef UNDERWATER\r\n\t\t\t\t\tFinalColor = ApplyFogOfWar( FinalColor, Input.WorldSpacePos, FogOfWarAlpha );\r\n\t\t\t\t\tFinalColor = ApplyDistanceFog( FinalColor, Input.WorldSpacePos );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t#ifdef TERRAIN_FLAT_MAP_LERP\r\n\t\t\t\t\tFinalColor = lerp( FinalColor, FlatMap, FlatMapLerp );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\tfloat Alpha = 1.0;\r\n\t\t\t\t#ifdef UNDERWATER\r\n\t\t\t\t\tAlpha = CompressWorldSpace( Input.WorldSpacePos );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t#ifdef TERRAIN_DEBUG\r\n\t\t\t\t\tTerrainDebug( FinalColor, Input.WorldSpacePos );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\tDebugReturn( FinalColor, MaterialProps, LightingProps, EnvironmentMap );\r\n\t\t\t\treturn float4( FinalColor, Alpha );\r\n\t\t\t}}\r\n\t\t]]\r\n\t}}\r\n\r\n\tMainCode PixelShaderLowSpec\r\n\t{{\r\n\t\tInput = \"VS_OUTPUT_PDX_TERRAIN_LOW_SPEC\"\r\n\t\tOutput = \"PDX_COLOR\"\r\n\t\tCode\r\n\t\t[[\r\n\t\t\tPDX_MAIN\r\n\t\t\t{{\r\n\t\t\t\tclip( vec2(1.0) - Input.WorldSpacePos.xz * WorldSpaceToTerrain0To1 );\r\n\r\n\t\t\t\tfloat3 DetailDiffuse = Input.DetailDiffuse;\r\n\t\t\t\tfloat4 DetailMaterial = Input.DetailMaterial;\r\n\r\n\t\t\t\tfloat2 ColorMapCoords = Input.WorldSpacePos.xz * WorldSpaceToTerrain0To1;\r\n\r\n\t\t\t\tfloat3 ColorMap = Input.ColorMap;\r\n\t\t\t\tfloat3 FlatMap = Input.FlatMap;\r\n\r\n\t\t\t\tfloat3 Normal = Input.Normal;\r\n\t\t\t\t\r\n\t\t\t\tfloat SnowHighlight = 0.0f;\r\n\t\t\t\t#ifndef UNDERWATER\r\n\t\t\t\t\tDetailDiffuse = ApplyDynamicMasksDiffuse( DetailDiffuse, Normal, ColorMapCoords );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\tfloat3 Diffuse = GetOverlay( DetailDiffuse.rgb, ColorMap, ( 1 - DetailMaterial.r ) * COLORMAP_OVERLAY_STRENGTH );\r\n\t\t\t\tfloat3 ReorientedNormal = Normal;\r\n\r\n\t\t\t\t#ifdef TERRAIN_COLOR_OVERLAY\r\n\t\t\t\t\tfloat3 BorderColor;\r\n\t\t\t\t\tfloat BorderPreLightingBlend;\r\n\t\t\t\t\tfloat BorderPostLightingBlend;\r\n\t\t\t\t\tGetBorderColorAndBlendGame( Input.WorldSpacePos.xz, FlatMap, BorderColor, BorderPreLightingBlend, BorderPostLightingBlend );\r\n\r\n\t\t\t\t\tDiffuse = lerp( Diffuse, BorderColor, BorderPreLightingBlend );\r\n\r\n\t\t\t\t\t#ifdef TERRAIN_FLAT_MAP_LERP\r\n\t\t\t\t\t\tfloat3 FlatColor;\r\n\t\t\t\t\t\tGetBorderColorAndBlendGameLerp( Input.WorldSpacePos.xz, FlatMap, FlatColor, BorderPreLightingBlend, BorderPostLightingBlend, FlatMapLerp );\r\n\t\t\t\t\t\t\r\n\t\t\t\t\t\tFlatMap = lerp( FlatMap, FlatColor, saturate( BorderPreLightingBlend + BorderPostLightingBlend ) );\r\n\t\t\t\t\t#endif \r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t//float ShadowTerm = CalculateShadow( Input.ShadowProj, ShadowMap );\r\n\t\t\t\tfloat ShadowTerm = 1.0;\r\n\r\n\t\t\t\tSMaterialProperties MaterialProps = GetMaterialProperties( Diffuse, ReorientedNormal, DetailMaterial.a, DetailMaterial.g, DetailMaterial.b );\r\n\t\t\t\tSLightingProperties LightingProps = GetSunLightingProperties( Input.WorldSpacePos, ShadowTerm );\r\n\r\n\t\t\t\tfloat3 FinalColor = CalculateSunLightingLowSpec( MaterialProps, LightingProps );\r\n\r\n\t\t\t\t#ifndef UNDERWATER\r\n\t\t\t\t\tFinalColor = ApplyFogOfWar( FinalColor, Input.WorldSpacePos, FogOfWarAlpha );\r\n\t\t\t\t\tFinalColor = ApplyDistanceFog( FinalColor, Input.WorldSpacePos );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t#ifdef TERRAIN_COLOR_OVERLAY\r\n\t\t\t\t\tFinalColor.rgb = lerp( FinalColor.rgb, BorderColor, BorderPostLightingBlend );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t#ifdef TERRAIN_COLOR_OVERLAY\r\n\t\t\t\t\tApplyHighlightColor( FinalColor.rgb, ColorMapCoords );\r\n\t\t\t\t\tCompensateWhiteHighlightColor( FinalColor.rgb, ColorMapCoords, SnowHighlight );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t#ifdef TERRAIN_FLAT_MAP_LERP\r\n\t\t\t\t\tFinalColor = lerp( FinalColor, FlatMap, FlatMapLerp );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\tfloat Alpha = 1.0;\r\n\t\t\t\t#ifdef UNDERWATER\r\n\t\t\t\t\tAlpha = CompressWorldSpace( Input.WorldSpacePos );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t#ifdef TERRAIN_DEBUG\r\n\t\t\t\t\tTerrainDebug( FinalColor, Input.WorldSpacePos );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\tDebugReturn( FinalColor, MaterialProps, LightingProps, EnvironmentMap );\r\n\t\t\t\treturn float4( FinalColor, Alpha );\r\n\t\t\t}}\r\n\t\t]]\r\n\t}}\r\n\r\n\tMainCode PixelShaderFlatMap\r\n\t{{\r\n\t\tInput = \"VS_OUTPUT_PDX_TERRAIN\"\r\n\t\tOutput = \"PDX_COLOR\"\r\n\t\tCode\r\n\t\t[[\r\n\t\t\tPDX_MAIN\r\n\t\t\t{{\r\n\t\t\t\t#ifdef TERRAIN_SKIRT\r\n\t\t\t\t\treturn float4( 0, 0, 0, 0 );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\tclip( vec2(1.0) - Input.WorldSpacePos.xz * WorldSpaceToTerrain0To1 );\r\n\r\n\t\t\t\tfloat2 ColorMapCoords = Input.WorldSpacePos.xz * WorldSpaceToTerrain0To1;\r\n\t\t\t\tfloat3 FlatMap = PdxTex2D( FlatMapTexture, float2( ColorMapCoords.x, 1.0 - ColorMapCoords.y ) ).rgb;\r\n\r\n\t\t\t\t#ifdef TERRAIN_COLOR_OVERLAY\r\n\t\t\t\t\tfloat3 BorderColor;\r\n\t\t\t\t\tfloat BorderPreLightingBlend;\r\n\t\t\t\t\tfloat BorderPostLightingBlend;\r\n\t\t\t\t\t\r\n\t\t\t\t\tGetBorderColorAndBlendGameLerp( Input.WorldSpacePos.xz, FlatMap, BorderColor, BorderPreLightingBlend, BorderPostLightingBlend, 1.0f );\r\n\t\t\t\t\t\r\n\t\t\t\t\tFlatMap = lerp( FlatMap, BorderColor, saturate( BorderPreLightingBlend + BorderPostLightingBlend ) );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\tfloat3 FinalColor = FlatMap;\r\n\t\t\t\t#ifdef TERRAIN_FLATMAP_LIGHTING\r\n\t\t\t\t\tif ( HasFlatMapLightingEnabled == 1 )\r\n\t\t\t\t\t{{\r\n\t\t\t\t\t\tfloat ShadowTerm = CalculateShadow( Input.ShadowProj, ShadowMap );\r\n\t\t\t\t\t\tSMaterialProperties FlatMapMaterialProps = GetMaterialProperties( FlatMap, float3( 0.0, 1.0, 0.0 ), 1.0, 0.0, 0.0 );\r\n\t\t\t\t\t\tSLightingProperties FlatMapLightingProps = GetSunLightingProperties( Input.WorldSpacePos, ShadowTerm );\r\n\t\t\t\t\t\tFinalColor = CalculateSunLighting( FlatMapMaterialProps, FlatMapLightingProps, EnvironmentMap );\r\n\t\t\t\t\t}}\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t#ifdef TERRAIN_COLOR_OVERLAY\r\n\t\t\t\t\tApplyHighlightColor( FinalColor, ColorMapCoords, 0.5 );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t#ifdef TERRAIN_DEBUG\r\n\t\t\t\t\tTerrainDebug( FinalColor, Input.WorldSpacePos );\r\n\t\t\t\t#endif\r\n\r\n\t\t\t\t// Make flatmap transparent based on the SurroundFlatMapMask\r\n\t\t\t\tfloat SurroundMapAlpha = 1 - PdxTex2D( SurroundFlatMapMask, float2( ColorMapCoords.x, 1.0 - ColorMapCoords.y ) ).b;\r\n\t\t\t\tSurroundMapAlpha *= FlatMapLerp;\r\n\r\n\t\t\t\treturn float4( FinalColor, SurroundMapAlpha );\r\n\t\t\t}}\r\n\t\t]]\r\n\t}}\r\n}}\r\n\r\n\r\nEffect PdxTerrain\r\n{{\r\n\tVertexShader = \"VertexShader\"\r\n\tPixelShader = \"PixelShader\"\r\n\r\n\tDefines = {{ \"TERRAIN_FLAT_MAP_LERP\" }}\r\n}}\r\n\r\nEffect PdxTerrainLowSpec\r\n{{\r\n\tVertexShader = \"VertexShaderLowSpec\"\r\n\tPixelShader = \"PixelShaderLowSpec\"\r\n}}\r\n\r\nEffect PdxTerrainSkirt\r\n{{\r\n\tVertexShader = \"VertexShaderSkirt\"\r\n\tPixelShader = \"PixelShader\"\r\n}}\r\n\r\nEffect PdxTerrainLowSpecSkirt\r\n{{\r\n\tVertexShader = \"VertexShaderLowSpecSkirt\"\r\n\tPixelShader = \"PixelShaderLowSpec\"\r\n}}\r\n\r\n### FlatMap Effects\r\n\r\nBlendState BlendStateAlpha\r\n{{\r\n\tBlendEnable = yes\r\n\tSourceBlend = \"SRC_ALPHA\"\r\n\tDestBlend = \"INV_SRC_ALPHA\"\r\n}}\r\n\r\nEffect PdxTerrainFlat\r\n{{\r\n\tVertexShader = \"VertexShader\"\r\n\tPixelShader = \"PixelShaderFlatMap\"\r\n\tBlendState = BlendStateAlpha\r\n\r\n\tDefines = {{ \"TERRAIN_FLAT_MAP\" \"TERRAIN_FLATMAP_LIGHTING\" }}\r\n}}\r\n\r\nEffect PdxTerrainFlatSkirt\r\n{{\r\n\tVertexShader = \"VertexShaderSkirt\"\r\n\tPixelShader = \"PixelShaderFlatMap\"\r\n\tBlendState = BlendStateAlpha\r\n\r\n\tDefines = {{ \"TERRAIN_FLAT_MAP\" \"TERRAIN_SKIRT\" }}\r\n}}\r\n\r\n# Low Spec flat map the same as regular effect\r\nEffect PdxTerrainFlatLowSpec\r\n{{\r\n\tVertexShader = \"VertexShader\"\r\n\tPixelShader = \"PixelShaderFlatMap\"\r\n\tBlendState = BlendStateAlpha\r\n\r\n\tDefines = {{ \"TERRAIN_FLAT_MAP\" }}\r\n}}\r\n\r\nEffect PdxTerrainFlatLowSpecSkirt\r\n{{\r\n\tVertexShader = \"VertexShaderSkirt\"\r\n\tPixelShader = \"PixelShaderFlatMap\"\r\n\tBlendState = BlendStateAlpha\r\n\r\n\tDefines = {{ \"TERRAIN_FLAT_MAP\" \"TERRAIN_SKIRT\" }}\r\n}}\r\n";
+        var file = $$"""
+                        Includes = {
+            	"cw/pdxterrain.fxh"
+            	"cw/heightmap.fxh"
+            	"cw/shadow.fxh"
+            	"cw/utility.fxh"
+            	"cw/camera.fxh"
+            	"cw/lighting_util.fxh"
+            	"cw/lighting.fxh"
+            	"jomini/jomini_fog.fxh"
+            	"jomini/map_lighting.fxh"
+            	"jomini/jomini_fog_of_war.fxh"
+            	"jomini/jomini_water.fxh"
+            	"standardfuncsgfx.fxh"
+            	"bordercolor.fxh"
+            	"lowspec.fxh"
+            	"legend.fxh"
+            	"dynamic_masks.fxh"
+            	"disease.fxh"
+            	"shadow_tint.fxh"
+            	"clouds.fxh"
+            	"province_effects.fxh"
+            	"paper_transition.fxh"
+            	"utility_game.fxh"
+            }
+
+            VertexStruct VS_OUTPUT_PDX_TERRAIN
+            {
+            	float4 Position			: PDX_POSITION;
+            	float3 WorldSpacePos	: TEXCOORD1;
+            	float4 ShadowProj		: TEXCOORD2;
+            };
+
+            VertexStruct VS_OUTPUT_PDX_TERRAIN_LOW_SPEC
+            {
+            	float4 Position			: PDX_POSITION;
+            	float3 WorldSpacePos	: TEXCOORD1;
+            	float4 ShadowProj		: TEXCOORD2;
+            	float3 DetailDiffuse	: TEXCOORD3;
+            	float4 DetailMaterial	: TEXCOORD4;
+            	float3 ColorMap			: TEXCOORD5;
+            	float3 FlatMap			: TEXCOORD6;
+            	float3 Normal			: TEXCOORD7;
+            };
+
+            # Limited JominiEnvironment data to get nicer transitions between the Flatmap lighting and Terrain lighting
+            # Only used in terrain shader while lerping between flatmap and terrain.
+            ConstantBuffer( FlatMapLerpEnvironment )
+            {
+            	float	FlatMapLerpCubemapIntensity;
+            	float3	FlatMapLerpSunDiffuse;
+            	float	FlatMapLerpSunIntensity;
+            	float4x4 FlatMapLerpCubemapYRotation;
+            };
+
+            VertexShader =
+            {
+            	TextureSampler DetailTextures
+            	{
+            		Ref = PdxTerrainTextures0
+            		MagFilter = "Linear"
+            		MinFilter = "Linear"
+            		MipFilter = "Linear"
+            		SampleModeU = "Wrap"
+            		SampleModeV = "Wrap"
+            		type = "2darray"
+            	}
+            	TextureSampler NormalTextures
+            	{
+            		Ref = PdxTerrainTextures1
+            		MagFilter = "Linear"
+            		MinFilter = "Linear"
+            		MipFilter = "Linear"
+            		SampleModeU = "Wrap"
+            		SampleModeV = "Wrap"
+            		type = "2darray"
+            	}
+            	TextureSampler MaterialTextures
+            	{
+            		Ref = PdxTerrainTextures2
+            		MagFilter = "Linear"
+            		MinFilter = "Linear"
+            		MipFilter = "Linear"
+            		SampleModeU = "Wrap"
+            		SampleModeV = "Wrap"
+            		type = "2darray"
+            	}
+            	TextureSampler DetailIndexTexture
+            	{
+            		Ref = PdxTerrainTextures3
+            		MagFilter = "Point"
+            		MinFilter = "Point"
+            		MipFilter = "Point"
+            		SampleModeU = "Clamp"
+            		SampleModeV = "Clamp"
+            	}
+            	TextureSampler DetailMaskTexture
+            	{
+            		Ref = PdxTerrainTextures4
+            		MagFilter = "Point"
+            		MinFilter = "Point"
+            		MipFilter = "Point"
+            		SampleModeU = "Clamp"
+            		SampleModeV = "Clamp"
+            	}
+            	TextureSampler ColorTexture
+            	{
+            		Ref = PdxTerrainColorMap
+            		MagFilter = "Linear"
+            		MinFilter = "Linear"
+            		MipFilter = "Linear"
+            		SampleModeU = "Clamp"
+            		SampleModeV = "Clamp"
+            	}
+            	TextureSampler FlatMapTexture
+            	{
+            		Ref = TerrainFlatMap
+            		MagFilter = "Linear"
+            		MinFilter = "Linear"
+            		MipFilter = "Linear"
+            		SampleModeU = "Clamp"
+            		SampleModeV = "Clamp"
+            	}
+
+            	Code
+            	[[
+            		VS_OUTPUT_PDX_TERRAIN TerrainVertex( float2 WithinNodePos, float2 NodeOffset, float NodeScale, float2 LodDirection, float LodLerpFactor )
+            		{
+            			STerrainVertex Vertex = CalcTerrainVertex( WithinNodePos, NodeOffset, NodeScale, LodDirection, LodLerpFactor );
+
+            			#ifdef TERRAIN_FLAT_MAP_LERP
+            				Vertex.WorldSpacePos.y = lerp( Vertex.WorldSpacePos.y, FlatMapHeight + 10, FlatMapLerp );
+            			#endif
+            			#ifdef TERRAIN_FLAT_MAP
+            				Vertex.WorldSpacePos.y = FlatMapHeight + 10;
+            			#endif
+
+            			VS_OUTPUT_PDX_TERRAIN Out;
+            			Out.WorldSpacePos = Vertex.WorldSpacePos;
+
+            			Out.Position = FixProjectionAndMul( ViewProjectionMatrix, float4( Vertex.WorldSpacePos, 1.0 ) );
+            			Out.ShadowProj = mul( ShadowMapTextureMatrix, float4( Vertex.WorldSpacePos, 1.0 ) );
+
+            			return Out;
+            		}
+
+            		// Copies of the pixels shader CalcHeightBlendFactors and CalcDetailUV functions
+            		float4 CalcHeightBlendFactors( float4 MaterialHeights, float4 MaterialFactors, float BlendRange )
+            		{
+            			float4 Mat = MaterialHeights + MaterialFactors;
+            			float BlendStart = max( max( Mat.x, Mat.y ), max( Mat.z, Mat.w ) ) - BlendRange;
+
+            			float4 MatBlend = max( Mat - vec4( BlendStart ), vec4( 0.0 ) );
+
+            			float Epsilon = 0.00001;
+            			return float4( MatBlend ) / ( dot( MatBlend, vec4( 1.0 ) ) + Epsilon );
+            		}
+
+            		float2 CalcDetailUV( float2 WorldSpacePosXZ )
+            		{
+            			return (WorldSpacePosXZ + DetailTileOffset) * DetailTileFactor;
+            		}
+
+            		// A low spec vertex buffer version of CalculateDetails
+            		void CalculateDetailsLowSpec( float2 WorldSpacePosXZ, out float3 DetailDiffuse, out float4 DetailMaterial )
+            		{
+            			float2 DetailCoordinates = WorldSpacePosXZ * WorldSpaceToDetail;
+            			float2 DetailCoordinatesScaled = DetailCoordinates * DetailTextureSize;
+            			float2 DetailCoordinatesScaledFloored = floor( DetailCoordinatesScaled );
+            			float2 DetailCoordinatesFrac = DetailCoordinatesScaled - DetailCoordinatesScaledFloored;
+            			DetailCoordinates = DetailCoordinatesScaledFloored * DetailTexelSize + DetailTexelSize * 0.5;
+
+            			float4 Factors = float4(
+            				(1.0 - DetailCoordinatesFrac.x) * (1.0 - DetailCoordinatesFrac.y),
+            				DetailCoordinatesFrac.x * (1.0 - DetailCoordinatesFrac.y),
+            				(1.0 - DetailCoordinatesFrac.x) * DetailCoordinatesFrac.y,
+            				DetailCoordinatesFrac.x * DetailCoordinatesFrac.y
+            			);
+
+            			float4 DetailIndex = PdxTex2DLod0( DetailIndexTexture, DetailCoordinates ) * 255.0;
+            			float4 DetailMask = PdxTex2DLod0( DetailMaskTexture, DetailCoordinates ) * Factors[0];
+
+            			float2 Offsets[3];
+            			Offsets[0] = float2( DetailTexelSize.x, 0.0 );
+            			Offsets[1] = float2( 0.0, DetailTexelSize.y );
+            			Offsets[2] = float2( DetailTexelSize.x, DetailTexelSize.y );
+
+            			for ( int k = 0; k < 3; ++k )
+            			{
+            				float2 DetailCoordinates2 = DetailCoordinates + Offsets[k];
+
+            				float4 DetailIndices = PdxTex2DLod0( DetailIndexTexture, DetailCoordinates2 ) * 255.0;
+            				float4 DetailMasks = PdxTex2DLod0( DetailMaskTexture, DetailCoordinates2 ) * Factors[k+1];
+
+            				for ( int i = 0; i < 4; ++i )
+            				{
+            					for ( int j = 0; j < 4; ++j )
+            					{
+            						if ( DetailIndex[j] == DetailIndices[i] )
+            						{
+            							DetailMask[j] += DetailMasks[i];
+            						}
+            					}
+            				}
+            			}
+
+            			// We don't use different detail UVs per material like in the normal pdxterrain shader
+            			float2 DetailUV = CalcDetailUV( WorldSpacePosXZ );
+
+            			float4 DiffuseTexture0 = PdxTex2DLod0( DetailTextures, float3( DetailUV, DetailIndex[0] ) ) * smoothstep( 0.0, 0.1, DetailMask[0] );
+            			float4 DiffuseTexture1 = PdxTex2DLod0( DetailTextures, float3( DetailUV, DetailIndex[1] ) ) * smoothstep( 0.0, 0.1, DetailMask[1] );
+            			float4 DiffuseTexture2 = PdxTex2DLod0( DetailTextures, float3( DetailUV, DetailIndex[2] ) ) * smoothstep( 0.0, 0.1, DetailMask[2] );
+            			float4 DiffuseTexture3 = PdxTex2DLod0( DetailTextures, float3( DetailUV, DetailIndex[3] ) ) * smoothstep( 0.0, 0.1, DetailMask[3] );
+
+            			float4 BlendFactors = CalcHeightBlendFactors( float4( DiffuseTexture0.a, DiffuseTexture1.a, DiffuseTexture2.a, DiffuseTexture3.a ), DetailMask, DetailBlendRange );
+
+            			DetailDiffuse = DiffuseTexture0.rgb * BlendFactors[0] +
+            							DiffuseTexture1.rgb * BlendFactors[1] +
+            							DiffuseTexture2.rgb * BlendFactors[2] +
+            							DiffuseTexture3.rgb * BlendFactors[3];
+
+            			DetailMaterial = vec4( 0.0 );
+
+            			for ( int i = 0; i < 4; ++i )
+            			{
+            				float BlendFactor = BlendFactors[i];
+            				if ( BlendFactor > 0.0 )
+            				{
+            					float3 ArrayUV = float3( DetailUV, DetailIndex[i] );
+            					float4 NormalTexture = PdxTex2DLod0( NormalTextures, ArrayUV );
+            					float4 MaterialTexture = PdxTex2DLod0( MaterialTextures, ArrayUV );
+
+            					DetailMaterial += MaterialTexture * BlendFactor;
+            				}
+            			}
+            		}
+
+            		VS_OUTPUT_PDX_TERRAIN_LOW_SPEC TerrainVertexLowSpec( float2 WithinNodePos, float2 NodeOffset, float NodeScale, float2 LodDirection, float LodLerpFactor )
+            		{
+            			STerrainVertex Vertex = CalcTerrainVertex( WithinNodePos, NodeOffset, NodeScale, LodDirection, LodLerpFactor );
+
+            			#ifdef TERRAIN_FLAT_MAP_LERP
+            				Vertex.WorldSpacePos.y = lerp( Vertex.WorldSpacePos.y, FlatMapHeight + 10, FlatMapLerp );
+            			#endif
+            			#ifdef TERRAIN_FLAT_MAP
+            				Vertex.WorldSpacePos.y = FlatMapHeight + 10;
+            			#endif
+
+            			VS_OUTPUT_PDX_TERRAIN_LOW_SPEC Out;
+            			Out.WorldSpacePos = Vertex.WorldSpacePos;
+
+            			Out.Position = FixProjectionAndMul( ViewProjectionMatrix, float4( Vertex.WorldSpacePos, 1.0 ) );
+            			Out.ShadowProj = mul( ShadowMapTextureMatrix, float4( Vertex.WorldSpacePos, 1.0 ) );
+
+            			CalculateDetailsLowSpec( Vertex.WorldSpacePos.xz, Out.DetailDiffuse, Out.DetailMaterial );
+
+            			float2 ColorMapCoords = Vertex.WorldSpacePos.xz * WorldSpaceToTerrain0To1;
+
+            #if defined( PDX_OSX ) && defined( PDX_OPENGL )
+            			// We're limited to the amount of samplers we can bind at any given time on Mac, so instead
+            			// we disable the usage of ColorTexture (since its effects are very subtle) and assign a
+            			// default value here instead.
+            			Out.ColorMap = float3( vec3( 0.5 ) );
+            #else
+            			Out.ColorMap = ToLinear( PdxTex2DLod0( ColorTexture, float2( ColorMapCoords.x, 1.0 - ColorMapCoords.y ) ).rgb );
+            #endif
+
+            			Out.FlatMap = float3( vec3( 0.5f ) ); // neutral overlay
+            			#ifdef TERRAIN_FLAT_MAP_LERP
+            				Out.FlatMap = lerp( Out.FlatMap, PdxTex2DLod0( FlatMapTexture, float2( ColorMapCoords.x, 1.0 - ColorMapCoords.y ) ).rgb, FlatMapLerp );
+            			#endif
+
+            			Out.Normal = CalculateNormal( Vertex.WorldSpacePos.xz );
+
+            			return Out;
+            		}
+            	]]
+
+            	MainCode VertexShader
+            	{
+            		Input = "VS_INPUT_PDX_TERRAIN"
+            		Output = "VS_OUTPUT_PDX_TERRAIN"
+            		Code
+            		[[
+            			PDX_MAIN
+            			{
+            				return TerrainVertex( Input.UV, Input.NodeOffset_Scale_Lerp.xy, Input.NodeOffset_Scale_Lerp.z, Input.LodDirection, Input.NodeOffset_Scale_Lerp.w );
+            			}
+            		]]
+            	}
+
+            	MainCode VertexShaderSkirt
+            	{
+            		Input = "VS_INPUT_PDX_TERRAIN_SKIRT"
+            		Output = "VS_OUTPUT_PDX_TERRAIN"
+            		Code
+            		[[
+            			PDX_MAIN
+            			{
+            				VS_OUTPUT_PDX_TERRAIN Out = TerrainVertex( Input.UV, Input.NodeOffset_Scale_Lerp.xy, Input.NodeOffset_Scale_Lerp.z, Input.LodDirection, Input.NodeOffset_Scale_Lerp.w );
+
+            				float3 Position = FixPositionForSkirt( Out.WorldSpacePos, Input.VertexID );
+            				Out.Position = FixProjectionAndMul( ViewProjectionMatrix, float4( Position, 1.0 ) );
+
+            				return Out;
+            			}
+            		]]
+            	}
+
+            	MainCode VertexShaderLowSpec
+            	{
+            		Input = "VS_INPUT_PDX_TERRAIN"
+            		Output = "VS_OUTPUT_PDX_TERRAIN_LOW_SPEC"
+            		Code
+            		[[
+            			PDX_MAIN
+            			{
+            				return TerrainVertexLowSpec( Input.UV, Input.NodeOffset_Scale_Lerp.xy, Input.NodeOffset_Scale_Lerp.z, Input.LodDirection, Input.NodeOffset_Scale_Lerp.w );
+            			}
+            		]]
+            	}
+
+            	MainCode VertexShaderLowSpecSkirt
+            	{
+            		Input = "VS_INPUT_PDX_TERRAIN_SKIRT"
+            		Output = "VS_OUTPUT_PDX_TERRAIN_LOW_SPEC"
+            		Code
+            		[[
+            			PDX_MAIN
+            			{
+            				VS_OUTPUT_PDX_TERRAIN_LOW_SPEC Out = TerrainVertexLowSpec( Input.UV, Input.NodeOffset_Scale_Lerp.xy, Input.NodeOffset_Scale_Lerp.z, Input.LodDirection, Input.NodeOffset_Scale_Lerp.w );
+
+            				float3 Position = FixPositionForSkirt( Out.WorldSpacePos, Input.VertexID );
+            				Out.Position = FixProjectionAndMul( ViewProjectionMatrix, float4( Position, 1.0 ) );
+
+            				return Out;
+            			}
+            		]]
+            	}
+            }
+
+
+            PixelShader =
+            {
+            	# PdxTerrain uses texture index 0 - 6
+
+            	# Jomini specific
+            	TextureSampler ShadowMap
+            	{
+            		Ref = PdxShadowmap
+            		MagFilter = "Linear"
+            		MinFilter = "Linear"
+            		MipFilter = "Linear"
+            		SampleModeU = "Wrap"
+            		SampleModeV = "Wrap"
+            		CompareFunction = less_equal
+            		SamplerType = "Compare"
+            	}
+
+            	# Game specific
+            	TextureSampler FogOfWarAlpha
+            	{
+            		Ref = JominiFogOfWar
+            		MagFilter = "Linear"
+            		MinFilter = "Linear"
+            		MipFilter = "Linear"
+            		SampleModeU = "Wrap"
+            		SampleModeV = "Wrap"
+            	}
+            	TextureSampler FlatMapTexture
+            	{
+            		Ref = TerrainFlatMap
+            		MagFilter = "Linear"
+            		MinFilter = "Linear"
+            		MipFilter = "Linear"
+            		SampleModeU = "Clamp"
+            		SampleModeV = "Clamp"
+            	}
+            	TextureSampler EnvironmentMap
+            	{
+            		Ref = JominiEnvironmentMap
+            		MagFilter = "Linear"
+            		MinFilter = "Linear"
+            		MipFilter = "Linear"
+            		SampleModeU = "Clamp"
+            		SampleModeV = "Clamp"
+            		Type = "Cube"
+            	}
+            	TextureSampler FlatMapEnvironmentMap
+            	{
+            		Ref = FlatMapEnvironmentMap
+            		MagFilter = "Linear"
+            		MinFilter = "Linear"
+            		MipFilter = "Linear"
+            		SampleModeU = "Clamp"
+            		SampleModeV = "Clamp"
+            		Type = "Cube"
+            	}
+            	TextureSampler SurroundFlatMapMask
+            	{
+            		Ref = SurroundFlatMapMask
+            		MagFilter = "Linear"
+            		MinFilter = "Linear"
+            		MipFilter = "Linear"
+            		SampleModeU = "Border"
+            		SampleModeV = "Border"
+            		Border_Color = { 1 1 1 1 }
+            		File = "gfx/map/surround_map/surround_mask.dds"
+            	}
+
+            	Code
+            	[[
+            		static const float UNDERWATER_CLIP_OFFSET = 0.00001f;
+            		static const float TERRAIN_SKIRT_CLIP_OFFSET = 0.01f;
+            		SLightingProperties GetFlatMapLerpSunLightingProperties( float3 WorldSpacePos, float ShadowTerm )
+            		{
+            			SLightingProperties LightingProps;
+            			LightingProps._ToCameraDir = normalize( CameraPosition - WorldSpacePos );
+            			LightingProps._ToLightDir = ToSunDir;
+            			LightingProps._LightIntensity = FlatMapLerpSunDiffuse * 5;
+            			LightingProps._ShadowTerm = ShadowTerm;
+            			LightingProps._CubemapIntensity = FlatMapLerpCubemapIntensity;
+            			LightingProps._CubemapYRotation = FlatMapLerpCubemapYRotation;
+
+            			return LightingProps;
+            		}
+            		void CheckClipNeeded( float TerrainHeight, float2 MapCoords, float StartColorOverlayHeightBlend )
+            		{
+            			#ifdef TERRAIN_SKIRT
+            				clip( TerrainHeight - TERRAIN_SKIRT_CLIP_OFFSET );
+            			#endif
+
+            			#ifdef UNDERWATER
+            				// When doing the refraction pass and applying the Color Overlay, skip the parts above the ocean.
+            				if ( StartColorOverlayHeightBlend > 0.99f )
+            				{
+            					clip( _RefractionCullHeight - TerrainHeight );
+            				}
+            			#endif
+            			clip( vec2( 1.0f ) - MapCoords );
+            		}
+
+            	]]
+
+            	MainCode PixelShader
+            	{
+            		Input = "VS_OUTPUT_PDX_TERRAIN"
+            		Output = "PDX_COLOR"
+            		Code
+            		[[
+
+            			PDX_MAIN
+            			{
+            				float FullColorOverlayFactor = 0.0f;
+            				bool IsFullyColorOverlay = false;
+
+            				const float2 ColorMapCoords = Input.WorldSpacePos.xz * WorldSpaceToTerrain0To1;
+            				CheckClipNeeded( Input.WorldSpacePos.y, ColorMapCoords, _StartColorOverlayHeightBlend * _EnabledTerrainCulling );
+
+            			#ifndef UNDERWATER
+            				// Skip terrain rendering below the ocean surface.
+            				if ( Input.WorldSpacePos.y < UNDERWATER_CLIP_OFFSET && _EnabledTerrainCulling > 0.99f)
+            				{
+            					return float4( _UnderwaterTerrainColor.rgb, 0.0f );
+            				}
+            			#endif
+
+            				float3 FlatMap = float3( 0.5f, 0.5f, 0.5f ); // neutral overlay
+            				#ifdef TERRAIN_FLAT_MAP_LERP
+            					FlatMap = lerp( FlatMap, PdxTex2D( FlatMapTexture,
+            						float2( ColorMapCoords.x, 1.0f - ColorMapCoords.y ) ).rgb,
+            						FlatMapLerp );
+            				#endif
+
+            				#ifdef TERRAIN_COLOR_OVERLAY
+            					float3 BorderColor;
+            					float BorderPreLightingBlend;
+            					float BorderPostLightingBlend;
+            					GetBorderColorAndBlendGame( Input.WorldSpacePos.xz, FlatMap, BorderColor, BorderPreLightingBlend, BorderPostLightingBlend );
+
+            					FullColorOverlayFactor = BorderPreLightingBlend + BorderPostLightingBlend;
+            					FullColorOverlayFactor *= _FullyColorOverlayHeightBlend * _EnabledTerrainCulling;
+            				#endif
+            				if ( FullColorOverlayFactor > 0.99f )
+            				{
+            					IsFullyColorOverlay = true;
+            				}
+
+            				float4 DetailDiffuse = vec4( 0.0f );
+            				float3 DetailNormal = float3( 0.0f, 1.0f, 0.0f );
+            				float4 DetailMaterial = vec4( 0.0f );
+            				float ShadowTerm = 1.0f;
+            				if( !IsFullyColorOverlay )
+            				{
+            					CalculateDetails( Input.WorldSpacePos.xz, DetailDiffuse, DetailNormal, DetailMaterial );
+            					ShadowTerm = CalculateShadow( Input.ShadowProj, ShadowMap );
+            				}
+
+            				float FogOfWarAlphaValue = PdxTex2D( FogOfWarAlpha, ColorMapCoords).r;
+            #if defined( PDX_OSX ) && defined( PDX_OPENGL )
+            				// We're limited to the amount of samplers we can bind at any given time on Mac, so instead
+            				// we disable the usage of ColorTexture (since its effects are very subtle) and assign a
+            				// default value here instead.
+            				float3 ColorMap = float3( vec3( 0.5f ) );
+            				float ColorDarken = 1.0f;
+            #else
+            				float4 ColorMapSample = ToLinear( PdxTex2D( ColorTexture,
+            						float2( ColorMapCoords.x, 1.0f - ColorMapCoords.y ) ) );
+            				float ColorDarken = ColorMapSample.a;
+            				float3 ColorMap = ColorMapSample.rgb;
+            #endif
+
+            				float SnowHighlight = 0.0f;
+            				float3 Normal = CalculateNormal( Input.WorldSpacePos.xz );
+            				#ifndef UNDERWATER
+            					float3 ReorientedNormal = Normal;
+            					if( !IsFullyColorOverlay )
+            					{
+            						float WaterNormalLerp = 0.0f;
+            						EffectIntensities ConditionData;
+            						BilinearSampleProvinceEffectsMask( ColorMapCoords, ConditionData );
+            						ApplyProvinceEffectsTerrain( ConditionData, DetailDiffuse, DetailNormal, DetailMaterial, Input.WorldSpacePos, WaterNormalLerp );
+
+            						// Use the property that only water has lower roughness to adjust the terrain normals to face upward.
+            						float WaterNormalAdjustment = smoothstep( 0.6f, 1.0f, 1 - DetailMaterial.a);
+            						WaterNormalLerp = max( WaterNormalLerp, WaterNormalAdjustment);
+            						float3 ReorientedNormal = ReorientNormal(
+            							lerp( Normal, float3( 0.0f, 1.0f, 0.0f ), WaterNormalLerp ),
+            							DetailNormal );
+
+            						ApplySnowMaterialTerrain( DetailDiffuse, DetailNormal, DetailMaterial, Normal, Input.WorldSpacePos.xz, ColorMapCoords, SnowHighlight );
+
+            						if( ConditionData._Drought > 0.0f || SnowHighlight > 0.0f )
+            						{
+            							ShadowTerm = lerp( ShadowTerm + 0.4f , ShadowTerm , ShadowTerm );
+            						}
+            					}
+            				#else
+            					float3 ReorientedNormal = ReorientNormal( Normal, DetailNormal );
+            				#endif
+
+            				float3 Diffuse = SoftLight( DetailDiffuse.rgb, ColorMap,
+            					( 1 - DetailMaterial.r ) * COLORMAP_OVERLAY_STRENGTH );
+
+            				#ifdef TERRAIN_COLOR_OVERLAY
+            					LerpBorderColorWithFogOfWarAlphaValue( Diffuse, FogOfWarAlphaValue, BorderColor, BorderPreLightingBlend );
+            					#ifdef TERRAIN_FLAT_MAP_LERP
+            						float3 FlatColor;
+            						GetBorderColorAndBlendGameLerp( Input.WorldSpacePos.xz, FlatMap,
+            							FlatColor, BorderPreLightingBlend, BorderPostLightingBlend,
+            							FlatMapLerp );
+
+            						FlatMap = lerp( FlatMap, FlatColor,
+            							saturate( BorderPreLightingBlend + BorderPostLightingBlend ) );
+            					#endif
+            					float4 HighlightColor = GetHighlightColor( ColorMapCoords );
+            					ApplyHighlightColor( Diffuse, HighlightColor );
+            					CompensateWhiteHighlightColor( Diffuse, HighlightColor, SnowHighlight );
+            				#endif
+
+            				SMaterialProperties MaterialProps = GetMaterialProperties(
+            					Diffuse,
+            					ReorientedNormal,
+            					DetailMaterial.a,
+            					DetailMaterial.g,
+            					DetailMaterial.b
+            				);
+
+            				SLightingProperties LightingProps = GetMapLightingProperties( Input.WorldSpacePos, ShadowTerm );
+            				#ifdef TERRAIN_FLAT_MAP_LERP
+            					LightingProps._LightIntensity = lerp( TERRAIN_SUNNY_SUN_COLOR * TERRAIN_SUNNY_SUN_INTENSITY, FlatMapLerpSunIntensity * SunDiffuse, FlatMapLerp );
+            					LightingProps._CubemapIntensity =  lerp( DefaultEnvironmentCubemapIntensity * TERRAIN_SUNNY_IBL_SCALE, FlatMapLerpCubemapIntensity , FlatMapLerp );
+            					LightingProps._ToLightDir = lerp( ToTerrainSunnySunDir, ToSunDir , FlatMapLerp );
+            				#endif
+
+            				// Calculate combined shadow mask from clouds and shadow tint
+            				float CloudMask = 0.0f;
+            				float3 FinalColor = vec3( 0.0f );
+            				if( !IsFullyColorOverlay )
+            				{
+            					CloudMask = GetCloudShadowMask( Input.WorldSpacePos.xz, FogOfWarAlphaValue );
+            					FinalColor = CalculateTerrainDualScenarioLighting( LightingProps, MaterialProps, CloudMask, EnvironmentMap );
+            					// Apply shadow tint with cloud interaction for terrain
+            					FinalColor = ApplyTerrainShadowTintWithClouds( FinalColor, Input.WorldSpacePos.xz, CloudMask, ShadowTerm, ReorientedNormal, Normal );
+            					float BlendAmount = ( 1.0f - ColorDarken ) * CloudMask; // Combine color mask with cloud coverage
+            					FinalColor.rgb = ApplyOvercastContrast( FinalColor, BlendAmount );
+            				}
+
+            				#ifdef TERRAIN_COLOR_OVERLAY
+            				 	float NdotL = saturate( dot( MaterialProps._Normal, LightingProps._ToLightDir ) ) + 1e-5;
+            					BorderColor *= lerp( max( _WaterZoomedInZoomedOutFactor - 0.4f, 0.4f ), 1.0f, NdotL );
+            					FinalColor.rgb = lerp( FinalColor.rgb, BorderColor, BorderPostLightingBlend );
+            					ApplyHighlightColor( FinalColor.rgb, HighlightColor, 0.25f );
+            					ApplyDiseaseDiffuse( FinalColor, ColorMapCoords );
+            					ApplyLegendDiffuse( FinalColor, ColorMapCoords );
+            				#endif
+
+            				#ifndef UNDERWATER
+            					if( !IsFullyColorOverlay )
+            					{
+            						FinalColor = ApplyFogOfWar( FinalColor, Input.WorldSpacePos, FogOfWarAlpha );
+            						FinalColor = ApplyMapDistanceFogWithoutFoW( FinalColor, Input.WorldSpacePos );
+            					}	
+            				#endif
+
+            				#ifdef TERRAIN_FLAT_MAP_LERP
+            					float Blend = CalculatePaperTransitionBlend( ColorMapCoords, FlatMapLerp );
+            					FlatMap = ApplyFlatMapBrightnessAdjustment( FlatMap );
+            					FinalColor = lerp( FinalColor, FlatMap, Blend );
+            				#endif
+
+            				float Alpha = 1.0f;
+            				#ifdef UNDERWATER
+            					Alpha = CompressWorldSpace( Input.WorldSpacePos );
+            				#endif
+
+            				#ifdef TERRAIN_DEBUG
+            					TerrainDebug( FinalColor, Input.WorldSpacePos );
+            				#endif
+            				// DebugReturn( FinalColor, MaterialProps, LightingProps, EnvironmentMap );
+
+            				return float4( FinalColor, Alpha );
+            			}
+            		]]
+            	}
+
+            	MainCode PixelShaderLowSpec
+            	{
+            		Input = "VS_OUTPUT_PDX_TERRAIN_LOW_SPEC"
+            		Output = "PDX_COLOR"
+            		Code
+            		[[
+            			PDX_MAIN
+            			{
+            				float FullColorOverlayFactor = 0.0f;
+            				bool IsFullyColorOverlay = false;
+
+            				const float2 ColorMapCoords = Input.WorldSpacePos.xz * WorldSpaceToTerrain0To1;
+            				CheckClipNeeded( Input.WorldSpacePos.y, ColorMapCoords, _StartColorOverlayHeightBlend);
+
+            				float3 DetailDiffuse = Input.DetailDiffuse;
+            				float4 DetailMaterial = Input.DetailMaterial;
+            				float3 ColorMap = Input.ColorMap;
+            				float3 FlatMap = Input.FlatMap;
+            				float3 Normal = Input.Normal;
+
+            				#ifdef TERRAIN_COLOR_OVERLAY
+            					float3 BorderColor;
+            					float BorderPreLightingBlend;
+            					float BorderPostLightingBlend;
+            					GetBorderColorAndBlendGame( Input.WorldSpacePos.xz, FlatMap, BorderColor, BorderPreLightingBlend, BorderPostLightingBlend );
+
+            					FullColorOverlayFactor = BorderPreLightingBlend + BorderPostLightingBlend;
+            					FullColorOverlayFactor *= _FullyColorOverlayHeightBlend * _EnabledTerrainCulling;
+            				#endif
+            				if ( FullColorOverlayFactor > 0.99f )
+            				{
+            					IsFullyColorOverlay = true;
+            				}
+
+            				float SnowHighlight = 0.0f;
+            				#ifndef UNDERWATER
+            					DetailDiffuse = ApplyDynamicMasksDiffuse( DetailDiffuse, Normal, ColorMapCoords );
+            				#endif
+
+            				float3 Diffuse = SoftLight( DetailDiffuse.rgb, ColorMap, ( 1 - DetailMaterial.r ) * COLORMAP_OVERLAY_STRENGTH );
+
+            				#ifdef TERRAIN_COLOR_OVERLAY
+            					float FogOfWarAlphaValue = PdxTex2D( FogOfWarAlpha, ColorMapCoords).r;
+            					LerpBorderColorWithFogOfWarAlphaValue( Diffuse, FogOfWarAlphaValue, BorderColor, BorderPreLightingBlend );
+
+            					#ifdef TERRAIN_FLAT_MAP_LERP
+            						float3 FlatColor;
+            						GetBorderColorAndBlendGameLerp( Input.WorldSpacePos.xz, FlatMap,
+            							FlatColor, BorderPreLightingBlend, BorderPostLightingBlend,
+            							FlatMapLerp );
+            						FlatMap = lerp( FlatMap, FlatColor,
+            							saturate( BorderPreLightingBlend + BorderPostLightingBlend ) );
+            					#endif
+            				#endif
+
+            				float3 FinalColor = vec3( 0.0f );
+            				SMaterialProperties MaterialProps = GetMaterialProperties(
+            					Diffuse,
+            					Normal,
+            					DetailMaterial.a,
+            					DetailMaterial.g,
+            					DetailMaterial.b
+            				);
+            				float ShadowTerm = 1.0f;
+            				SLightingProperties LightingProps = GetMapLightingProperties( Input.WorldSpacePos, ShadowTerm );
+            				if( !IsFullyColorOverlay )
+            				{
+            					FinalColor = CalculateTerrainSunLightingLowSpec( MaterialProps, LightingProps );
+            				}
+            				#ifndef UNDERWATER
+            					if( !IsFullyColorOverlay )
+            					{
+            						FinalColor = ApplyFogOfWar( FinalColor, Input.WorldSpacePos, FogOfWarAlpha );
+            						FinalColor = ApplyMapDistanceFog( FinalColor, Input.WorldSpacePos, FogOfWarAlpha );
+            					}
+            				#endif
+
+            				#ifdef TERRAIN_COLOR_OVERLAY
+            					FinalColor.rgb = lerp( FinalColor.rgb, BorderColor, BorderPostLightingBlend );
+            				#endif
+
+            				#ifdef TERRAIN_COLOR_OVERLAY
+            					float4 HighlightColor = GetHighlightColor( ColorMapCoords );
+            					ApplyHighlightColor( FinalColor.rgb, HighlightColor );
+            					CompensateWhiteHighlightColor( FinalColor.rgb, HighlightColor, SnowHighlight );
+            				#endif
+
+            				#ifdef TERRAIN_FLAT_MAP_LERP
+            					FinalColor = lerp( FinalColor, FlatMap, FlatMapLerp );
+            				#endif
+
+            				float Alpha = 1.0f;
+            				#ifdef UNDERWATER
+            					Alpha = CompressWorldSpace( Input.WorldSpacePos );
+            				#endif
+
+            				#ifdef TERRAIN_DEBUG
+            					TerrainDebug( FinalColor, Input.WorldSpacePos );
+            				#endif
+
+            				DebugReturn( FinalColor, MaterialProps, LightingProps, EnvironmentMap );
+            				return float4( FinalColor, Alpha );
+            			}
+            		]]
+            	}
+
+            	MainCode PixelShaderFlatMap
+            	{
+            		Input = "VS_OUTPUT_PDX_TERRAIN"
+            		Output = "PDX_COLOR"
+            		Code
+            		[[
+            			PDX_MAIN
+            			{
+            				#ifdef TERRAIN_SKIRT
+            					return float4( 0, 0, 0, 0 );
+            				#endif
+
+            				clip( vec2( 1.0f ) - Input.WorldSpacePos.xz * WorldSpaceToTerrain0To1 );
+
+            				float2 ColorMapCoords = Input.WorldSpacePos.xz * WorldSpaceToTerrain0To1;
+            				float3 FlatMap = PdxTex2D( FlatMapTexture, float2( ColorMapCoords.x, 1.0 - ColorMapCoords.y ) ).rgb;
+
+
+            				#ifdef TERRAIN_COLOR_OVERLAY
+            					float3 BorderColor;
+            					float BorderPreLightingBlend;
+            					float BorderPostLightingBlend;
+
+            					GetBorderColorAndBlendGameLerp( Input.WorldSpacePos.xz, FlatMap,
+            						BorderColor, BorderPreLightingBlend, BorderPostLightingBlend,
+            						1.0f );
+
+            					FlatMap = lerp( FlatMap, BorderColor,
+            						saturate( BorderPreLightingBlend + BorderPostLightingBlend ) );
+
+            				#endif
+
+            				float3 FinalColor = FlatMap;
+            				#ifdef TERRAIN_COLOR_OVERLAY
+            					float4 HighlightColor = GetHighlightColor( ColorMapCoords );
+            					ApplyHighlightColor( FinalColor, HighlightColor, 0.5f );
+            				#endif
+
+            				#ifdef TERRAIN_DEBUG
+            					TerrainDebug( FinalColor, Input.WorldSpacePos );
+            				#endif
+
+            				FinalColor = ApplyFlatMapBrightnessAdjustment( FinalColor );
+
+            				// Make flatmap transparent based on the SurroundFlatMapMask
+            				float SurroundMapAlpha = 1 - PdxTex2D( SurroundFlatMapMask, float2( ColorMapCoords.x, 1.0 - ColorMapCoords.y ) ).b;
+            				SurroundMapAlpha *= FlatMapLerp;
+
+            				return float4( FinalColor, SurroundMapAlpha );
+            			}
+            		]]
+            	}
+            }
+
+
+            Effect PdxTerrain
+            {
+            	VertexShader = "VertexShader"
+            	PixelShader = "PixelShader"
+
+            	Defines = { "TERRAIN_FLAT_MAP_LERP" }
+            }
+
+            Effect PdxTerrainLowSpec
+            {
+            	VertexShader = "VertexShaderLowSpec"
+            	PixelShader = "PixelShaderLowSpec"
+            }
+
+            Effect PdxTerrainSkirt
+            {
+            	VertexShader = "VertexShaderSkirt"
+            	PixelShader = "PixelShader"
+            	Defines = { "TERRAIN_SKIRT" }
+            }
+
+            Effect PdxTerrainLowSpecSkirt
+            {
+            	VertexShader = "VertexShaderLowSpecSkirt"
+            	PixelShader = "PixelShaderLowSpec"
+            	Defines = { "TERRAIN_SKIRT" }
+            }
+
+            ### FlatMap Effects
+
+            BlendState BlendStateAlpha
+            {
+            	BlendEnable = yes
+            	SourceBlend = "SRC_ALPHA"
+            	DestBlend = "INV_SRC_ALPHA"
+            }
+
+            Effect PdxTerrainFlat
+            {
+            	VertexShader = "VertexShader"
+            	PixelShader = "PixelShaderFlatMap"
+            	BlendState = BlendStateAlpha
+
+            	Defines = { "TERRAIN_FLAT_MAP" "TERRAIN_FLATMAP_LIGHTING" }
+            }
+
+            Effect PdxTerrainFlatSkirt
+            {
+            	VertexShader = "VertexShaderSkirt"
+            	PixelShader = "PixelShaderFlatMap"
+            	BlendState = BlendStateAlpha
+
+            	Defines = { "TERRAIN_FLAT_MAP" "TERRAIN_SKIRT" }
+            }
+
+            # Low Spec flat map the same as regular effect
+            Effect PdxTerrainFlatLowSpec
+            {
+            	VertexShader = "VertexShader"
+            	PixelShader = "PixelShaderFlatMap"
+            	BlendState = BlendStateAlpha
+
+            	Defines = { "TERRAIN_FLAT_MAP" }
+            }
+
+            Effect PdxTerrainFlatLowSpecSkirt
+            {
+            	VertexShader = "VertexShaderSkirt"
+            	PixelShader = "PixelShaderFlatMap"
+            	BlendState = BlendStateAlpha
+
+            	Defines = { "TERRAIN_FLAT_MAP" "TERRAIN_SKIRT" }
+            }
+            """;
         var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "Fx", "pdxterrain.shader");
         Helper.EnsureDirectoryExists(path);
         await File.WriteAllTextAsync(path, file);
@@ -917,7 +1978,7 @@ NCamera = {{
 ";
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "graphic", "00_graphics.txt");
         Helper.EnsureDirectoryExists(path);
-        File.WriteAllText(path, file);
+        File.WriteAllText(path, file, new UTF8Encoding(true));
     }
     public static async Task WriteDefines(Map map)
     {
@@ -931,7 +1992,7 @@ NCamera = {{
 }}";
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "00_defines.txt");
         Helper.EnsureDirectoryExists(path);
-        await File.WriteAllTextAsync(path, file);
+        await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
     }
 
     private static string[] GetOriginalCultures()

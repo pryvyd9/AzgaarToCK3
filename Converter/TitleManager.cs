@@ -197,7 +197,6 @@ public static class TitleManager
             {
                 return $@"                {n.Id} = {{
                     color = {{ {n.color.R} {n.color.G} {n.color.B} }}
-                    color2 = {{ 255 255 255 }}
                     province = {map.Output.IdToIndex[n.province.Id]}
                 }}";
             }).ToArray();
@@ -210,7 +209,6 @@ public static class TitleManager
                 ci = n.id;
                 return $@"            {n.Id} = {{
                 color = {{ {n.Color.R} {n.Color.G} {n.Color.B} }}
-                color2 = {{ 255 255 255 }}
                 definite_form = yes
 {string.Join("\n", GetBaronies(n.baronies.ToArray()))}
             }}";
@@ -221,7 +219,6 @@ public static class TitleManager
         {
             return duchies.Select((d, i) => $@"        {d.Id} = {{
             color = {{ {d.color.R} {d.color.G} {d.color.B} }}
-            color2 = {{ 255 255 255 }}
             capital = c_{ci}
             definite_form = yes
 {string.Join("\n", GetCounties(d.counties))}
@@ -232,7 +229,6 @@ public static class TitleManager
         {
             return kingdoms.Select((k, i) => $@"    {k.Id} = {{
         color = {{ {k.color.R} {k.color.G} {k.color.B} }}
-        color2 = {{ 255 255 255 }}
         capital = c_{ci}
         definite_form = yes
         {(k.isAllowed ? "" : "allow = { always = no }")}
@@ -244,7 +240,6 @@ public static class TitleManager
         {
             return map.Output.Empires.Select((e, i) => $@"{e.Id} = {{
     color = {{ {e.color.R} {e.color.G} {e.color.B} }}
-    color2 = {{ 255 255 255 }}
     capital = c_{ci}
     definite_form = yes
     {(e.isAllowed ? "" : "allow = { always = no }")}
@@ -255,6 +250,7 @@ public static class TitleManager
         var file = $@"@correct_culture_primary_score = 100
 @better_than_the_alternatives_score = 50
 @always_primary_score = 1000
+@never_primary_score = -1000
 {string.Join("\n", GetEmpires())}
 # These titles cut hundreds of errors from logs. 
 e_hre = {{ landless = yes }}
@@ -263,7 +259,7 @@ e_roman_empire = {{ landless = yes }}";
 
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "landed_titles", "00_landed_titles.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
-        await File.WriteAllTextAsync(path, file);
+        await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
     }
 
     public static async Task WriteTitleLocalization(Map map)

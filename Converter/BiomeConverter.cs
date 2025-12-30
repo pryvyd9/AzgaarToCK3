@@ -1,4 +1,5 @@
-﻿using SixLabors.ImageSharp;
+﻿using ImageMagick;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Tga;
 using Svg;
 using System.Xml;
@@ -67,7 +68,7 @@ public static class BiomeConverter
         var svg = SvgDocument.FromSvg<SvgDocument>(doc.OuterXml);
         var img = svg.ToGrayscaleImage(map.Settings.MapWidth, map.Settings.MapHeight);
 
-        var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", ck3Biome.ToMaskFilename());
+        var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "masks", ck3Biome.ToMaskFilename());
         Helper.EnsureDirectoryExists(path);
         //img.Save($"{filename}.png");
         await img.SaveAsync(path);
@@ -133,20 +134,39 @@ public static class BiomeConverter
 
         var detail_index = new XmlDocument();
         {
-            detail_index.LoadXml($@"<svg id=""detail_index"" width=""{width}"" height=""{height}"" version=""1.1"" background-color=""white"" >
-<rect x=""0"" y=""0"" width=""100%"" height=""100%"" fill=""white"" />
-</svg>");
+            detail_index.LoadXml($"""
+                <svg id="detail_index" width="{width}" height="{height}" version="1.1" background-color="white" >
+                <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                </svg>
+                """);
         }
 
 
         var detail_intensity = new XmlDocument();
         {
-            detail_intensity.LoadXml($@"<svg id=""detail_intensity"" width=""{width}"" height=""{height}"" version=""1.1"" background-color=""black"" >
-<rect x=""0"" y=""0"" width=""100%"" height=""100%"" fill=""black"" />
-</svg>");
+            detail_intensity.LoadXml($"""
+                <svg id="detail_intensity" width="{width}" height="{height}" version="1.1" background-color="red" >
+                <rect x="0" y="0" width="100%" height="100%" fill="black" />
+                </svg>
+                """);
         }
+        // Resize default maps
+        {
+            var templateFile = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "masks", "winter_effect_mask.png");
+            var masks = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "masks");
+            var masks_gen = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "masks_gen");
+            var files = Directory.EnumerateFiles(masks).Concat(Directory.EnumerateFiles(masks_gen)).Where(n => n.EndsWith(".png")).Except([templateFile]);
+            using (var img1 = new MagickImage(templateFile))
+            {
+                img1.Resize(map.Settings.MapWidth, map.Settings.MapHeight);
+                img1.Write(templateFile);
+            }
 
-        using SemaphoreSlim semaphore = new(Settings.Instance.MaxThreads);
+            foreach (var path in files)
+            {
+                File.Copy(templateFile, path, true);
+            }
+        }
 
         Task[] tasks = [
             WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.HotDesert),
@@ -193,6 +213,17 @@ public static class BiomeConverter
             };
             //await img.SaveAsync("detail_intensity.tga", encoder);
             await img.SaveAsync(path, encoder);
+        }
+
+        // resize colormap
+        {
+            var inputPath = Helper.GetPath(Settings.Instance.TotalConversionSandboxPath, "gfx", "map", "terrain", "colormap.dds");
+            var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "colormap.dds");
+            Helper.EnsureDirectoryExists(path);
+
+            using var img = new MagickImage(inputPath);
+            img.Resize(map.Settings.MapWidth / 4, map.Settings.MapHeight / 4);
+            img.Write(path);
         }
 
         //var nonWaterProvinceCells = map.Output.Provinces

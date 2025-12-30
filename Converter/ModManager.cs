@@ -142,18 +142,30 @@ public static class ModManager
 
     private static string CreateDescriptor(bool isOutsideDescriptor)
     {
-        const string supportedGameVersion = "1.14.0";
+        const string supportedGameVersion = "1.18.2";
 
-        var descriptor = $@"version=""1.0""
-tags={{
-	""Total Conversion""
-}}
-name=""{Settings.Instance.ModName}""
-supported_version=""{supportedGameVersion}""";
+        var descriptor = $$"""
+            version="1.0"
+            tags={"Total Conversion"}
+            name="{{Settings.Instance.ModName}}"
+            replace_path="common/bookmark_portraits"
+            replace_path="common/bookmarks"
+            replace_path="common/religion/religions"
+            replace_path="common/landed_titles"
+            replace_path="history/characters"
+            replace_path="history/provinces"
+            replace_path="history/province_mappings"
+            replace_path="history/titles"
+            replace_path="gfx/map/map_object_data/generated"
+            replace_path="gfx/map/map_object_data"
+            replace_path="map_data"
+            picture="thumbnail.png"
+            supported_version="{{supportedGameVersion}}"
+            """;
 
         if (isOutsideDescriptor)
         {
-            descriptor += $@"path=""mod/{Settings.Instance.ModName}""";
+            descriptor += $"path=\"mod/{Settings.Instance.ModName}\"";
         }
 
         return descriptor;
@@ -173,7 +185,7 @@ supported_version=""{supportedGameVersion}""";
                 new ("Defines file created.", c => MainConverter.WriteDefines(c.map)),
                 new ("Rivermap created.", c => MainConverter.DrawRivers(c.map)),
                 new ("Masks created.", c => BiomeConverter.WriteMasks(c.map)),
-                new ("Pdxterrain created.", c => MainConverter.WritePdxterrain()),
+                //new ("Pdxterrain created.", c => MainConverter.WritePdxterrain()),
             ]),
             new ("Definition created.", c => MainConverter.WriteDefinition(c.map)),
             new ("Locators created.", c => MainConverter.WriteLocators(c.map)),
@@ -212,7 +224,7 @@ supported_version=""{supportedGameVersion}""";
                 new ("Defines file created.", c => MainConverter.WriteDefines(c.map)),
                 new ("Rivermap created.", c => MainConverter.DrawRivers(c.map)),
                 new ("Masks created.", c => BiomeConverter.WriteMasks(c.map)),
-                new ("Pdxterrain created.", c => MainConverter.WritePdxterrain()),
+                //new ("Pdxterrain created.", c => MainConverter.WritePdxterrain()),
             ]),
             new ("Definition created.", c => MainConverter.WriteDefinition(c.map)),
             new ("Locators created.", c => MainConverter.WriteLocators(c.map)),

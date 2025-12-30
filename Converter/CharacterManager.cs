@@ -1,4 +1,5 @@
 ﻿using SixLabors.ImageSharp;
+using System.Text;
 
 namespace Converter;
 
@@ -275,7 +276,7 @@ public static class CharacterManager
 
         var path = Helper.GetPath(Settings.OutputDirectory, "common", "dynasties", "all.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
-        await File.WriteAllTextAsync(path, file);
+        await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
     }
     public static async Task WriteDynastyLocalization(Map map)
     {
