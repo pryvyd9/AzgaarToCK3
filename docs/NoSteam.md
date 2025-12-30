@@ -4,7 +4,7 @@ Create a file named `settings.json` and put this inside:
 {
   "ModsDirectory": "F:\\Projects\\Paradox Interactive\\Crusader Kings III\\mod",
   "Ck3Directory": "G:\\Games\\SteamLibrary\\steamapps\\common\\Crusader Kings III\\game",
-  "TotalConversionSandboxPath": "G:\\Games\\SteamLibrary\\steamapps\\workshop\\content\\1158310\\3337607192",
+  "TotalConversionSandboxPath": "G:\\Games\\SteamLibrary\\steamapps\\workshop\\content\\1158310\\3595862458",
   "InputXmlPath": "Chaia 2024-12-06-23-43.xml",
   "ModName": "PublishMod",
   "ShouldOverride": false,
