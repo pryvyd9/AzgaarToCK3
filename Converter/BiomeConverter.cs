@@ -159,7 +159,7 @@ public static class BiomeConverter
             using (var img1 = new MagickImage(templateFile))
             {
                 img1.Resize(map.Settings.MapWidth, map.Settings.MapHeight);
-                img1.Write(templateFile);
+                img1.Write(templateFile, MagickFormat.Png00);
             }
 
             foreach (var path in files)
