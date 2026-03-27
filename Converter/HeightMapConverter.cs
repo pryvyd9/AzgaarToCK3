@@ -1,10 +1,8 @@
 ﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using Svg;
+using SixLabors.ImageSharp.Processing;
 using System.Diagnostics;
 using System.Numerics;
-using System.Text.RegularExpressions;
-using System.Xml;
 
 namespace Converter;
 
@@ -442,124 +440,31 @@ empty_tile_offset={{ 255 127 }}
     }
     private static async Task DrawHeightMap(Map map)
     {
-        if (map.Input.XmlMap is null)
+        using var canvas = new Drawing.Canvas(map.Settings.MapWidth, map.Settings.MapHeight);
+        canvas.Clear(Drawing.RgbaColor.Black);
+
+        foreach (var feature in map.Input.GeoMap.features)
         {
-            MyConsole.Warning("Skipping heightmap draw: InputSvgPath is not set or file not found.");
-            return;
+            var scaledHeight = (byte)Math.Clamp(feature.properties.height - AzgaarWaterLevel + CK3WaterLevel, 0, 255);
+            var color = Drawing.RgbaColor.FromGrayscaleByte(scaledHeight);
+            foreach (var ring in feature.geometry.coordinates)
+            {
+                var pts = ring
+                    .Select(n => Helper.GeoToPixel(n[0], n[1], map))
+                    .Select(p => ((float)p.X, (float)p.Y))
+                    .ToArray();
+                canvas.DrawFilledPolygon(pts, color);
+            }
         }
 
-        try
-        {
-            // create ns manager
-            XmlNamespaceManager xmlnsManager = new(map.Input.XmlMap.NameTable);
-            xmlnsManager.AddNamespace("ns", "http://www.w3.org/2000/svg");
+        var pixels = canvas.GetPixelsTopLeft();
+        using var rgba = Image.LoadPixelData<Rgba32>(pixels, map.Settings.MapWidth, map.Settings.MapHeight);
+        using var l8 = rgba.CloneAs<L8>();
+        l8.Mutate(ctx => ctx.GaussianBlur((float)Settings.Instance.HeightMapBlurStdDeviation));
 
-            var svgland = map.Input.XmlMap.SelectSingleNode($"//*[@id='svgland']", xmlnsManager)!;
-            XmlElement? GetNode(string attribute) => svgland.SelectSingleNode($"//*[{attribute}]", xmlnsManager) as XmlElement;
-
-            void Remove(string attribute)
-            {
-                var node = map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
-                node?.ParentNode?.RemoveChild(node);
-            }
-
-            // Remove all blur
-            void removeFilterFromAll(string attribute) { 
-                for (XmlElement? element = GetNode(attribute) as XmlElement; element is not null; element = GetNode(attribute) as XmlElement)
-                {
-                    element.RemoveAttribute("filter");
-                }
-            }
-            removeFilterFromAll("@filter='url(#blur)'");
-            removeFilterFromAll("@filter='url(#blur05)'");
-            removeFilterFromAll("@filter='url(#blur10)'");
-
-            var land = GetNode("@id='svgland'")!;
-            var background = (XmlElement)map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
-            //var wl = CK3WaterLevel;
-            var wl = 0;
-
-            background.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
-            background.SetAttribute("x", "0");
-            background.SetAttribute("y", "0");
-            background.SetAttribute("width", "100%");
-            background.SetAttribute("height", "100%");
-            land.PrependChild(background);
-
-            land.SetAttribute("background-color", $"rgb({wl},{wl},{wl})");
-            land.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
-
-            // make only landHeights visible
-            var landHeights = GetNode("@id='landHeights'")!;
-            landHeights.SetAttribute("filter", "url(#blurFilter)");
-
-            // Set blur from settings
-            var feGaussianBlur = (XmlElement)svgland.SelectSingleNode("//*[@id='blurFilter']/feGaussianBlur")!;
-            feGaussianBlur.SetAttribute("stdDeviation", Settings.Instance.HeightMapBlurStdDeviation.ToString());
-
-            var oldRect = (XmlElement)landHeights.SelectSingleNode("//*[@id='landHeights']/rect")!;
-            oldRect.GetAttribute("width");
-            var width = int.Parse(oldRect.GetAttribute("width"));
-            var height = int.Parse(oldRect.GetAttribute("height"));
-
-            land.SetAttribute("viewBox", $"0 0 {width} {height}");
-
-            void removeAllElements(string filter, XmlElement parent)
-            {
-                for (XmlElement? element = parent.SelectSingleNode(filter) as XmlElement; element is not null; element = parent.SelectSingleNode(filter) as XmlElement)
-                {
-                    parent.RemoveChild(element);
-                }
-            }
-
-            removeAllElements("//*[@id='landHeights']/rect", landHeights);
-            var rect = (XmlElement)map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
-            rect.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
-            rect.SetAttribute("x", "0");
-            rect.SetAttribute("y", "0");
-            rect.SetAttribute("width", oldRect.GetAttribute("width"));
-            rect.SetAttribute("height", oldRect.GetAttribute("height"));
-            landHeights.PrependChild(rect);
-
-            var landHeightsBackground = landHeights.FirstChild;
-            ((XmlElement)landHeightsBackground!).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
-
-            var water = GetNode("@id='water'")!;
-            ((XmlElement)water.FirstChild!).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
-
-            // scale heights
-            foreach (XmlElement child in landHeights.ChildNodes)
-            {
-                var originalFill = child.GetAttribute("fill");
-                var originalHeight = int.Parse(new Regex(@"\((\d+)").Match(originalFill).Groups[1].Value);
-                //const int maxHeight = 255;
-                var newHeight = originalHeight - AzgaarWaterLevel + CK3WaterLevel;
-                child.SetAttribute("fill", $"rgb({newHeight},{newHeight},{newHeight})");
-            }
-
-            // shadows and weird colors
-            Remove("@id='dropShadow'");
-            Remove("@id='dropShadow01'");
-            Remove("@id='dropShadow05'");
-            Remove("@id='landmass'");
-            Remove("@id='sea_island'");
-            Remove("@id='vignette-mask'");
-            Remove("@id='fog'");
-
-            var svg = SvgDocument.FromSvg<SvgDocument>(land.OuterXml);
-            var img = svg.ToGrayscaleImage(map.Settings.MapWidth, map.Settings.MapHeight);
-
-            var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
-            Helper.EnsureDirectoryExists(path);
-
-            //img.Save("landHeights.png");
-            img.Save(path);
-        }
-        catch (Exception ex)
-        {
-            MyConsole.Error(ex);
-            throw;
-        }
+        var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
+        Helper.EnsureDirectoryExists(path);
+        l8.Save(path);
     }
 
     public static async Task WriteHeightMap(Map map)
