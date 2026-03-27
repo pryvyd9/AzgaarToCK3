@@ -9,7 +9,10 @@ public class Settings
     public required string Ck3Directory { get; init; }
     public required string TotalConversionSandboxPath { get; init; }
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-    public string InputXmlPath { get; set; }
+    public string InputJsonPath { get; set; }
+    public string InputGeojsonPath { get; set; }
+    // Optional: path to Azgaar .map file used for SVG-based rendering (heightmap, biomes, flat map)
+    public string? InputSvgPath { get; set; }
     public string ModName { get; set; }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public bool? ShouldOverride { get; set; } = null;

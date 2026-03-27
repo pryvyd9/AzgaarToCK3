@@ -21,11 +21,11 @@ public partial class JsonMapJsonContext : JsonSerializerContext {}
 
 public static class MainConverter
 {
-    public static async Task<XmlDocument> LoadXml()
+    public static async Task<XmlDocument> LoadSvg()
     {
         try
         {
-            var unescapedFile = File.ReadAllText(Settings.Instance.InputXmlPath);
+            var unescapedFile = File.ReadAllText(Settings.Instance.InputSvgPath!);
             unescapedFile = unescapedFile.Replace("&amp;quot;", "\"");
             unescapedFile = new Regex(@"xmlns[^\s]+""").Replace(unescapedFile, "");
             // remove xlink namespace prefixes
@@ -42,6 +42,36 @@ public static class MainConverter
                 Debugger.Break();
                 throw;
             }
+        }
+        catch (Exception e)
+        {
+            Debugger.Break();
+            throw;
+        }
+    }
+
+    public static async Task<GeoMap> LoadGeoJson()
+    {
+        try
+        {
+            var file = await File.ReadAllTextAsync(Settings.Instance.InputGeojsonPath);
+            var geoMap = JsonSerializer.Deserialize(file, GeoMapJsonContext.Default.GeoMap);
+            return geoMap!;
+        }
+        catch (Exception e)
+        {
+            Debugger.Break();
+            throw;
+        }
+    }
+
+    public static async Task<JsonMap> LoadJson()
+    {
+        try
+        {
+            var file = await File.ReadAllTextAsync(Settings.Instance.InputJsonPath);
+            var jsonMap = JsonSerializer.Deserialize(file, JsonMapJsonContext.Default.JsonMap);
+            return jsonMap!;
         }
         catch (Exception e)
         {
@@ -340,44 +370,16 @@ public static class MainConverter
         return finalProvinces;
     }
 
-    public static async Task<Map> ConvertMap(XmlDocument xmlMap)
+    public static async Task<Map> ConvertMap(GeoMap geoMap, JsonMap jsonMap, XmlDocument? xmlMap = null)
     {
-        XmlNamespaceManager xmlnsManager = new(xmlMap.NameTable);
-        xmlnsManager.AddNamespace("ns", "http://www.w3.org/1999/xhtml");
-
-        XmlNode? GetNode(string attribute) => xmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
-        var geoMapXml = GetNode("@id='geojson'")!.InnerXml;
-        GeoMap? geoMap = null;
-        try
-        {
-            geoMap = JsonSerializer.Deserialize(geoMapXml, GeoMapJsonContext.Default.GeoMap);
-        }
-        catch (Exception ex)
-        {
-            Debugger.Break();
-            throw;
-        }
-
-        var jsonMapXml = GetNode("@id='json'")!.InnerXml;
-        JsonMap? jsonMap = null;
-        try
-        {
-            jsonMap = JsonSerializer.Deserialize(jsonMapXml, JsonMapJsonContext.Default.JsonMap);
-        }
-        catch (Exception ex)
-        {
-            Debugger.Break();
-            throw;
-        }
-
         var geoMapRivers = new GeoMapRivers([]);
 
 
 
-        var provinces = CreateProvinces(geoMap!, jsonMap!);
+        var provinces = CreateProvinces(geoMap, jsonMap);
 
         var rnd = new Random(1);
-        var nameBase = jsonMap!.nameBases[rnd.Next(jsonMap.nameBases.Length)];
+        var nameBase = jsonMap.nameBases[rnd.Next(jsonMap.nameBases.Length)];
         var nameBaseNames = nameBase.b.Split(',')
             .Select(n =>
             {
@@ -389,7 +391,7 @@ public static class MainConverter
         {
             Input = new()
             {
-                GeoMap = geoMap!,
+                GeoMap = geoMap,
                 Rivers = geoMapRivers,
                 JsonMap = jsonMap,
                 XmlMap = xmlMap,
@@ -445,30 +447,25 @@ public static class MainConverter
     {
         try
         {
-            var settings = new MagickReadSettings()
-            {
-                Width = map.Settings.MapWidth,
-                Height = map.Settings.MapHeight,
-            };
-            using var cellsMap = new MagickImage("xc:black", settings);
+            using var canvas = new Drawing.Canvas(map.Settings.MapWidth, map.Settings.MapHeight);
+            canvas.Clear(Drawing.RgbaColor.Black);
 
-            var drawables = new Drawables();
             foreach (var province in map.Output.Provinces.Skip(1))
             {
+                var color = Drawing.RgbaColor.FromBytes(province.Color.R, province.Color.G, province.Color.B);
                 foreach (var cell in province.Cells)
                 {
-                    drawables
-                        .DisableStrokeAntialias()
-                        .StrokeColor(province.Color)
-                        .FillColor(province.Color)
-                        .Polygon(cell.cells.Select(n => new PointD((n[0] - map.XOffset) * map.XRatio, map.Settings.MapHeight - (n[1] - map.YOffset) * map.YRatio)));
+                    var pts = cell.cells
+                        .Select(n => Helper.GeoToPixel(n[0], n[1], map))
+                        .Select(p => ((float)p.X, (float)p.Y))
+                        .ToArray();
+                    canvas.DrawFilledPolygon(pts, color);
                 }
             }
 
-            cellsMap.Draw(drawables);
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "provinces.png");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            await cellsMap.WriteAsync(path);
+            canvas.SaveAsPng(path);
         }
         catch (Exception ex)
         {
@@ -481,64 +478,58 @@ public static class MainConverter
     {
         try
         {
-            var settings = new MagickReadSettings()
-            {
-                Width = (int)map.Settings.MapWidth,
-                Height = (int)map.Settings.MapHeight,
-            };
-            using var cellsMap = new MagickImage("xc:#ff0080", settings);
-            
-            var drawables = new Drawables();
-            // Draw land
+            // River map uses CK3's indexed-PNG palette convention.
+            // Background: #FF0080 (magic pink = sea/no-river)
+            // Land fill:  white
+            // River lines: #00E1FF
+            var background = Drawing.RgbaColor.FromBytes(0xFF, 0x00, 0x80);
+            var landColor  = Drawing.RgbaColor.White;
+            var riverColor = Drawing.RgbaColor.FromBytes(0x00, 0xE1, 0xFF);
+
+            using var canvas = new Drawing.Canvas(map.Settings.MapWidth, map.Settings.MapHeight);
+            canvas.Clear(background);
+
             foreach (var province in map.Output.Provinces.Skip(1).Where(n => !n.IsWater))
             {
                 foreach (var cell in province.Cells)
                 {
-                    drawables
-                        .DisableStrokeAntialias()
-                        .StrokeColor(MagickColors.White)
-                        .FillColor(MagickColors.White)
-                        .Polygon(cell.cells.Select(n => Helper.GeoToPixel(n[0], n[1], map)));
+                    var pts = cell.cells
+                        .Select(n => Helper.GeoToPixel(n[0], n[1], map))
+                        .Select(p => ((float)p.X, (float)p.Y))
+                        .ToArray();
+                    canvas.DrawFilledPolygon(pts, landColor);
                 }
             }
 
             foreach (var river in map.Input.Rivers.features)
             {
-                drawables
-                    .DisableStrokeAntialias()
-                    .StrokeColor(new MagickColor("#00E1FF"))
-                    .StrokeWidth(0.5)
-                    .Polyline(river.geometry.coordinates.Select(n => Helper.GeoToPixel(n[0], n[1], map)));
+                var pts = river.geometry.coordinates
+                    .Select(n => Helper.GeoToPixel(n[0], n[1], map))
+                    .Select(p => ((float)p.X, (float)p.Y))
+                    .ToArray();
+                canvas.DrawPolyline(pts, riverColor);
             }
 
-            cellsMap.Draw(drawables);
+            var pixels = canvas.GetPixelsTopLeft();
+
+            using var magickImage = new MagickImage(pixels.AsSpan(),
+                new PixelReadSettings(map.Settings.MapWidth, map.Settings.MapHeight,
+                    StorageType.Char, PixelMapping.RGBA));
+
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "rivers.png");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            cellsMap.Settings.SetDefine("png:color-type", "1");
+            magickImage.Settings.SetDefine("png:color-type", "1");
 
             string[] colormap = [
-               "#00FF00",
-               "#FF0000",
-               "#FFFC00",
-               "#00E1FF",
-               "#00C8FF",
-               "#0096FF",
-               "#0064FF",
-               "#0000FF",
-               "#0000E1",
-               "#0000C8",
-               "#000096",
-               "#000064",
-               "#005500",
-               "#007D00",
-               "#009E00",
-               "#18CE00",
-               "#FF0080",
-               "#FFFFFF",
+               "#00FF00", "#FF0000", "#FFFC00", "#00E1FF",
+               "#00C8FF", "#0096FF", "#0064FF", "#0000FF",
+               "#0000E1", "#0000C8", "#000096", "#000064",
+               "#005500", "#007D00", "#009E00", "#18CE00",
+               "#FF0080", "#FFFFFF",
             ];
 
-            cellsMap.Map(colormap.Select(n => new MagickColor(n)));
-            await cellsMap.WriteAsync(path);
+            magickImage.Map(colormap.Select(n => new MagickColor(n)));
+            await magickImage.WriteAsync(path);
         }
         catch (Exception ex)
         {
@@ -988,6 +979,12 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
 
     public static async Task DrawFlatMap(Map map)
     {
+        if (map.Input.XmlMap is null)
+        {
+            MyConsole.Warning("Skipping flat map: InputSvgPath is not set or file not found.");
+            return;
+        }
+
         try
         {
             XmlNode? GetNode(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]");

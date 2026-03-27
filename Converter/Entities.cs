@@ -212,7 +212,8 @@ public class Map
         public required GeoMap GeoMap { get; init; }
         public required GeoMapRivers Rivers { get; init; }
         public required JsonMap JsonMap { get; init; }
-        public required XmlDocument XmlMap { get; init; }
+        // Optional: loaded from InputSvgPath (.map file) for SVG-based rendering (heightmap, biomes, flat map)
+        public XmlDocument? XmlMap { get; init; }
     }
     public required MapInput Input { get; init; }
 

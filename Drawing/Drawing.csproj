@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- OpenGL bindings -->
+    <PackageReference Include="Silk.NET.OpenGL" Version="2.22.0" />
+    <!-- Direct GLFW bindings for headless context creation (no SDL fallback) -->
+    <PackageReference Include="Silk.NET.GLFW" Version="2.22.0" />
+    <!-- Math types -->
+    <PackageReference Include="Silk.NET.Maths" Version="2.22.0" />
+    <!-- PNG I/O for saving rendered images -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
+  </ItemGroup>
+
+</Project>

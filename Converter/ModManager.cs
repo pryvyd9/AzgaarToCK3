@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualBasic.FileIO;
+using System.Xml;
 
 namespace Converter;
 
@@ -115,27 +116,40 @@ public static class ModManager
         return Directory.Exists(Helper.GetPath(Settings.Instance.ModsDirectory, Settings.Instance.ModName));
     }
 
-    public static string? FindLatestInputs()
+    public static (string? jsonPath, string? geojsonPath) FindLatestInputs()
     {
-        var filesToCheck = new DirectoryInfo(SettingsManager.ExecutablePath)
+        var files = new DirectoryInfo(SettingsManager.ExecutablePath)
             .EnumerateFiles()
-            .OrderByDescending(n => n.CreationTime)
-            .Select(n => n.Name)
-            .Where(n => n.EndsWith(".xml"))
-            .FirstOrDefault();
+            .OrderByDescending(n => n.LastWriteTime)
+            .ToArray();
 
-        if (filesToCheck != null && Settings.Instance.InputXmlPath != filesToCheck)
-        {
-            return filesToCheck;
-        }
+        string[] excludedInputs = [
+            "settings.json",
+            #if DEBUG
+            "ConsoleUI.deps.json",
+            "ConsoleUI.runtimeconfig.json"
+            #endif
+        ];
+        var jsonFile = files.FirstOrDefault(n => n.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase)
+            && !excludedInputs.Any(m => n.Name.Equals(m, StringComparison.OrdinalIgnoreCase)))?.FullName;
 
-        return null;
+        var geojsonFile = files.FirstOrDefault(n => n.Extension.Equals(".geojson", StringComparison.OrdinalIgnoreCase))?.FullName;
+
+        return (jsonFile, geojsonFile);
     }
 
     private static async Task<Map> LoadMap()
     {
-        var xmlMap = await MainConverter.LoadXml();
-        var map = await MainConverter.ConvertMap(xmlMap);
+        var geoMap = await MainConverter.LoadGeoJson();
+        var jsonMap = await MainConverter.LoadJson();
+
+        XmlDocument? xmlMap = null;
+        if (!string.IsNullOrEmpty(Settings.Instance.InputSvgPath) && File.Exists(Settings.Instance.InputSvgPath))
+        {
+            xmlMap = await MainConverter.LoadSvg();
+        }
+
+        var map = await MainConverter.ConvertMap(geoMap, jsonMap, xmlMap);
         map.Settings = Settings.Instance;
         return map;
     }

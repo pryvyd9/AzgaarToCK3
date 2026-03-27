@@ -33,10 +33,18 @@ internal class Program
         CheckIfShouldOverride();
         FindInputs();
 
-        if (!File.Exists(Settings.Instance.InputXmlPath))
+        if (!File.Exists(Settings.Instance.InputJsonPath) || !File.Exists(Settings.Instance.InputGeojsonPath))
         {
-            MyConsole.Info($".xml file has not been found.");
-            MyConsole.Info($"Please, place it in '{Settings.Instance.InputXmlPath}' or change '{nameof(Settings.Instance.InputXmlPath)}' in 'settings.json'.");
+            if (!File.Exists(Settings.Instance.InputJsonPath))
+            {
+                MyConsole.Info($".json file has not been found.");
+                MyConsole.Info($"Please, place it in '{Settings.Instance.InputJsonPath}' or change '{nameof(Settings.Instance.InputJsonPath)}' in 'settings.json'.");
+            }
+            if (!File.Exists(Settings.Instance.InputGeojsonPath))
+            {
+                MyConsole.Info($".geojson file has not been found.");
+                MyConsole.Info($"Please, place it in '{Settings.Instance.InputGeojsonPath}' or change '{nameof(Settings.Instance.InputGeojsonPath)}' in 'settings.json'.");
+            }
             Exit();
         }
 
@@ -156,25 +164,36 @@ internal class Program
 
     private static void FindInputs()
     {
-        if (ModManager.FindLatestInputs() is { } xmlName && xmlName != Settings.Instance.InputXmlPath)
-        {
-            MyConsole.Info("Found new input in the directory:");
-            MyConsole.Info(Path.GetFileName(xmlName));
-            MyConsole.Info("Use it as input?");
+        var (foundJson, foundGeojson) = ModManager.FindLatestInputs();
 
+        bool jsonUpdated = false;
+        bool geojsonUpdated = false;
+
+        if (foundJson != null && foundJson != Settings.Instance.InputJsonPath)
+        {
+            MyConsole.Info("Found new .json input in the directory:");
+            MyConsole.Info(Path.GetFileName(foundJson));
+            MyConsole.Info("Use it as input?");
             if (YesNo())
             {
-                Settings.Instance.InputXmlPath = xmlName;
-            }
-            else
-            {
-                EnsureInputsExist();
-
-                MyConsole.Info("Previously used input will be used:");
-                MyConsole.Info(Settings.Instance.InputXmlPath);
+                Settings.Instance.InputJsonPath = foundJson;
+                jsonUpdated = true;
             }
         }
-        else
+
+        if (foundGeojson != null && foundGeojson != Settings.Instance.InputGeojsonPath)
+        {
+            MyConsole.Info("Found new .geojson input in the directory:");
+            MyConsole.Info(Path.GetFileName(foundGeojson));
+            MyConsole.Info("Use it as input?");
+            if (YesNo())
+            {
+                Settings.Instance.InputGeojsonPath = foundGeojson;
+                geojsonUpdated = true;
+            }
+        }
+
+        if (!jsonUpdated || !geojsonUpdated)
         {
             EnsureInputsExist();
         }
@@ -182,21 +201,27 @@ internal class Program
         // Exit if inputs not found
         static void EnsureInputsExist()
         {
-            var xmlExists = File.Exists(Settings.Instance.InputXmlPath);
+            var jsonExists = File.Exists(Settings.Instance.InputJsonPath);
+            var geojsonExists = File.Exists(Settings.Instance.InputGeojsonPath);
 
-            if (!xmlExists)
+            if (!jsonExists)
             {
-                MyConsole.Warning(".xml input was not found.");
+                MyConsole.Warning(".json input was not found.");
             }
-            
+            if (!geojsonExists)
+            {
+                MyConsole.Warning(".geojson input was not found.");
+            }
 
-            if (!xmlExists)
+            if (!jsonExists || !geojsonExists)
             {
                 MyConsole.Info($"-------------------------------------------------");
-                MyConsole.Info($"Put your exported .xml file to this app's folder ({SettingsManager.ExecutablePath}).");
-                MyConsole.Info("Make sure it has the latest 'modification date'.");
-                MyConsole.Info("If the wrong files are found delete other exported .xml files from the folder.");
-                MyConsole.Info("If the files cannot be found open 'settings.json' and modify 'InputXmlPath' value to point to your file.");
+                MyConsole.Info($"Export your map from Azgaar's Fantasy Map Generator:");
+                MyConsole.Info($"  File -> Export -> JSON  -> save as .json");
+                MyConsole.Info($"  File -> Export -> GeoJSON -> save as .geojson");
+                MyConsole.Info($"Put both files in this app's folder ({SettingsManager.ExecutablePath}).");
+                MyConsole.Info("Make sure they have the latest 'modification date'.");
+                MyConsole.Info("Or open 'settings.json' and set 'InputJsonPath' / 'InputGeojsonPath' directly.");
                 MyConsole.Info($"-------------------------------------------------");
 
                 Exit();

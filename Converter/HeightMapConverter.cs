@@ -442,6 +442,12 @@ empty_tile_offset={{ 255 127 }}
     }
     private static async Task DrawHeightMap(Map map)
     {
+        if (map.Input.XmlMap is null)
+        {
+            MyConsole.Warning("Skipping heightmap draw: InputSvgPath is not set or file not found.");
+            return;
+        }
+
         try
         {
             // create ns manager
