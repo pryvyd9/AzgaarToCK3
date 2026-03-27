@@ -2,6 +2,7 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Tga;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace Converter;
 
@@ -28,20 +29,33 @@ public static class BiomeConverter
         maskCanvas.MakeCurrent();
         maskCanvas.Clear(Drawing.RgbaColor.Black);
         foreach (var pts in ptsList)
+        {
             maskCanvas.DrawFilledPolygon(pts, Drawing.RgbaColor.White);
+            maskCanvas.DrawPolygonOutline(pts, Drawing.RgbaColor.White);
+        }
 
         var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "masks", ck3Biome.ToMaskFilename());
         Helper.EnsureDirectoryExists(path);
-        maskCanvas.SaveAsPng(path);
+        var maskPixels = maskCanvas.GetPixelsTopLeft();
+        using var maskRgba = Image.LoadPixelData<Rgba32>(maskPixels, map.Settings.MapWidth, map.Settings.MapHeight);
+        using var maskL8 = maskRgba.CloneAs<L8>();
+        maskL8.Save(path);
 
         var indexColor = Drawing.RgbaColor.FromBytes((byte)(int)ck3Biome, 255, 255, 255);
         detailIndex.MakeCurrent();
         foreach (var pts in ptsList)
+        {
             detailIndex.DrawFilledPolygon(pts, indexColor);
+            detailIndex.DrawPolygonOutline(pts, indexColor);
+        }
 
+        var intensityColor = Drawing.RgbaColor.FromBytes(255, 0, 0, 0);
         detailIntensity.MakeCurrent();
         foreach (var pts in ptsList)
-            detailIntensity.DrawFilledPolygon(pts, Drawing.RgbaColor.FromBytes(255, 0, 0));
+        {
+            detailIntensity.DrawFilledPolygon(pts, intensityColor);
+            detailIntensity.DrawPolygonOutline(pts, intensityColor);
+        }
 
         MyConsole.Info($"Finished writing {ck3Biome.ToMaskFilename()}", true);
     }
@@ -77,10 +91,10 @@ public static class BiomeConverter
         using var detailIntensityCanvas = new Drawing.Canvas(map.Settings.MapWidth, map.Settings.MapHeight);
 
         detailIndexCanvas.MakeCurrent();
-        detailIndexCanvas.Clear(Drawing.RgbaColor.White);
+        detailIndexCanvas.Clear(Drawing.RgbaColor.FromBytes(6, 0, 0, 0)); // mud_wet_01 (index 6) matches vanilla CK3 ocean/background
 
         detailIntensityCanvas.MakeCurrent();
-        detailIntensityCanvas.Clear(Drawing.RgbaColor.Black);
+        detailIntensityCanvas.Clear(Drawing.RgbaColor.FromBytes(255, 0, 0, 0)); // Fill with red to draw ocean/background mask properly
 
         AzgaarBiome[] biomes = [
             AzgaarBiome.HotDesert,
@@ -125,6 +139,18 @@ public static class BiomeConverter
             detailIntensityCanvas.MakeCurrent();
             var pixels = detailIntensityCanvas.GetPixelsTopLeft();
             using var img = Image.LoadPixelData<Rgba32>(pixels, map.Settings.MapWidth, map.Settings.MapHeight);
+
+            // For some reason, TgaEncoder is writing alpha as 1 when all the alpha values are 0, even with Compression.None.
+            // We set a single pixel's alpha to 1 to prevent the encoder from optimizing the alpha channel.
+            img.Mutate(ctx => ctx.ProcessPixelRowsAsVector4(row =>
+            {
+                row[0].W = 1;
+                for (int i = 1; i < row.Length; i++)
+                {
+                    row[i].W = 0;
+                }
+            }));
+
             var encoder = new TgaEncoder { BitsPerPixel = TgaBitsPerPixel.Pixel32, Compression = TgaCompression.None };
             await img.SaveAsync(path, encoder);
         }

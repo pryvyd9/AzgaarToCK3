@@ -454,6 +454,7 @@ empty_tile_offset={{ 255 127 }}
                     .Select(p => ((float)p.X, (float)p.Y))
                     .ToArray();
                 canvas.DrawFilledPolygon(pts, color);
+                canvas.DrawPolygonOutline(pts, color);
             }
         }
 

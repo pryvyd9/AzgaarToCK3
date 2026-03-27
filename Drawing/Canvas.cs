@@ -131,6 +131,7 @@ public sealed unsafe class Canvas : IDisposable
         _gl.Viewport(0, 0, (uint)width, (uint)height);
         _gl.UseProgram(_shaderProgram);
         _gl.Uniform2(_uResolution, (float)width, (float)height);
+        _gl.Disable(EnableCap.Blend);
     }
 
     // ── Public drawing API ────────────────────────────────────────────────
@@ -152,6 +153,7 @@ public sealed unsafe class Canvas : IDisposable
     public void DrawFilledPolygon(ReadOnlySpan<(float x, float y)> points, RgbaColor color)
     {
         if (points.Length < 3) return;
+        _gl.Disable(EnableCap.Blend);
         UploadVertices(points);
         SetColor(color);
         _gl.DrawArrays(PrimitiveType.TriangleFan, 0, (uint)points.Length);
@@ -165,6 +167,7 @@ public sealed unsafe class Canvas : IDisposable
     public void DrawPolyline(ReadOnlySpan<(float x, float y)> points, RgbaColor color)
     {
         if (points.Length < 2) return;
+        _gl.Disable(EnableCap.Blend);
         UploadVertices(points);
         SetColor(color);
         _gl.DrawArrays(PrimitiveType.LineStrip, 0, (uint)points.Length);
@@ -173,6 +176,24 @@ public sealed unsafe class Canvas : IDisposable
     /// <summary>Convenience overload accepting float[2] coordinate pairs.</summary>
     public void DrawPolyline(float[][] coordinates, RgbaColor color)
         => DrawPolyline(ToTuples(coordinates), color);
+
+    /// <summary>
+    /// Draws a closed polygon outline using GL_LINE_LOOP.
+    /// Mirrors SVG stroke behaviour — fills sub-pixel gaps left by GL_TRIANGLE_FAN fill
+    /// that arise when adjacent cells share edges with non-bit-identical float32 coordinates.
+    /// </summary>
+    public void DrawPolygonOutline(ReadOnlySpan<(float x, float y)> points, RgbaColor color)
+    {
+        if (points.Length < 3) return;
+        _gl.Disable(EnableCap.Blend);
+        UploadVertices(points);
+        SetColor(color);
+        _gl.DrawArrays(PrimitiveType.LineLoop, 0, (uint)points.Length);
+    }
+
+    /// <summary>Convenience overload accepting float[2] coordinate pairs.</summary>
+    public void DrawPolygonOutline(float[][] coordinates, RgbaColor color)
+        => DrawPolygonOutline(ToTuples(coordinates), color);
 
     /// <summary>
     /// Reads pixels from the FBO and saves as a PNG file.
