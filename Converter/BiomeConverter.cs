@@ -91,10 +91,14 @@ public static class BiomeConverter
         using var detailIntensityCanvas = new Drawing.Canvas(map.Settings.MapWidth, map.Settings.MapHeight);
 
         detailIndexCanvas.MakeCurrent();
-        detailIndexCanvas.Clear(Drawing.RgbaColor.FromBytes(6, 0, 0, 0)); // mud_wet_01 (index 6) matches vanilla CK3 ocean/background
+
+        // mud_wet_01 (index 6) matches vanilla CK3 ocean/background
+        // 255 represents nonexisting value
+        detailIndexCanvas.Clear(Drawing.RgbaColor.FromBytes(6, 255, 255, 255));
 
         detailIntensityCanvas.MakeCurrent();
-        detailIntensityCanvas.Clear(Drawing.RgbaColor.FromBytes(255, 0, 0, 0)); // Fill with red to draw ocean/background mask properly
+        // Fill with red to draw ocean/background mask properly
+        detailIntensityCanvas.Clear(Drawing.RgbaColor.FromBytes(255, 0, 0, 0));
 
         AzgaarBiome[] biomes = [
             AzgaarBiome.HotDesert,
@@ -140,8 +144,8 @@ public static class BiomeConverter
             var pixels = detailIntensityCanvas.GetPixelsTopLeft();
             using var img = Image.LoadPixelData<Rgba32>(pixels, map.Settings.MapWidth, map.Settings.MapHeight);
 
-            // For some reason, TgaEncoder is writing alpha as 1 when all the alpha values are 0, even with Compression.None.
-            // We set a single pixel's alpha to 1 to prevent the encoder from optimizing the alpha channel.
+            // For some reason, Tga alpha channel is being interpreted as opaque 1 or 255 when all the alpha values are written as 0.
+            // To prevent image editors and CK3 from reading alpha channel as opaque we set a single pixel's alpha to 1.
             img.Mutate(ctx => ctx.ProcessPixelRowsAsVector4(row =>
             {
                 row[0].W = 1;
