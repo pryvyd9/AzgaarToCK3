@@ -21,11 +21,11 @@ public partial class JsonMapJsonContext : JsonSerializerContext {}
 
 public static class MainConverter
 {
-    public static async Task<XmlDocument> LoadSvg()
+    public static async Task<XmlDocument> LoadXml()
     {
         try
         {
-            var unescapedFile = File.ReadAllText(Settings.Instance.InputSvgPath!);
+            var unescapedFile = File.ReadAllText(Settings.Instance.InputXmlPath);
             unescapedFile = unescapedFile.Replace("&amp;quot;", "\"");
             unescapedFile = new Regex(@"xmlns[^\s]+""").Replace(unescapedFile, "");
             // remove xlink namespace prefixes
@@ -42,36 +42,6 @@ public static class MainConverter
                 Debugger.Break();
                 throw;
             }
-        }
-        catch (Exception e)
-        {
-            Debugger.Break();
-            throw;
-        }
-    }
-
-    public static async Task<GeoMap> LoadGeoJson()
-    {
-        try
-        {
-            var file = await File.ReadAllTextAsync(Settings.Instance.InputGeojsonPath);
-            var geoMap = JsonSerializer.Deserialize(file, GeoMapJsonContext.Default.GeoMap);
-            return geoMap!;
-        }
-        catch (Exception e)
-        {
-            Debugger.Break();
-            throw;
-        }
-    }
-
-    public static async Task<JsonMap> LoadJson()
-    {
-        try
-        {
-            var file = await File.ReadAllTextAsync(Settings.Instance.InputJsonPath);
-            var jsonMap = JsonSerializer.Deserialize(file, JsonMapJsonContext.Default.JsonMap);
-            return jsonMap!;
         }
         catch (Exception e)
         {
@@ -370,8 +340,37 @@ public static class MainConverter
         return finalProvinces;
     }
 
-    public static async Task<Map> ConvertMap(GeoMap geoMap, JsonMap jsonMap, XmlDocument? xmlMap = null)
+    public static async Task<Map> ConvertMap(XmlDocument xmlMap)
     {
+        XmlNamespaceManager xmlnsManager = new(xmlMap.NameTable);
+        xmlnsManager.AddNamespace("ns", "http://www.w3.org/1999/xhtml");
+
+        XmlNode? GetNode(string attribute) => xmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager);
+
+        var geoMapXml = GetNode("@id='geojson'")!.InnerXml;
+        GeoMap geoMap;
+        try
+        {
+            geoMap = JsonSerializer.Deserialize(geoMapXml, GeoMapJsonContext.Default.GeoMap)!;
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+            throw;
+        }
+
+        var jsonMapXml = GetNode("@id='json'")!.InnerXml;
+        JsonMap jsonMap;
+        try
+        {
+            jsonMap = JsonSerializer.Deserialize(jsonMapXml, JsonMapJsonContext.Default.JsonMap)!;
+        }
+        catch (Exception ex)
+        {
+            Debugger.Break();
+            throw;
+        }
+
         var geoMapRivers = new GeoMapRivers([]);
 
 
