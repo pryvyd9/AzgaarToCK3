@@ -1990,7 +1990,7 @@ NCamera = {{
 	WORLD_EXTENTS_Z = {map.Settings.MapHeight - 1}
 	WATERLEVEL = {waterLevel}
 }}";
-        var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "00_defines.txt");
+        var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "mapsize_defines.txt");
         Helper.EnsureDirectoryExists(path);
         await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
     }

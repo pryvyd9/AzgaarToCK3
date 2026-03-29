@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="3.116.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.116.1" />
+  </ItemGroup>
+
+</Project>

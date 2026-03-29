@@ -1,9 +1,11 @@
 ﻿using ImageMagick;
-using System.Drawing.Imaging;
-using System.Drawing;
-using System.Text;
-using Svg;
 using SixLabors.ImageSharp;
+using Svg;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Drawing.Text;
+using System.Text;
 
 namespace Converter;
 
@@ -330,53 +332,6 @@ public static class Helper
     }
 
 
-    public static unsafe Bitmap ToGrayscale(Bitmap colorBitmap)
-    {
-        int Width = colorBitmap.Width;
-        int Height = colorBitmap.Height;
-
-        Bitmap grayscaleBitmap = new Bitmap(Width, Height, PixelFormat.Format8bppIndexed);
-
-        grayscaleBitmap.SetResolution(colorBitmap.HorizontalResolution,
-                             colorBitmap.VerticalResolution);
-
-        ///////////////////////////////////////
-        // Set grayscale palette
-        ///////////////////////////////////////
-        ColorPalette colorPalette = grayscaleBitmap.Palette;
-        for (int i = 0; i < colorPalette.Entries.Length; i++)
-        {
-            colorPalette.Entries[i] = System.Drawing.Color.FromArgb(i, i, i);
-        }
-        grayscaleBitmap.Palette = colorPalette;
-        ///////////////////////////////////////
-        // Set grayscale palette
-        ///////////////////////////////////////
-        BitmapData bitmapData = grayscaleBitmap.LockBits(
-            new System.Drawing.Rectangle(System.Drawing.Point.Empty, grayscaleBitmap.Size),
-            ImageLockMode.WriteOnly, PixelFormat.Format8bppIndexed);
-
-        Byte* pPixel = (Byte*)bitmapData.Scan0;
-
-        for (int y = 0; y < Height; y++)
-        {
-            for (int x = 0; x < Width; x++)
-            {
-                System.Drawing.Color clr = colorBitmap.GetPixel(x, y);
-
-                Byte byPixel = (byte)((30 * clr.R + 59 * clr.G + 11 * clr.B) / 100);
-
-                pPixel[x] = byPixel;
-            }
-
-            pPixel += bitmapData.Stride;
-        }
-
-        grayscaleBitmap.UnlockBits(bitmapData);
-
-        return grayscaleBitmap;
-    }
-
     public static unsafe Bitmap ToBitmap(byte[] colorBitmap, int width, int height)
     {
         Bitmap grayscaleBitmap = new Bitmap(width, height, PixelFormat.Format8bppIndexed);
@@ -464,15 +419,33 @@ public static class Helper
 
     public static SixLabors.ImageSharp.Image ToGrayscaleImage(this SvgDocument svgDocument, int width, int height)
     {
+        //using ISvgRenderer svgRenderer = SvgRenderer.FromGraphics(CreateGraphics(new Bitmap(width, height)));
         var bitmap = svgDocument.Draw(width, height);
         var img = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.L8>(Helper.ToGrayscaleByteArray(bitmap).AsSpan(), width, height);
         //img.Mutate(x => x.Grayscale(GrayscaleMode.Bt709));
         return img;
     }
 
+
+    private static Graphics CreateGraphics(System.Drawing.Image image)
+    {
+        Graphics graphics = Graphics.FromImage(image);
+        graphics.SmoothingMode = SmoothingMode.None;
+        graphics.PixelOffsetMode = PixelOffsetMode.None;
+        graphics.CompositingQuality = CompositingQuality.HighSpeed;
+        graphics.TextRenderingHint = TextRenderingHint.SingleBitPerPixel;
+        graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
+        return graphics;
+    }
+
+
     public static SixLabors.ImageSharp.Image ToImage(this SvgDocument svgDocument, int width, int height)
     {
-        var bitmap = svgDocument.Draw(width, height);
+        var bitmap = new Bitmap(width, height);
+        using ISvgRenderer svgRenderer = SvgRenderer.FromGraphics(CreateGraphics(bitmap));
+        svgRenderer.SmoothingMode = SmoothingMode.None;
+        svgRenderer.ScaleTransform(width / svgDocument.GetDimensions().Width, height / svgDocument.GetDimensions().Height);
+        svgDocument.Draw(svgRenderer);
         var img = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Rgba32>(Helper.ToRGBAByteArray(bitmap).AsSpan(), width, height);
         return img;
     }

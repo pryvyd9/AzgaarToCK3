@@ -14,6 +14,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleUI", "ConsoleUI\Cons
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Converter", "Converter\Converter.csproj", "{5680C0A2-084A-4449-A3A0-BF37FA7318BB}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Drawing", "Drawing\Drawing.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{5EF68E0B-FAFA-4945-8851-96C43D875655}"
 	ProjectSection(SolutionItems) = preProject
 		docs\MapEditor.md = docs\MapEditor.md
@@ -39,6 +41,12 @@ Global
 		{5680C0A2-084A-4449-A3A0-BF37FA7318BB}.Publish|Any CPU.Build.0 = Publish|Any CPU
 		{5680C0A2-084A-4449-A3A0-BF37FA7318BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5680C0A2-084A-4449-A3A0-BF37FA7318BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Publish|Any CPU.ActiveCfg = Publish|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Publish|Any CPU.Build.0 = Publish|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

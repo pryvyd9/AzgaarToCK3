@@ -1,7 +1,11 @@
-﻿using ImageMagick;
+using Drawing;
+using ImageMagick;
+using SkiaSharp;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Tga;
-using Svg;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using System.Numerics;
 using System.Xml;
 
 namespace Converter;
@@ -11,7 +15,13 @@ public static class BiomeConverter
     private static readonly SemaphoreSlim _detail_index_semaphore = new(1);
     private static readonly SemaphoreSlim _detail_intensity_semaphore = new(1);
 
-    private static async Task WriteMaskFromXml(Map map, XmlDocument detail_index, XmlDocument detail_intensity, AzgaarBiome biomeId)
+    private static async Task WriteMaskFromXml(
+        Map map,
+        PixelCanvas detail_index_canvas,
+        PixelCanvas detail_intensity_canvas,
+        float scaleX,
+        float scaleY,
+        AzgaarBiome biomeId)
     {
         if (Settings.Instance.MaxThreads > 1)
         {
@@ -26,91 +36,69 @@ public static class BiomeConverter
         xmlnsManager.AddNamespace("ns", "http://www.w3.org/2000/svg");
 
         XmlElement? GetNodeFromDoc(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager) as XmlElement;
-        XmlElement? GetNode(XmlNode xmlElement, string attribute) => xmlElement.SelectSingleNode($"//*[{attribute}]", xmlnsManager) as XmlElement;
-        void RemoveExcept(XmlNode xmlElement, string attribute)
-        {
-            XmlElement? childExcept = GetNode(xmlElement, attribute);
-            List<XmlElement> childrenToRemove = [];
-            foreach (XmlElement c in xmlElement.ChildNodes)
-            {
-                if (c != childExcept)
-                {
-                    childrenToRemove.Add(c);
-                }
-            }
 
-            foreach (var c in childrenToRemove)
-            {
-                c!.ParentNode!.RemoveChild(c);
-            }
-        }
-
-        var doc = new XmlDocument();
-        doc.LoadXml(GetNodeFromDoc("@id='svgbiomes'")!.OuterXml);
         var biomeAttribute = $"@id='biome{(int)biomeId}'";
-        var biome = GetNode(doc, biomeAttribute);
-        if (biome is null)
+        var biomeElement = GetNodeFromDoc(biomeAttribute);
+        if (biomeElement is null)
         {
             return;
         }
-        biome.SetAttribute("stroke", "white");
-        biome.SetAttribute("fill", "white");
 
-        var biomes = GetNode(doc, "@id='biomes'");
-        //biomes!.SetAttribute("filter", "url(#blur10)");
+        // Collect all SVG path data: the biome element itself may be a <path> (common in Azgaar FMG)
+        // or a <g> group containing child paths. Handle both cases and any nesting depth.
+        var pathData = new List<string>();
+        {
+            var selfD = biomeElement.GetAttribute("d");
+            if (!string.IsNullOrEmpty(selfD)) pathData.Add(selfD);
+            foreach (XmlElement el in biomeElement.SelectNodes(".//*", xmlnsManager)!.OfType<XmlElement>())
+            {
+                var d = el.GetAttribute("d");
+                if (!string.IsNullOrEmpty(d)) pathData.Add(d);
+            }
+        }
 
-        RemoveExcept(biomes, biomeAttribute);
-
-        var defs = doc.CreateDocumentFragment();
-        defs.InnerXml = @"<defs><filter id=""blur10""><feGaussianBlur in=""SourceGraphic"" stdDeviation=""10"" /></filter></defs>";
-        doc.DocumentElement.FirstChild.PrependChild(defs);
-
-        var svg = SvgDocument.FromSvg<SvgDocument>(doc.OuterXml);
-        var img = svg.ToGrayscaleImage(map.Settings.MapWidth, map.Settings.MapHeight);
+        if (pathData.Count == 0)
+        {
+            MyConsole.Info($"No path data found for {ck3Biome.ToMaskFilename()}, skipping", true);
+            return;
+        }
 
         var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "masks", ck3Biome.ToMaskFilename());
         Helper.EnsureDirectoryExists(path);
-        //img.Save($"{filename}.png");
-        await img.SaveAsync(path);
+
+        // Render grayscale biome mask: white polygon on black background
+        using (var canvas = new PixelCanvas(map.Settings.MapWidth, map.Settings.MapHeight, SKColors.Black))
+        {
+            foreach (var d in pathData)
+                canvas.FillSvgPath(d, SKColors.White, scaleX, scaleY);
+            canvas.SaveAsPng(path);
+        }
 
         // Detail Index
         {
-            var indexColor = $"rgba({(int)ck3Biome},255,255,255)";
-            biome.SetAttribute("stroke", indexColor);
-            biome.SetAttribute("fill", indexColor);
-
-            var detail_index_biome = detail_index.CreateDocumentFragment();
-            detail_index_biome.InnerXml = biome.OuterXml;
-            detail_index.DocumentElement!.AppendChild(detail_index_biome);
-
-            var detail_index_svg = GetNode(detail_index, "@id='detail_index'")!;
+            var indexColor = new SKColor((byte)ck3Biome, 255, 255, 255);
 
             await _detail_index_semaphore.WaitAsync();
             try
             {
-                detail_index_svg.AppendChild(detail_index_biome);
+                foreach (var d in pathData)
+                    detail_index_canvas.FillSvgPath(d, indexColor, scaleX, scaleY);
             }
             finally
             {
                 _detail_index_semaphore.Release();
             }
         }
+
         // Detail Intensity
         {
-            var intensityColor = $"rgba(255,0,0,1)";
-            biome.SetAttribute("stroke", intensityColor);
-            biome.SetAttribute("fill", intensityColor);
-
-            var detail_intensity_biome = detail_intensity.CreateDocumentFragment();
-            detail_intensity_biome.InnerXml = biome.OuterXml;
-            detail_intensity.DocumentElement!.AppendChild(detail_intensity_biome);
-
-            var detail_intensity_svg = GetNode(detail_intensity, "@id='detail_intensity'")!;
+            var intensityColor = new SKColor(255, 0, 0, 255);
 
             await _detail_intensity_semaphore.WaitAsync();
             try
             {
-                detail_intensity_svg.AppendChild(detail_intensity_biome);
+                foreach (var d in pathData)
+                    detail_intensity_canvas.FillSvgPath(d, intensityColor, scaleX, scaleY);
             }
             finally
             {
@@ -128,28 +116,16 @@ public static class BiomeConverter
         xmlnsManager.AddNamespace("ns", "http://www.w3.org/2000/svg");
 
         XmlElement? GetNodeFromDoc(string attribute) => map.Input.XmlMap.SelectSingleNode($"//*[{attribute}]", xmlnsManager) as XmlElement;
-        var biomes = GetNodeFromDoc("@id='svgbiomes'")!;
-        var width = biomes.GetAttribute("width");
-        var height = biomes.GetAttribute("height");
+        var biomesElement = GetNodeFromDoc("@id='svgbiomes'")!;
 
-        var detail_index = new XmlDocument();
-        {
-            detail_index.LoadXml($"""
-                <svg id="detail_index" width="{width}" height="{height}" version="1.1" background-color="white" >
-                <rect x="0" y="0" width="100%" height="100%" fill="white" />
-                </svg>
-                """);
-        }
+        float svgWidth = float.Parse(biomesElement.GetAttribute("width"), System.Globalization.CultureInfo.InvariantCulture);
+        float svgHeight = float.Parse(biomesElement.GetAttribute("height"), System.Globalization.CultureInfo.InvariantCulture);
+        float scaleX = map.Settings.MapWidth / svgWidth;
+        float scaleY = map.Settings.MapHeight / svgHeight;
 
+        int w = map.Settings.MapWidth;
+        int h = map.Settings.MapHeight;
 
-        var detail_intensity = new XmlDocument();
-        {
-            detail_intensity.LoadXml($"""
-                <svg id="detail_intensity" width="{width}" height="{height}" version="1.1" background-color="red" >
-                <rect x="0" y="0" width="100%" height="100%" fill="black" />
-                </svg>
-                """);
-        }
         // Resize default maps
         {
             var templateFile = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "masks", "winter_effect_mask.png");
@@ -158,7 +134,7 @@ public static class BiomeConverter
             var files = Directory.EnumerateFiles(masks).Concat(Directory.EnumerateFiles(masks_gen)).Where(n => n.EndsWith(".png")).Except([templateFile]);
             using (var img1 = new MagickImage(templateFile))
             {
-                img1.Resize(map.Settings.MapWidth, map.Settings.MapHeight);
+                img1.Resize(w, h);
                 img1.Write(templateFile, MagickFormat.Png00);
             }
 
@@ -168,19 +144,22 @@ public static class BiomeConverter
             }
         }
 
+        using var detail_index_canvas = new PixelCanvas(w, h, SKColors.White);
+        using var detail_intensity_canvas = new PixelCanvas(w, h, SKColors.Black);
+
         Task[] tasks = [
-            WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.HotDesert),
-            WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.ColdDesert),
-            WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Savanna),
-            WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Grassland),
-            WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.TropicalSeasonalForest),
-            WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.TemperateDeciduousForest),
-            WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.TropicalRainforest),
-            WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.TemperateRainforest),
-            WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Taiga),
-            WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Tundra),
-            WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Glacier),
-            WriteMaskFromXml(map, detail_index, detail_intensity, AzgaarBiome.Wetland),
+            WriteMaskFromXml(map, detail_index_canvas, detail_intensity_canvas, scaleX, scaleY, AzgaarBiome.HotDesert),
+            WriteMaskFromXml(map, detail_index_canvas, detail_intensity_canvas, scaleX, scaleY, AzgaarBiome.ColdDesert),
+            WriteMaskFromXml(map, detail_index_canvas, detail_intensity_canvas, scaleX, scaleY, AzgaarBiome.Savanna),
+            WriteMaskFromXml(map, detail_index_canvas, detail_intensity_canvas, scaleX, scaleY, AzgaarBiome.Grassland),
+            WriteMaskFromXml(map, detail_index_canvas, detail_intensity_canvas, scaleX, scaleY, AzgaarBiome.TropicalSeasonalForest),
+            WriteMaskFromXml(map, detail_index_canvas, detail_intensity_canvas, scaleX, scaleY, AzgaarBiome.TemperateDeciduousForest),
+            WriteMaskFromXml(map, detail_index_canvas, detail_intensity_canvas, scaleX, scaleY, AzgaarBiome.TropicalRainforest),
+            WriteMaskFromXml(map, detail_index_canvas, detail_intensity_canvas, scaleX, scaleY, AzgaarBiome.TemperateRainforest),
+            WriteMaskFromXml(map, detail_index_canvas, detail_intensity_canvas, scaleX, scaleY, AzgaarBiome.Taiga),
+            WriteMaskFromXml(map, detail_index_canvas, detail_intensity_canvas, scaleX, scaleY, AzgaarBiome.Tundra),
+            WriteMaskFromXml(map, detail_index_canvas, detail_intensity_canvas, scaleX, scaleY, AzgaarBiome.Glacier),
+            WriteMaskFromXml(map, detail_index_canvas, detail_intensity_canvas, scaleX, scaleY, AzgaarBiome.Wetland),
         ];
 
         await Task.WhenAll(tasks);
@@ -189,14 +168,26 @@ public static class BiomeConverter
         {
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "detail_index.tga");
             Helper.EnsureDirectoryExists(path);
-            var svg = SvgDocument.FromSvg<SvgDocument>(detail_index.OuterXml);
-            var img = svg.ToImage(map.Settings.MapWidth, map.Settings.MapHeight);
+
+            var img = Image.LoadPixelData<Rgba32>(detail_index_canvas.GetRgbaBytes().AsSpan(), w, h);
+
+            // Set water mask to mud_wet_01 biome how it's done in the game.
+            img.Mutate(n => n.ProcessPixelRowsAsVector4((row) =>
+            {
+                for (int i = 0; i < row.Length; i++)
+                {
+                    if (row[i][0] == 1)
+                    {
+                        row[i] = (Vector4)Color.FromRgba((byte)CK3Biome.mud_wet_01, 255, 255, 255);
+                    }
+                }
+            }));
+
             var encoder = new TgaEncoder
             {
                 BitsPerPixel = TgaBitsPerPixel.Pixel32,
                 Compression = TgaCompression.None,
             };
-            //await img.SaveAsync("detail_index.tga", encoder);
             await img.SaveAsync(path, encoder);
         }
 
@@ -204,14 +195,35 @@ public static class BiomeConverter
         {
             var path = Helper.GetPath(Settings.OutputDirectory, "gfx", "map", "terrain", "detail_intensity.tga");
             Helper.EnsureDirectoryExists(path);
-            var svg = SvgDocument.FromSvg<SvgDocument>(detail_intensity.OuterXml);
-            var img = svg.ToImage(map.Settings.MapWidth, map.Settings.MapHeight);
+
+            var img = Image.LoadPixelData<Rgba32>(detail_intensity_canvas.GetRgbaBytes().AsSpan(), w, h);
+
+            img.Mutate(n => n.ProcessPixelRowsAsVector4((row) =>
+            {
+                // Workaround to bypass reader's optimization reads alpha as 255 when the whole alpha channel is 0.
+                row[0][3] = 0.01f;
+                for (int i = 1; i < row.Length; i++)
+                {
+                    row[i][3] = 0;
+                }
+
+                // Set intensity for water mask to 255 so it's displayed properly.
+                // Otherwise, it's going to be displayed as black void.
+                // With current approach when we only write to red channel for simplicity the whole red channel is going to be filled with 255.
+                for (int i = 0; i < row.Length; i++)
+                {
+                    if (row[i][0] == 0)
+                    {
+                        row[i][0] = 1;
+                    }
+                }
+            }));
+
             var encoder = new TgaEncoder
             {
                 BitsPerPixel = TgaBitsPerPixel.Pixel32,
                 Compression = TgaCompression.None,
             };
-            //await img.SaveAsync("detail_intensity.tga", encoder);
             await img.SaveAsync(path, encoder);
         }
 
@@ -222,50 +234,8 @@ public static class BiomeConverter
             Helper.EnsureDirectoryExists(path);
 
             using var img = new MagickImage(inputPath);
-            img.Resize(map.Settings.MapWidth / 4, map.Settings.MapHeight / 4);
+            img.Resize(w / 4, h / 4);
             img.Write(path);
         }
-
-        //var nonWaterProvinceCells = map.Output.Provinces
-        //    .Skip(1)
-        //    .Where(n => !n.IsWater && n.Cells.Any())
-        //    .SelectMany(n => n.Cells)
-        //    .ToArray();
-
-        //var provinceBiomes = map.Output.Provinces
-        //    .Skip(1)
-        //    .Where(n => !n.IsWater && n.Cells.Any())
-        //    .Select(n =>
-        //    {
-        //        var primaryBiome = n.Cells.Select(m => m.biome).Max();
-        //        var heightDifference = (int)Helper.HeightDifference(n);
-        //        return new
-        //        {
-        //            Province = n,
-        //            Biome = Helper.GetProvinceBiomeName(primaryBiome, heightDifference)
-        //        };
-        //    }).ToArray();
-
-
-
-        //// taiga
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is var b && (b == "taiga" || b == "drylands" && Helper.IsCellLowMountains(n.height) || b == "drylands" && Helper.IsCellMountains(n.height))), map, "forest_pine_01_mask");
-        //// Desert
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "desert" && !Helper.IsCellMountains(n.height) && !Helper.IsCellHighMountains(n.height)), map, "desert_01_mask");
-        //// desert_mountains
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "desert" && Helper.IsCellMountains(n.height)), map, "mountain_02_desert_mask");
-        //// oasis
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) == "oasis"), map, "oasis_mask");
-        //// hills
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.IsCellHills(n.biome, n.height)), map, "hills_01_mask");
-        //// low mountains
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellLowMountains(n.height)), map, "mountain_02_mask");
-        //// mountains
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellMountains(n.height) || Helper.IsCellHighMountains(n.height)), map, "mountain_02_snow_mask");
-        //// HighMountains
-        //await WriteMask(nonWaterProvinceCells.Where(n => Helper.MapBiome(n.biome) is "drylands" && Helper.IsCellHighMountains(n.height)), map, "mountain_02_c_snow_mask");
-        //// wetlands
-        //await WriteMask(provinceBiomes.Where(n => n.Biome == "wetlands").SelectMany(n => n.Province.Cells).Where(n => Helper.MapBiome(n.biome) == "floodplains"), map, "wetlands_02_mask");
     }
-
 }
