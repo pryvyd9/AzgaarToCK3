@@ -1,3 +1,6 @@
+# 1.7.4
+- fixed biome drawing being overlapped by some unknown layer. As well as pitch black masks.
+
 # 1.7.3
 - added support for negative numbers and empty objects in ck3 files.
 

@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
     <Nullable>enable</Nullable>
+    <Configurations>Debug;Release;Publish</Configurations>
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
