@@ -142,18 +142,12 @@ public static class BiomeConverter
             Helper.EnsureDirectoryExists(path);
             detailIntensityCanvas.MakeCurrent();
             var pixels = detailIntensityCanvas.GetPixelsTopLeft();
-            using var img = Image.LoadPixelData<Rgba32>(pixels, map.Settings.MapWidth, map.Settings.MapHeight);
 
             // For some reason, Tga alpha channel is being interpreted as opaque 1 or 255 when all the alpha values are written as 0.
             // To prevent image editors and CK3 from reading alpha channel as opaque we set a single pixel's alpha to 1.
-            img.Mutate(ctx => ctx.ProcessPixelRowsAsVector4(row =>
-            {
-                row[0].W = 1;
-                for (int i = 1; i < row.Length; i++)
-                {
-                    row[i].W = 0;
-                }
-            }));
+            pixels[3] = 1;
+
+            using var img = Image.LoadPixelData<Rgba32>(pixels, map.Settings.MapWidth, map.Settings.MapHeight);
 
             var encoder = new TgaEncoder { BitsPerPixel = TgaBitsPerPixel.Pixel32, Compression = TgaCompression.None };
             await img.SaveAsync(path, encoder);

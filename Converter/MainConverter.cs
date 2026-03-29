@@ -1978,33 +1978,33 @@ NCamera = {{
         Helper.EnsureDirectoryExists(path);
         File.WriteAllText(path, file, new UTF8Encoding(true));
     }
-    //     public static async Task WriteMapSizeDefines(Map map)
-    //     {
-    //         var maxElevation = Settings.Instance.MaxElevation;
-    //         var waterLevelRatio = (float)Math.Abs(map.MinHeight) / (map.MaxHeight + Math.Abs(map.MinHeight));
-    //         // var waterLevel = ((float)Settings.Instance.MaxElevation / 255) * HeightMapConverter.CK3WaterLevel;
-    //         var waterLevel = maxElevation * waterLevelRatio;
-    //         var file = $@"NJominiMap = {{
-    // 	WORLD_EXTENTS_X = {map.Settings.MapWidth - 1}
-    // 	WORLD_EXTENTS_Y = {maxElevation}
-    // 	WORLD_EXTENTS_Z = {map.Settings.MapHeight - 1}
-    // 	WATERLEVEL = {waterLevel}
-    // }}";
-    //         var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "mapsize_defines.txt");
-    //         Helper.EnsureDirectoryExists(path);
-    //         await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
-    //     }
+  
+    //    public static async Task WriteMapSizeDefines(Map map)
+    //    {
+    //        var maxElevation = Settings.Instance.MaxElevation;
+    //        // var waterLevelRatio = 1.0f / (map.MaxHeight + Math.Abs(map.MinHeight));
+    //        // var waterLevel = maxElevation * waterLevelRatio;
+
+    //        var waterLevelRatio = (float)Math.Abs(map.MinHeight) / (map.MaxHeight + Math.Abs(map.MinHeight));
+    //        var waterLevel = maxElevation * waterLevelRatio;
+
+    //        // var waterLevel = ((float)Settings.Instance.MaxElevation / 255) * HeightMapConverter.CK3WaterLevel;
+    //        var file = $@"NJominiMap = {{
+    //	WORLD_EXTENTS_X = {map.Settings.MapWidth - 1}
+    //	WORLD_EXTENTS_Y = {maxElevation}
+    //	WORLD_EXTENTS_Z = {map.Settings.MapHeight - 1}
+    //	WATERLEVEL = {waterLevel}
+    //}}";
+    //        var path = Helper.GetPath(Settings.OutputDirectory, "common", "defines", "mapsize_defines.txt");
+    //        Helper.EnsureDirectoryExists(path);
+    //        await File.WriteAllTextAsync(path, file, new UTF8Encoding(true));
+    //    }
+
 
     public static async Task WriteMapSizeDefines(Map map)
     {
         var maxElevation = Settings.Instance.MaxElevation;
-        // var waterLevelRatio = 1.0f / (map.MaxHeight + Math.Abs(map.MinHeight));
-        // var waterLevel = maxElevation * waterLevelRatio;
-        
-        var waterLevelRatio = (float)Math.Abs(map.MinHeight) / (map.MaxHeight + Math.Abs(map.MinHeight));
-        var waterLevel = maxElevation * waterLevelRatio;
-
-        // var waterLevel = ((float)Settings.Instance.MaxElevation / 255) * HeightMapConverter.CK3WaterLevel;
+        var waterLevel = ((float)Settings.Instance.MaxElevation / 255) * HeightMapConverter.CK3WaterLevel;
         var file = $@"NJominiMap = {{
 	WORLD_EXTENTS_X = {map.Settings.MapWidth - 1}
 	WORLD_EXTENTS_Y = {maxElevation}
