@@ -16,8 +16,7 @@ namespace Converter;
 /// </summary>
 public static class HeightMapConverter
 {
-    private const int AzgaarWaterLevel = 50;
-    public const int CK3WaterLevel = 20;
+    public const int CK3WaterLevel = 10;
 
     private static readonly int[] detailSize = [33, 17, 9, 5, 3];
     // Width of average sampling for height. For detail size 9 averages of 4x4 squares are taken for every pixel in a tile.
@@ -438,14 +437,43 @@ empty_tile_offset={{ 255 127 }}
         Directory.CreateDirectory(Path.GetDirectoryName(hhPath));
         await File.WriteAllTextAsync(hhPath, heightmap_heightmap);
     }
+
+
     private static async Task DrawHeightMap(Map map)
     {
+        var minHeightAbs = Math.Abs(map.MinHeight);
+        var totalHeightToByte = (float)255 / (map.MaxHeight + minHeightAbs);
+        // var totalHeightToByte = (float)255 / (map.MaxHeight);
+
         using var canvas = new Drawing.Canvas(map.Settings.MapWidth, map.Settings.MapHeight);
         canvas.Clear(Drawing.RgbaColor.Black);
 
         foreach (var feature in map.Input.GeoMap.features)
         {
-            var scaledHeight = (byte)Math.Clamp(feature.properties.height - AzgaarWaterLevel + CK3WaterLevel, 0, 255);
+            var h = feature.properties.height;
+            // byte scaledHeight = h <= 0
+            //     ? (byte)Math.Round((double)(h - minHeight) / -minHeight * CK3WaterLevel)
+            //     : (byte)Math.Round(CK3WaterLevel + (double)h / maxHeight * (255 - CK3WaterLevel));
+            // byte scaledHeight = h <= 0
+            //             ? (byte)0
+            //             : (byte)Math.Round(CK3WaterLevel + (double)h / maxHeight * (255 - CK3WaterLevel));
+
+            byte scaledHeight = (byte)Math.Clamp((minHeightAbs + h) * totalHeightToByte, 0, 255);
+            // byte scaledHeight = (byte)Math.Clamp((minHeightAbs + h) * totalHeightToByte, 0, 255);
+            // if (h <= 0 && scaledHeight > 0)
+            // {
+            //     scaledHeight--;
+            // }
+
+
+            // byte scaledHeight = h <= 0
+            //     ? (byte)0
+            //     : (byte)Math.Clamp(h * totalHeightToByte, 0, 255);
+
+            // byte scaledHeight = h <= 0
+            //     ? (byte)0
+            //     : (byte)Math.Clamp(Math.Ceiling(h * totalHeightToByte), 0, 255);
+
             var color = Drawing.RgbaColor.FromGrayscaleByte(scaledHeight);
             foreach (var ring in feature.geometry.coordinates)
             {
@@ -461,7 +489,8 @@ empty_tile_offset={{ 255 127 }}
         var pixels = canvas.GetPixelsTopLeft();
         using var rgba = Image.LoadPixelData<Rgba32>(pixels, map.Settings.MapWidth, map.Settings.MapHeight);
         using var l8 = rgba.CloneAs<L8>();
-        l8.Mutate(ctx => ctx.GaussianBlur((float)Settings.Instance.HeightMapBlurStdDeviation));
+        // l8.Mutate(ctx => ctx.GaussianBlur((float)Settings.Instance.HeightMapBlurStdDeviation));
+        // l8.Mutate(ctx => ctx.MedianBlur(Settings.Instance.HeightMapBlurStdDeviation, false));
 
         var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
         Helper.EnsureDirectoryExists(path);

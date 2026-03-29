@@ -240,6 +240,10 @@ public class Map
     public double PixelXRatio => (double)Settings.MapWidth / Input.JsonMap.info.width;
     public double PixelYRatio => (double)Settings.MapHeight / Input.JsonMap.info.height;
 
+    // Used to determine water level and scaling of the heightmap
+    public int MinHeight { get; set; }
+    public int MaxHeight { get; set; }
+
     public Settings Settings { get; set; }
 }
 

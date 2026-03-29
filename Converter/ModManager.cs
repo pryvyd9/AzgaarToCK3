@@ -183,7 +183,7 @@ public static class ModManager
                 new ("Heightmap created.", c => HeightMapConverter.WriteHeightMap(c.map)),
                 new ("Flat map created.", c => MainConverter.DrawFlatMap(c.map)),
                 new ("Graphics file created.", _ => MainConverter.WriteGraphics()),
-                new ("Defines file created.", c => MainConverter.WriteDefines(c.map)),
+                new ("Defines file created.", c => MainConverter.WriteMapSizeDefines(c.map)),
                 new ("Rivermap created.", c => MainConverter.DrawRivers(c.map)),
                 new ("Masks created.", c => BiomeConverter.WriteMasks(c.map)),
                 //new ("Pdxterrain created.", c => MainConverter.WritePdxterrain()),
