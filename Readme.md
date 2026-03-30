@@ -69,3 +69,7 @@ Do them if there are issues with holding/unit placement or terrain looks weird. 
 
 ## Helpful links
 - DeepWiki: https://deepwiki.com/pryvyd9/AzgaarToCK3
+
+## Contributing
+
+See [docs/Publishing.md](docs/Publishing.md) for build and release instructions.

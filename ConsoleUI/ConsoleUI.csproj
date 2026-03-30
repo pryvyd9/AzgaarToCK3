@@ -13,7 +13,7 @@
   </PropertyGroup>
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)'=='Publish' And '$(BuildingInsideVisualStudio)' == 'true'">
-    <Exec Command="powershell -ExecutionPolicy Unrestricted $(ProjectDir)afterPublishBuild.ps1 -ProjectDir $(ProjectDir) -OutDir $(OutDir)" />
+    <Exec Command="pwsh -ExecutionPolicy Unrestricted &quot;$(SolutionDir)publish.ps1&quot; -LocalOnly" />
   </Target>
 
   <ItemGroup>
