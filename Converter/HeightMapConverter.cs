@@ -1,6 +1,5 @@
 ﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using Svg;
 using System.Diagnostics;
 using System.Numerics;
 using System.Text.RegularExpressions;
@@ -417,7 +416,7 @@ public static class HeightMapConverter
             }
         }
 
-        var packed_heightmap = Helper.ToBitmap(packed_heightmap_pixels, packedWidth, heightmap.PixelHeight);
+        using var packed_heightmap = SixLabors.ImageSharp.Image.LoadPixelData<L8>(packed_heightmap_pixels, packedWidth, heightmap.PixelHeight);
         var phPath = Helper.GetPath(Settings.OutputDirectory, "map_data", "packed_heightmap.png");
         Directory.CreateDirectory(Path.GetDirectoryName(phPath));
         packed_heightmap.Save(phPath);
@@ -540,8 +539,7 @@ empty_tile_offset={{ 255 127 }}
             Remove("@id='vignette-mask'");
             Remove("@id='fog'");
 
-            var svg = SvgDocument.FromSvg<SvgDocument>(land.OuterXml);
-            var img = svg.ToGrayscaleImage(map.Settings.MapWidth, map.Settings.MapHeight);
+            var img = Helper.SvgToGrayscaleImage(land.OuterXml, map.Settings.MapWidth, map.Settings.MapHeight);
 
             var path = Helper.GetPath(Settings.OutputDirectory, "map_data", "heightmap.png");
             Helper.EnsureDirectoryExists(path);

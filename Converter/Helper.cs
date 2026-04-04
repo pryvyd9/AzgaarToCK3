@@ -1,10 +1,7 @@
 ﻿using ImageMagick;
 using SixLabors.ImageSharp;
-using Svg;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
-using System.Drawing.Text;
+using SkiaSharp;
+using Svg.Skia;
 using System.Text;
 
 namespace Converter;
@@ -88,13 +85,18 @@ public enum CK3Biome
 
 public static class Helper
 {
-    // Generates path that works in both Windows and Mac
+    // Generates path that works in Windows, Mac, Linux.
     public static string GetPath(params string[] paths)
     {
         if (paths is null) return "";
         try
         {
-            return Path.Combine(paths.SelectMany(n => n.Replace(@"\\", "/").Replace(@"\", "/").Split("/")).ToArray());
+            var segments = paths.SelectMany(n => n.Replace(@"\\", "/").Replace(@"\", "/").Split("/")).ToArray();
+            var result = Path.Combine(segments);
+            // Linux support
+            if (paths[0].StartsWith("/") && !result.StartsWith("/"))
+                result = "/" + result;
+            return result;
         }
         catch (Exception ex)
         {
@@ -332,122 +334,43 @@ public static class Helper
     }
 
 
-    public static unsafe Bitmap ToBitmap(byte[] colorBitmap, int width, int height)
+    public static SixLabors.ImageSharp.Image SvgToGrayscaleImage(string svgXml, int width, int height)
     {
-        Bitmap grayscaleBitmap = new Bitmap(width, height, PixelFormat.Format8bppIndexed);
+        using var svg = SKSvg.CreateFromSvg(svgXml);
+        var picture = svg.Picture;
+        using var bitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(SKColors.Black);
+        float scaleX = width / picture.CullRect.Width;
+        float scaleY = height / picture.CullRect.Height;
+        canvas.Scale(scaleX, scaleY);
+        canvas.DrawPicture(picture);
 
-        ///////////////////////////////////////
-        // Set grayscale palette
-        ///////////////////////////////////////
-        ColorPalette colorPalette = grayscaleBitmap.Palette;
-        for (int i = 0; i < colorPalette.Entries.Length; i++)
+        int n = width * height;
+        var result = new byte[n];
+        var pixels = bitmap.Pixels;
+        for (int i = 0; i < n; i++)
         {
-            colorPalette.Entries[i] = System.Drawing.Color.FromArgb(i, i, i);
+            var c = pixels[i];
+            result[i] = (byte)(c.Red * 0.299f + c.Green * 0.587f + c.Blue * 0.114f);
         }
-        grayscaleBitmap.Palette = colorPalette;
-        ///////////////////////////////////////
-        // Set grayscale palette
-        ///////////////////////////////////////
-        BitmapData bitmapData = grayscaleBitmap.LockBits(
-            new System.Drawing.Rectangle(System.Drawing.Point.Empty, grayscaleBitmap.Size),
-            ImageLockMode.WriteOnly, PixelFormat.Format8bppIndexed);
-
-        Byte* pPixel = (Byte*)bitmapData.Scan0;
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                pPixel[x] = colorBitmap[width * y + x];
-            }
-
-            pPixel += bitmapData.Stride;
-        }
-
-        grayscaleBitmap.UnlockBits(bitmapData);
-
-        return grayscaleBitmap;
+        return SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.L8>(result.AsSpan(), width, height);
     }
 
-
-    public static unsafe byte[] ToGrayscaleByteArray(Bitmap colorBitmap)
+    public static SixLabors.ImageSharp.Image SvgToImage(string svgXml, int width, int height)
     {
-        int Width = colorBitmap.Width;
-        int Height = colorBitmap.Height;
+        using var svg = SKSvg.CreateFromSvg(svgXml);
+        var picture = svg.Picture;
+        using var bitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(SKColors.Transparent);
+        float scaleX = width / picture.CullRect.Width;
+        float scaleY = height / picture.CullRect.Height;
+        canvas.Scale(scaleX, scaleY);
+        canvas.DrawPicture(picture);
 
-        byte[] array = new byte[Width * Height];
-
-        for (int y = 0; y < Height; y++)
-        {
-            for (int x = 0; x < Width; x++)
-            {
-                System.Drawing.Color clr = colorBitmap.GetPixel(x, y);
-
-                Byte byPixel = (byte)((30 * clr.R + 59 * clr.G + 11 * clr.B) / 100);
-
-                array[Width * y + x] = byPixel;
-            }
-        }
-
-        return array;
-    }
-
-
-    public static unsafe byte[] ToRGBAByteArray(Bitmap colorBitmap)
-    {
-        int Width = colorBitmap.Width;
-        int Height = colorBitmap.Height;
-        int stride = 4;
-
-        byte[] array = new byte[Width * Height * stride];
-
-        for (int y = 0; y < Height; y++)
-        {
-            for (int x = 0; x < Width; x++)
-            {
-                System.Drawing.Color clr = colorBitmap.GetPixel(x, y);
-
-                array[Width * stride * y + x * stride + 0] = clr.R;
-                array[Width * stride * y + x * stride + 1] = clr.G;
-                array[Width * stride * y + x * stride + 2] = clr.B;
-                array[Width * stride * y + x * stride + 3] = clr.A;
-            }
-        }
-
-        return array;
-    }
-
-    public static SixLabors.ImageSharp.Image ToGrayscaleImage(this SvgDocument svgDocument, int width, int height)
-    {
-        //using ISvgRenderer svgRenderer = SvgRenderer.FromGraphics(CreateGraphics(new Bitmap(width, height)));
-        var bitmap = svgDocument.Draw(width, height);
-        var img = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.L8>(Helper.ToGrayscaleByteArray(bitmap).AsSpan(), width, height);
-        //img.Mutate(x => x.Grayscale(GrayscaleMode.Bt709));
-        return img;
-    }
-
-
-    private static Graphics CreateGraphics(System.Drawing.Image image)
-    {
-        Graphics graphics = Graphics.FromImage(image);
-        graphics.SmoothingMode = SmoothingMode.None;
-        graphics.PixelOffsetMode = PixelOffsetMode.None;
-        graphics.CompositingQuality = CompositingQuality.HighSpeed;
-        graphics.TextRenderingHint = TextRenderingHint.SingleBitPerPixel;
-        graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
-        return graphics;
-    }
-
-
-    public static SixLabors.ImageSharp.Image ToImage(this SvgDocument svgDocument, int width, int height)
-    {
-        var bitmap = new Bitmap(width, height);
-        using ISvgRenderer svgRenderer = SvgRenderer.FromGraphics(CreateGraphics(bitmap));
-        svgRenderer.SmoothingMode = SmoothingMode.None;
-        svgRenderer.ScaleTransform(width / svgDocument.GetDimensions().Width, height / svgDocument.GetDimensions().Height);
-        svgDocument.Draw(svgRenderer);
-        var img = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Rgba32>(Helper.ToRGBAByteArray(bitmap).AsSpan(), width, height);
-        return img;
+        var rgbaBytes = bitmap.GetPixelSpan().ToArray();
+        return SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Rgba32>(rgbaBytes.AsSpan(), width, height);
     }
 
     public static int GetDominant(this IEnumerable<Cell> cells, Func<Cell, int> selector) =>

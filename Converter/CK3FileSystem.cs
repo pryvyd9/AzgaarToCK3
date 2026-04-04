@@ -7,7 +7,17 @@ namespace Converter;
 public static class CK3FileSystem
 {
     private static string MyDocuments => Helper.GetPath(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
-    public static readonly string defaultModsDirectory = Helper.GetPath(MyDocuments, "Paradox Interactive", "Crusader Kings III", "mod");
+    public static readonly string defaultModsDirectory = GetDefaultModsDirectory();
+
+    private static string GetDefaultModsDirectory()
+    {
+        if (OperatingSystem.IsLinux())
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return Helper.GetPath(home, ".local", "share", "Paradox Interactive", "Crusader Kings III", "mod");
+        }
+        return Helper.GetPath(MyDocuments, "Paradox Interactive", "Crusader Kings III", "mod");
+    }
 
     private static string FindSteamDirectory()
     {
@@ -30,6 +40,19 @@ public static class CK3FileSystem
             var steamPath = Helper.GetPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support", "Steam");
 
             return steamPath;
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string[] candidates =
+            [
+                Helper.GetPath(home, ".local", "share", "Steam"),
+                Helper.GetPath(home, ".steam", "steam"),
+                Helper.GetPath(home, ".steam", "debian-installation"),
+            ];
+            foreach (var candidate in candidates)
+                if (Directory.Exists(candidate)) return candidate;
+            throw new Exception($"Could not find Steam directory. Searched: {string.Join(", ", candidates)}");
         }
         else
         {

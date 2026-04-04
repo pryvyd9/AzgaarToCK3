@@ -6,15 +6,16 @@
     <LangVersion>12</LangVersion>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Publish</Configurations>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="13.6.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
     <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.4" />
-    <PackageReference Include="Svg" Version="3.4.7" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+    <PackageReference Include="SkiaSharp" Version="3.116.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.116.1" />
+    <PackageReference Include="Svg.Skia" Version="3.7.0" />
   </ItemGroup>
 
   <ItemGroup>

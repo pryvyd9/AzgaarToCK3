@@ -1,7 +1,6 @@
 ﻿using ImageMagick;
 using Microsoft.VisualBasic.FileIO;
 using SixLabors.ImageSharp;
-using Svg;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -1011,8 +1010,7 @@ sea_zones = LIST {{ {string.Join(" ", waterProvinces)} }}
             var fog = map.Input.XmlMap.SelectSingleNode($"//*[@id='fog']/rect") as XmlElement;
             (terrain as XmlElement).SetAttribute("viewBox", $"0 0 {fog.GetAttribute("width")} {fog.GetAttribute("height")}");
 
-            var svg = SvgDocument.FromSvg<SvgDocument>(terrain.OuterXml);
-            var img = svg.ToImage(map.Settings.MapWidth, map.Settings.MapHeight);
+            var img = Helper.SvgToImage(terrain.OuterXml, map.Settings.MapWidth, map.Settings.MapHeight);
             var base64 = img.ToBase64String(SixLabors.ImageSharp.Formats.Png.PngFormat.Instance);
             var magickImage = MagickImage.FromBase64(base64.Split(',')[1]);
             //magickImage.Write("terrain.dds", MagickFormat.Dds);
