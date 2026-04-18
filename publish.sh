@@ -71,9 +71,10 @@ COMMON_ARGS="-c Release /p:DebugType=None /p:DebugSymbols=false /p:CopyOutputSym
 echo "Publishing win-x64..."
 # shellcheck disable=SC2086
 dotnet publish "$PROJ" -r win-x64 $COMMON_ARGS \
-    /p:PublishAot=true \
-    /p:PublishReadyToRun=true \
+    /p:PublishSingleFile=true \
+    /p:PublishTrimmed=true \
     /p:IncludeNativeLibrariesForSelfExtract=true \
+    -v error \
     -o "$OUT/win-x64"
 
 echo "Publishing osx-x64..."
@@ -82,6 +83,7 @@ dotnet publish "$PROJ" -r osx-x64 $COMMON_ARGS \
     /p:PublishSingleFile=true \
     /p:PublishTrimmed=true \
     /p:IncludeNativeLibrariesForSelfExtract=true \
+    -v error \
     -o "$OUT/osx-x64"
 
 echo "Publishing linux-x64..."
@@ -90,6 +92,7 @@ dotnet publish "$PROJ" -r linux-x64 $COMMON_ARGS \
     /p:PublishSingleFile=true \
     /p:PublishTrimmed=true \
     /p:IncludeNativeLibrariesForSelfExtract=true \
+    -v error \
     -o "$OUT/linux-x64"
 
 # --- Create ZIP archives ---

@@ -469,8 +469,8 @@ empty_tile_offset={{ 255 127 }}
 
             var land = GetNode("@id='svgland'")!;
             var background = (XmlElement)map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
-            // var wl = CK3WaterLevel;
-            var wl = 0;
+            var wl = CK3WaterLevel;
+            // var wl = 0;
 
             background.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
             background.SetAttribute("x", "0");
@@ -503,14 +503,15 @@ empty_tile_offset={{ 255 127 }}
 
             land.SetAttribute("viewBox", $"0 0 {width} {height}");
 
-            // void removeAllElements(string filter, XmlElement parent)
-            // {
-            //     for (XmlElement? element = parent.SelectSingleNode(filter) as XmlElement; element is not null; element = parent.SelectSingleNode(filter) as XmlElement)
-            //     {
-            //         parent.RemoveChild(element);
-            //     }
-            // }
+            void removeAllElements(string filter, XmlElement parent)
+            {
+                for (XmlElement? element = parent.SelectSingleNode(filter) as XmlElement; element is not null; element = parent.SelectSingleNode(filter) as XmlElement)
+                {
+                    parent.RemoveChild(element);
+                }
+            }
 
+            removeAllElements("//*[@id='landHeights']/rect", landHeights);
 
             var landHeightsBackground = landHeights.FirstChild;
             ((XmlElement)landHeightsBackground!).SetAttribute("fill", $"rgb({wl},{wl},{wl})");

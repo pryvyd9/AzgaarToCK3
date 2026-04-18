@@ -67,14 +67,15 @@ $commonArgs = @(
     '/p:DebugType=None',
     '/p:DebugSymbols=false',
     '/p:CopyOutputSymbolsToPublishDirectory=false',
-    '--self-contained', 'true'
+    '--self-contained', 'true',
+    '-v', 'error'
 )
 
 # --- dotnet publish ---
 Write-Host "Publishing win-x64..."
 dotnet publish $proj -r win-x64 @commonArgs `
-    /p:PublishAot=true `
-    /p:PublishReadyToRun=true `
+    /p:PublishSingleFile=true `
+    /p:PublishTrimmed=true `
     /p:IncludeNativeLibrariesForSelfExtract=true `
     -o (Join-Path $outDir "win-x64")
 if ($LASTEXITCODE -ne 0) { exit 1 }
