@@ -1,3 +1,7 @@
+# 1.7.5
+- added linux support.
+- reworked build and publishing process to support building outside Visual Studio.
+
 # 1.7.4
 - fixed biome drawing being overlapped by some unknown layer. As well as pitch black masks.
 

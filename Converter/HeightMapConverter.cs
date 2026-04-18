@@ -469,7 +469,7 @@ empty_tile_offset={{ 255 127 }}
 
             var land = GetNode("@id='svgland'")!;
             var background = (XmlElement)map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
-            //var wl = CK3WaterLevel;
+            // var wl = CK3WaterLevel;
             var wl = 0;
 
             background.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
@@ -485,6 +485,12 @@ empty_tile_offset={{ 255 127 }}
             // make only landHeights visible
             var landHeights = GetNode("@id='landHeights'")!;
             landHeights.SetAttribute("filter", "url(#blurFilter)");
+            // Remove terrain mask to allow blur to go into ocean.
+            landHeights.RemoveAttribute("mask");
+
+            // Set interpolation for blur to sRGB to prevent darkening of the image and smoother gradients.
+            var blurFilter = (XmlElement)svgland.SelectSingleNode("//*[@id='blurFilter']")!;
+            blurFilter.SetAttribute("color-interpolation-filters", "sRGB");
 
             // Set blur from settings
             var feGaussianBlur = (XmlElement)svgland.SelectSingleNode("//*[@id='blurFilter']/feGaussianBlur")!;
@@ -497,22 +503,14 @@ empty_tile_offset={{ 255 127 }}
 
             land.SetAttribute("viewBox", $"0 0 {width} {height}");
 
-            void removeAllElements(string filter, XmlElement parent)
-            {
-                for (XmlElement? element = parent.SelectSingleNode(filter) as XmlElement; element is not null; element = parent.SelectSingleNode(filter) as XmlElement)
-                {
-                    parent.RemoveChild(element);
-                }
-            }
+            // void removeAllElements(string filter, XmlElement parent)
+            // {
+            //     for (XmlElement? element = parent.SelectSingleNode(filter) as XmlElement; element is not null; element = parent.SelectSingleNode(filter) as XmlElement)
+            //     {
+            //         parent.RemoveChild(element);
+            //     }
+            // }
 
-            removeAllElements("//*[@id='landHeights']/rect", landHeights);
-            var rect = (XmlElement)map.Input.XmlMap.CreateNode(XmlNodeType.Element, "rect", null);
-            rect.SetAttribute("fill", $"rgb({wl},{wl},{wl})");
-            rect.SetAttribute("x", "0");
-            rect.SetAttribute("y", "0");
-            rect.SetAttribute("width", oldRect.GetAttribute("width"));
-            rect.SetAttribute("height", oldRect.GetAttribute("height"));
-            landHeights.PrependChild(rect);
 
             var landHeightsBackground = landHeights.FirstChild;
             ((XmlElement)landHeightsBackground!).SetAttribute("fill", $"rgb({wl},{wl},{wl})");
@@ -534,8 +532,9 @@ empty_tile_offset={{ 255 127 }}
             Remove("@id='dropShadow'");
             Remove("@id='dropShadow01'");
             Remove("@id='dropShadow05'");
-            Remove("@id='landmass'");
-            Remove("@id='sea_island'");
+            // Don't hide base landmass layer which displays lowest elevation land.
+            // Remove("@id='landmass'");
+            // Remove("@id='sea_island'");
             Remove("@id='vignette-mask'");
             Remove("@id='fog'");
 
