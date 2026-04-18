@@ -65,7 +65,7 @@ fi
 OUT="$SCRIPT_DIR/publish_tmp"
 rm -rf "$OUT"
 PROJ="$SCRIPT_DIR/ConsoleUI/ConsoleUI.csproj"
-COMMON_ARGS="-c Release /p:DebugType=None /p:DebugSymbols=false /p:CopyOutputSymbolsToPublishDirectory=false --self-contained true"
+COMMON_ARGS="-c Release /p:DebugType=None /p:DebugSymbols=false /p:CopyOutputSymbolsToPublishDirectory=false /p:NuGetAudit=false --self-contained true"
 
 # --- dotnet publish ---
 echo "Publishing win-x64..."
@@ -74,7 +74,7 @@ dotnet publish "$PROJ" -r win-x64 $COMMON_ARGS \
     /p:PublishSingleFile=true \
     /p:PublishTrimmed=true \
     /p:IncludeNativeLibrariesForSelfExtract=true \
-    -v error \
+    -v quiet \
     -o "$OUT/win-x64"
 
 echo "Publishing osx-x64..."
@@ -83,7 +83,7 @@ dotnet publish "$PROJ" -r osx-x64 $COMMON_ARGS \
     /p:PublishSingleFile=true \
     /p:PublishTrimmed=true \
     /p:IncludeNativeLibrariesForSelfExtract=true \
-    -v error \
+    -v quiet \
     -o "$OUT/osx-x64"
 
 echo "Publishing linux-x64..."
@@ -92,7 +92,7 @@ dotnet publish "$PROJ" -r linux-x64 $COMMON_ARGS \
     /p:PublishSingleFile=true \
     /p:PublishTrimmed=true \
     /p:IncludeNativeLibrariesForSelfExtract=true \
-    -v error \
+    -v quiet \
     -o "$OUT/linux-x64"
 
 # --- Create ZIP archives ---

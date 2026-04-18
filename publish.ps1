@@ -67,8 +67,9 @@ $commonArgs = @(
     '/p:DebugType=None',
     '/p:DebugSymbols=false',
     '/p:CopyOutputSymbolsToPublishDirectory=false',
+    '/p:NuGetAudit=false',
     '--self-contained', 'true',
-    '-v', 'error'
+    '-v', 'quiet'
 )
 
 # --- dotnet publish ---
